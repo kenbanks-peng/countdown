@@ -1,0 +1,16 @@
+[display]
+clock_face_enabled = true
+clock_hands_enabled = true
+current_timeout_enabled = true
+autoset_enabled = false
+
+[notifications]
+wakeup_enabled = true
+wakeup_time = 5
+alarm_enabled = true
+
+# Paths are relative to this file.
+green_notification = "green_notification.mp3"
+yellow_notification = "yellow_notification.mp3"
+red_notification = "red_notification.mp3"
+alarm_notification = "alarm_notification.mp3"

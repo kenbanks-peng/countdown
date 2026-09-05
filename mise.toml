@@ -1,0 +1,76 @@
+[env]
+BINDIR = "{{config_root}}/bin"
+
+[tasks.release]
+description = "Build the Countdown release executable"
+run = '''
+set -e
+binary=".build/release/countdown"
+before_checksum="$(shasum -a 256 "$binary" 2>/dev/null || true)"
+swift build -c release >/dev/null
+after_checksum="$(shasum -a 256 "$binary")"
+
+if [ "$before_checksum" = "$after_checksum" ]; then
+  echo "Production build unchanged"
+else
+  echo "Built for production"
+fi
+'''
+
+[tasks.deploy]
+description = "Install Countdown and start it at macOS login"
+depends = ["release"]
+run = '''
+set -eu
+
+bin_dir="$BINDIR"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/countdown"
+executable="$bin_dir/countdown"
+resource_directory="src/Resources"
+installed_bundle="$bin_dir/Countdown_Countdown.bundle"
+label="com.kenbanks.countdown"
+agent_dir="$HOME/Library/LaunchAgents"
+agent_plist="$agent_dir/$label.plist"
+temporary_plist="$(mktemp)"
+trap 'rm -f "$temporary_plist"' EXIT
+
+install -d "$bin_dir" "$config_dir" "$agent_dir"
+resources_installed=false
+app_updated=false
+if [ ! -f "$config_dir/config.toml" ]; then
+  install -m 644 "resources/config.toml" "$config_dir/config.toml"
+  resources_installed=true
+fi
+for file in green_notification.mp3 yellow_notification.mp3 red_notification.mp3 alarm_notification.mp3; do
+  if [ ! -f "$config_dir/$file" ] || ! cmp -s "resources/$file" "$config_dir/$file"; then
+    install -m 644 "resources/$file" "$config_dir/$file"
+    resources_installed=true
+  fi
+done
+if [ "$resources_installed" = true ]; then
+  echo "Installed countdown resources"
+fi
+if [ ! -f "$executable" ] || ! cmp -s .build/release/countdown "$executable"; then
+  install -m 755 .build/release/countdown "$executable"
+  app_updated=true
+  echo "Installed countdown binary"
+fi
+if [ ! -d "$installed_bundle" ] || ! diff -qr "$resource_directory" "$installed_bundle" >/dev/null; then
+  rm -rf "$installed_bundle"
+  cp -R "$resource_directory" "$installed_bundle"
+  app_updated=true
+  echo "Installed countdown image resources"
+fi
+sed "s|__COUNTDOWN_EXECUTABLE__|$executable|g" "launch/$label.plist" > "$temporary_plist"
+plutil -lint "$temporary_plist" >/dev/null
+agent_updated=false
+if [ ! -f "$agent_plist" ] || ! cmp -s "$temporary_plist" "$agent_plist"; then
+  install -m 644 "$temporary_plist" "$agent_plist"
+  agent_updated=true
+fi
+if [ "$app_updated" = true ] || [ "$agent_updated" = true ]; then
+  launchctl bootout "gui/$(id -u)" "$agent_plist" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$agent_plist"
+  echo "Deployed macOS launch agent"
+fi
+'''

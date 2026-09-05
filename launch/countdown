@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec launchctl kickstart -k "gui/$(id -u)/com.kenbanks.countdown" "$@"

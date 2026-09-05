@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Countdown Application Architecture",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/kenbanks-peng/countdown",
+      "revision": "4d0ab3e8614f4104f8e69032e75313d6caa4e0cb"
+    },
+    "viewBox": [1380, 820]
+  },
+  "components": [
+    { "id": "entry", "type": "frontend", "label": "Application Entry", "sublabel": "NSApplication startup", "pos": [30, 320], "size": [140, 72], "sources": [{ "path": "src/App/main.swift", "line": 1, "end_line": 6 }] },
+    { "id": "delegate", "type": "backend", "label": "AppDelegate", "sublabel": "Panel and lifecycle control", "pos": [280, 320], "size": [160, 72], "sources": [{ "path": "src/App/AppDelegate.swift", "line": 6, "end_line": 52 }] },
+    { "id": "countdownView", "type": "frontend", "label": "Countdown Views", "sublabel": "Normal and compact SwiftUI", "pos": [560, 320], "size": [170, 72], "sources": [{ "path": "src/UI/CountdownView.swift", "line": 4, "end_line": 42 }, { "path": "src/UI/CompactCountdownView.swift", "line": 3, "end_line": 40 }] },
+    { "id": "model", "type": "backend", "label": "CountdownModel", "sublabel": "Timer state and behavior", "pos": [850, 320], "size": [160, 72], "sources": [{ "path": "src/Countdown/CountdownModel.swift", "line": 5, "end_line": 40 }] },
+    { "id": "stateStore", "type": "database", "label": "CountdownStateStore", "sublabel": "Atomic session.json storage", "pos": [1120, 320], "size": [190, 72], "sources": [{ "path": "src/Countdown/CountdownStateStore.swift", "line": 14, "end_line": 56 }] },
+    { "id": "svgResources", "type": "external", "label": "SVG Resources", "sublabel": "Bundled clock artwork", "pos": [280, 70], "size": [160, 72], "sources": [{ "path": "Package.swift", "line": 10, "end_line": 17 }] },
+    { "id": "clockDrawing", "type": "frontend", "label": "Clock Drawing", "sublabel": "Face, hands, and radial sector", "pos": [560, 70], "size": [170, 72], "sources": [{ "path": "src/UI/ClockFace.swift", "line": 4, "end_line": 68 }, { "path": "src/UI/RadialSector.swift", "line": 3, "end_line": 21 }] },
+    { "id": "timeAdjuster", "type": "frontend", "label": "ScrollTimeAdjuster", "sublabel": "Local scroll event monitor", "pos": [850, 70], "size": [170, 72], "sources": [{ "path": "src/App/ScrollTimeAdjuster.swift", "line": 4, "end_line": 42 }] },
+    { "id": "appearance", "type": "frontend", "label": "CountdownAppearance", "sublabel": "Time-based color mapping", "pos": [560, 560], "size": [170, 72], "sources": [{ "path": "src/UI/CountdownAppearance.swift", "line": 3, "end_line": 20 }] },
+    { "id": "configuration", "type": "backend", "label": "CountdownConfiguration", "sublabel": "Loads and updates TOML options", "pos": [850, 560], "size": [180, 72], "sources": [{ "path": "src/Configuration/CountdownConfiguration.swift", "line": 3, "end_line": 86 }] },
+    { "id": "userResources", "type": "external", "label": "User Configuration", "sublabel": "TOML options and alert audio", "pos": [1120, 560], "size": [190, 72], "sources": [{ "path": "resources/config.toml", "line": 1, "end_line": 16 }] }
+  ],
+  "connections": [
+    { "id": "start-app", "from": "entry", "to": "delegate", "label": "starts app" },
+    { "id": "build-ui", "from": "delegate", "to": "countdownView", "label": "hosts SwiftUI" },
+    { "id": "bind-model", "from": "countdownView", "to": "model", "label": "state and actions" },
+    { "id": "persist-state", "from": "model", "to": "stateStore", "label": "session JSON" },
+    { "id": "adjust-time", "from": "timeAdjuster", "to": "model", "label": "changes duration by minutes", "fromSide": "bottom", "toSide": "top" },
+    { "id": "render-clock", "from": "countdownView", "to": "clockDrawing", "label": "composes clock graphics" },
+    { "id": "select-color", "from": "countdownView", "to": "appearance", "label": "maps remaining time to color", "labelDy": 24 },
+    { "id": "load-config", "from": "model", "to": "configuration", "label": "reads and updates options", "fromSide": "bottom", "toSide": "top" },
+    { "id": "resolve-resources", "from": "configuration", "to": "userResources", "label": "resolves audio paths", "variant": "dashed", "labelDy": 60 },
+    { "id": "load-svg", "from": "clockDrawing", "to": "svgResources", "label": "loads bundled SVG", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Runtime path", "items": ["AppDelegate creates a floating NSPanel", "SwiftUI views observe and control CountdownModel", "CountdownStateStore keeps the active session"] },
+    { "dot": "emerald", "title": "Local integration", "items": ["ScrollTimeAdjuster changes the duration from wheel events", "Configuration resolves user options and alert sounds", "Clock drawing loads SVG resources from the Swift package"] }
+  ]
+}
