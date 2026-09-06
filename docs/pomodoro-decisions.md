@@ -184,11 +184,15 @@ Keep this stand-alone check runnable from the repository root. It deliberately e
 check_dir="$(mktemp -d)"
 trap 'rm -rf "$check_dir"' EXIT
 swiftc -parse-as-library \
-  src/Configuration/*.swift src/Countdown/*.swift src/UI/*.swift \
+  src/Configuration/*.swift src/Countdown/*.swift src/Pomodoro/*.swift \
+  src/App/TimerController.swift src/UI/*.swift \
   Tests/CircleTransitionCheck.swift \
   -o "$check_dir/circle-transition-check"
+cp src/Resources/*.svg "$check_dir/"
 "$check_dir/circle-transition-check"
 ```
+
+Ticket #3 adds the Pomodoro and mode-controller source dependencies shown above. For test discovery and execution with the installed Command Line Tools framework paths, use `tools/swift-test list` and `tools/swift-test --filter <SourceNamedSuite>`. See [testing.md](testing.md).
 
 If a feature adds a direct source dependency for this stand-alone program, update its command in the same feature. Do not replace the program with a test that cannot render.
 

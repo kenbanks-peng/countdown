@@ -48,7 +48,6 @@ struct CountdownView: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint("Click the circle to use Compact mode. Option-click the circle to set the timeout to the next hour. Scroll to adjust by one minute. Hold Option while you scroll for slower, precise one-minute adjustment.")
         .padding(6)
-        .contextMenu { CountdownContextMenu(model: model) }
         .task { await updateClock() }
     }
 
@@ -119,8 +118,9 @@ struct CountdownView: View {
     }
 }
 
-private struct CountdownContextMenu: View {
+struct CountdownContextMenu: View {
     @ObservedObject var model: CountdownModel
+    let timer: TimerController
 
     var body: some View {
         Toggle("Face", isOn: enablementBinding(\.isClockFaceEnabled, model.setClockFaceEnabled))
@@ -132,17 +132,13 @@ private struct CountdownContextMenu: View {
         Divider()
 
         Button("Set Timeout to Next Hour") {
-            model.setDurationToNextHour()
+            timer.setCountdownToNextHour()
         }
 
         Button(model.isPaused ? "Resume" : "Pause") {
-            model.toggleRunning()
+            timer.toggleCountdownRunning()
         }
         .disabled(model.status == .empty)
-
-        Button("Quit Countdown") {
-            NSApplication.shared.terminate(nil)
-        }
     }
 
     private func enablementBinding(

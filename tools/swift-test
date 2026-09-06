@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+# Some Command Line Tools releases omit these paths from SwiftPM's test flags.
+developer_dir="$(xcode-select -p)"
+frameworks="$developer_dir/Library/Developer/Frameworks"
+if [ -d "$frameworks/Testing.framework" ]; then
+    exec swift test --disable-xctest \
+        -Xswiftc "-F$frameworks" \
+        -Xlinker -rpath -Xlinker "$frameworks" \
+        -Xlinker -rpath -Xlinker "$developer_dir/Library/Developer/usr/lib" "$@"
+fi
+exec swift test "$@"

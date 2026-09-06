@@ -10,7 +10,6 @@ struct ClockFace: View {
                 .renderingMode(.template)
                 .resizable()
                 .scaledToFill()
-                .frame(width: 176, height: 176)
                 .clipShape(Circle())
                 .foregroundStyle(.white.opacity(0.42))
                 .allowsHitTesting(false)
@@ -44,7 +43,6 @@ struct ClockHands: View {
                 Image(nsImage: hourImage)
                     .renderingMode(.template)
                     .resizable()
-                    .frame(width: 176, height: 176)
                     .rotationEffect(.degrees(hourAngle))
             }
 
@@ -52,7 +50,6 @@ struct ClockHands: View {
                 Image(nsImage: minuteImage)
                     .renderingMode(.template)
                     .resizable()
-                    .frame(width: 176, height: 176)
                     .rotationEffect(.degrees(minuteAngle))
             }
 

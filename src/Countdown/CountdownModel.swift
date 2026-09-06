@@ -243,7 +243,7 @@ final class CountdownModel: ObservableObject {
         }
     }
 
-    private static func playSound(at soundURL: URL?) {
+    static func playSound(at soundURL: URL?) {
         guard let soundURL,
               let sound = NSSound(contentsOf: soundURL, byReference: true)
         else {

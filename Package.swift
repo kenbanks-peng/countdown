@@ -12,6 +12,12 @@ let package = Package(
             name: "Countdown",
             path: "src",
             resources: [.process("Resources")]
+        ),
+        .testTarget(
+            name: "CountdownTests",
+            dependencies: ["Countdown"],
+            path: "Tests",
+            exclude: ["CircleTransitionCheck.swift"]
         )
     ]
 )

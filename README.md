@@ -8,6 +8,7 @@ Native macOS Countdown application.
 - Option-click the circle to set the timeout to end exactly on the next hour.
 - Scroll up to add time and scroll down to remove time in one-minute steps. Hold Option while you scroll for slower, precise one-minute adjustment. 
 - Right-click the Countdown window and toggle settings or select **Quit Countdown** to quit.
+- In the normal window, select **Pomodoro** from **Timer Mode** for the [25/5-minute allocation preview](docs/pomodoro-usage.md).
 
 ## Configuration
 
@@ -34,6 +35,8 @@ alarm_notification = "alarm_notification.mp3"
 `wakeup_time` is the wakeup interval in minutes.
 
 ## Dev 
+
+See [automated checks](docs/testing.md) for test discovery and focused test commands.
 
 ```sh
 mise run deploy

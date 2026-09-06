@@ -10,8 +10,10 @@ extension Bundle {
 struct CircleTransitionCheck {
     @MainActor
     static func main() {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
         let stateStore = CountdownStateStore(environment: [
-            "XDG_STATE_HOME": FileManager.default.temporaryDirectory.path
+            "XDG_STATE_HOME": directory.path
         ])
         let configuration = CountdownConfiguration(alarmNotificationURL: nil)
         let model = CountdownModel(
@@ -31,6 +33,7 @@ struct CircleTransitionCheck {
                 failures.append("could not render \(Int(side))x\(Int(side))")
                 continue
             }
+            bitmap.bitmapData?.initialize(repeating: 0, count: bitmap.bytesPerRow * bitmap.pixelsHigh)
             hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
 
             let maxX = bitmap.pixelsWide - 1
