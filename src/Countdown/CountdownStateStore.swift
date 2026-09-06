@@ -31,6 +31,10 @@ struct CountdownStateStore {
         }
     }
 
+    var timerSettingsStore: TimerSettingsStore {
+        TimerSettingsStore(fileManager: fileManager, stateDirectory: stateDirectory)
+    }
+
     func load() -> CountdownSession? {
         guard let data = try? Data(contentsOf: sessionURL) else { return nil }
         return try? JSONDecoder().decode(CountdownSession.self, from: data)

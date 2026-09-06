@@ -14,6 +14,11 @@ struct PomodoroModel {
     private var breakElapsed: TimeInterval = 0
     private var lastUpdate: Date?
 
+    init(focusDuration: TimeInterval = 25 * 60, breakDuration: TimeInterval = 5 * 60) {
+        self.focusDuration = focusDuration
+        self.breakDuration = breakDuration
+    }
+
     var focusRemaining: TimeInterval { focusCompleted ? 0 : max(0, focusDuration - focusElapsed) }
     var breakRemaining: TimeInterval { status == .completed ? 0 : max(0, breakDuration - breakElapsed) }
     var phaseLabel: String { focusRemaining > 0 ? "Focus" : "Break" }

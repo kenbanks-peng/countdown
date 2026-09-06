@@ -73,6 +73,8 @@ struct TimerControllerTests {
         let paused = TimerController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
         #expect(paused.countdown.isPaused)
         #expect(paused.countdown.remaining == 290)
+        #expect(paused.mode == .pomodoro)
+        paused.selectMode(.countdown)
         paused.toggleCountdownRunning()
         now += 290
         paused.update()

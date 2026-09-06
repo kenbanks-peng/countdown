@@ -31,6 +31,14 @@ Both sizes show blue break and green focus on the same 60-minute scale. Compact 
 
 Scroll over each allocated sector in either size, including its depleted area. The same 1-minute steps, Option sensitivity, minimum, and combined limit apply. Compact does not use whole-circle adjustment. Pomodoro does not expand automatically, even in the final minute or at completion.
 
-Saved mode and durations are a separate feature slice. Duration edits in this version are not saved across app restarts.
+## Restart
+
+The app saves the selected timer mode and configured focus and break durations when you change them and when you quit. These settings are separate from the Countdown session.
+
+After restart, Pomodoro is always ready with the full saved pair. A running, paused, or completed pair does not resume. Time while the app is closed does not reduce either phase, and Pomodoro has no startup sounds. Click **Start** to begin focus again.
+
+Countdown keeps its existing session restoration rules. If Pomodoro is selected at startup, Countdown then pauses and stays paused while hidden. Select Countdown and **Resume** to continue it.
+
+If saved mode or duration data is missing, invalid, or unreadable, the app selects Countdown and uses Pomodoro defaults of 25/5 minutes. If storage is not writable, you can still use the timer, but changes might not be saved.
 
 For build and automated checks, see [testing.md](testing.md).

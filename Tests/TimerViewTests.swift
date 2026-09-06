@@ -59,6 +59,52 @@ struct TimerViewTests {
     }
 
     @Test
+    func restartedPomodoroRendersSavedAllocationsAsReadyWithAccessibleFocus() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path])
+        let configuration = CountdownConfiguration(alarmNotificationURL: nil)
+        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var sounds = 0
+        let timer = TimerController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
+        timer.selectMode(.pomodoro)
+        timer.adjustPomodoroDuration(.focus, by: -300)
+        timer.adjustPomodoroDuration(.shortBreak, by: 120)
+        timer.togglePomodoroRunning()
+        now += 1_320
+        timer.update()
+        #expect(timer.pomodoro.phaseLabel == "Break")
+        timer.save()
+        now += 7_200
+
+        let restored = TimerController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
+        let hosting = NSHostingView(rootView: TimerView(timer: restored, changePresentation: {}))
+        let bitmap = try render(hosting)
+        // Saved 7-minute break spans 42°; saved 20-minute focus ends at 162°.
+        for angle in [3.0, 39] {
+            #expect(try sample(bitmap, angle: angle).blueComponent > 0.8)
+        }
+        for angle in [45.0, 90, 159] {
+            #expect(try sample(bitmap, angle: angle).greenComponent > 0.6)
+        }
+        for angle in [165.0, 270, 357] {
+            #expect(try sample(bitmap, angle: angle).greenComponent < 0.2)
+        }
+        #expect(try recognizedText(bitmap) == ["Focus"])
+        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
+        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
+        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
+        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
+        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        defer { window.close() }
+        hosting.layoutSubtreeIfNeeded()
+        #expect(accessibilityLabels(hosting).contains("Pomodoro ready. Focus: 20 minutes allocated. Break: 7 minutes allocated."))
+        #expect(sounds == 0)
+    }
+
+    @Test
     func runningPomodoroDepletesGreenThenBlueAtFixedBoundaries() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
