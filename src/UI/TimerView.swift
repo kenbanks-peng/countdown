@@ -12,7 +12,20 @@ struct TimerView: View {
             case .countdown:
                 CountdownView(model: timer.countdown, compact: compact)
             case .pomodoro:
-                PomodoroView(model: timer.pomodoro)
+                Button(action: timer.togglePomodoroRunning) {
+                    PomodoroView(model: timer.pomodoro)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(timer.pomodoro.accessibilityDescription)
+                .accessibilityHint("Click to \(timer.pomodoro.controlLabel.lowercased()). Use the context menu to reset the pair.")
+                .help("Click to \(timer.pomodoro.controlLabel.lowercased()). Focus changes to break automatically. The pair stops after break.")
+                .task {
+                    while !Task.isCancelled {
+                        timer.update()
+                        try? await Task.sleep(for: .milliseconds(100))
+                    }
+                }
             }
         }
         .contextMenu {
@@ -25,8 +38,11 @@ struct TimerView: View {
             Divider()
             if timer.mode == .countdown {
                 CountdownContextMenu(model: timer.countdown, timer: timer)
-                Divider()
+            } else {
+                Button(timer.pomodoro.controlLabel, action: timer.togglePomodoroRunning)
+                Button("Reset", action: timer.resetPomodoro)
             }
+            Divider()
             Button("Quit Countdown") {
                 NSApplication.shared.terminate(nil)
             }

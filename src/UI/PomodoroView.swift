@@ -6,10 +6,10 @@ struct PomodoroView: View {
     var body: some View {
         ZStack {
             Circle().fill(Color.countdownSurface)
-            RadialSector(proportion: model.breakDuration / 3_600)
+            RadialSector(proportion: model.breakRemaining / 3_600)
                 .fill(Color.pomodoroBlue)
             RadialSector(
-                proportion: model.focusDuration / 3_600,
+                proportion: model.focusRemaining / 3_600,
                 startProportion: model.breakDuration / 3_600
             )
             .fill(Color.countdownGreen)
@@ -21,9 +21,6 @@ struct PomodoroView: View {
                 .foregroundStyle(.white)
                 .offset(y: 32)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(model.accessibilityDescription)
-        .help("Pomodoro allocation preview: 25 minutes of focus and 5 minutes of break.")
         .padding(6)
     }
 }

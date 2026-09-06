@@ -7,6 +7,7 @@ swift build
 tools/swift-test list
 tools/swift-test --filter CountdownViewLayoutTests
 tools/swift-test --filter TimerControllerTests
+tools/swift-test --filter PomodoroLifecycleTests
 tools/swift-test --filter ScrollTimeAdjusterTests
 tools/swift-test --filter TimerViewTests
 ```
@@ -14,6 +15,8 @@ tools/swift-test --filter TimerViewTests
 `tools/swift-test` runs SwiftPM tests. For Command Line Tools releases that install Testing outside the default search paths, it adds the framework and runtime paths and disables unused XCTest discovery. With Xcode, it uses `swift test` directly. The app still targets macOS 13. The installed Testing framework can require a newer macOS version for tests.
 
 The test target excludes the stand-alone `@main` circle check. State directories are unique and are removed after each test. Tests use controlled time and capture sounds; they do not play notifications or change user settings. Hosted bitmap checks test sector colors, phase text, numeric display, and Countdown circle layout with packaged SVG resources. Text checks use local Vision text recognition. Accessibility checks read the hosted AppKit accessibility output; they do not replace a VoiceOver check.
+
+`PomodoroLifecycleTests` drives the application commands with controlled time. It covers focus-first operation, exact and delayed expiry, silent completion, pause/resume, reset, and the hidden-timer gate. `TimerViewTests` also checks green-then-blue depletion, fixed sector placement, phase-only text, accessible lifecycle descriptions, and the hosted circle's accessible press action. These checks use no real-time timer waits.
 
 For final validation, `tools/swift-test` without a filter runs the full suite. Feature work uses individual suite filters.
 
@@ -35,4 +38,4 @@ The extra source paths supply the mode-aware view dependencies. The copied SVG f
 
 ## Manual checks
 
-Manual checks are separate: menu selection and check marks, VoiceOver, Countdown settings and gestures, and Compact transitions. Timing, sector edits, and Compact Pomodoro checks belong to their later feature slices. Do not report a manual check as passed from a build or bitmap test alone.
+Manual checks are separate: menu selection and check marks, Pomodoro click and Option-click controls, Reset, VoiceOver, Countdown settings and gestures, and Compact transitions. Sector edits and Compact Pomodoro checks belong to their later feature slices. Do not report a manual check as passed from a build or bitmap test alone.

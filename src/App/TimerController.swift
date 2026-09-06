@@ -6,12 +6,13 @@ enum TimerMode: String, CaseIterable {
     case pomodoro = "Pomodoro"
 }
 
-/// The application command boundary keeps hidden Countdown activity out of Pomodoro.
+/// Mode-aware commands keep hidden timers paused and their lifecycle rules separate.
 @MainActor
 final class TimerController: ObservableObject {
     @Published private(set) var mode: TimerMode = .countdown
     let countdown: CountdownModel
-    let pomodoro = PomodoroModel()
+    @Published private(set) var pomodoro = PomodoroModel()
+    private let now: () -> Date
 
     init(
         stateStore: CountdownStateStore = .default,
@@ -19,6 +20,7 @@ final class TimerController: ObservableObject {
         playSound: @escaping @MainActor (URL?) -> Void = CountdownModel.playSound,
         now: @escaping () -> Date = Date.init
     ) {
+        self.now = now
         countdown = CountdownModel(
             stateStore: stateStore, configuration: configuration,
             playSound: playSound, now: now
@@ -31,6 +33,8 @@ final class TimerController: ObservableObject {
         self.mode = mode
         if previousMode == .countdown {
             countdown.stop()
+        } else {
+            pomodoro.pause(at: now())
         }
     }
 
@@ -49,9 +53,21 @@ final class TimerController: ObservableObject {
         countdown.setDurationToNextHour()
     }
 
+    func togglePomodoroRunning() {
+        guard mode == .pomodoro else { return }
+        pomodoro.toggleRunning(at: now())
+    }
+
+    func resetPomodoro() {
+        guard mode == .pomodoro else { return }
+        pomodoro.reset()
+    }
+
     func update() {
-        guard mode == .countdown else { return }
-        countdown.update()
+        switch mode {
+        case .countdown: countdown.update()
+        case .pomodoro: pomodoro.update(at: now())
+        }
     }
 
     func save() {
