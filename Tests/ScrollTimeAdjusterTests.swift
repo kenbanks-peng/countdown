@@ -56,9 +56,9 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.accessibilityDescription == "Pomodoro ready. Focus: 25 minutes allocated. Break: 5 minutes allocated.")
     }
 
-    @Test(arguments: [0.0, 29.999, 30, 30.001, 179.999, 180, 270, 359.999])
-    func boundariesBelongToTheFollowingAllocatedSector(angle: Double) throws {
-        let session = Session()
+    @Test(arguments: [0.0, 29.999, 30, 30.001, 179.999, 180, 270, 359.999], [false, true])
+    func boundariesBelongToTheFollowingAllocatedSector(angle: Double, isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
         defer { session.close() }
         session.timer.selectMode(.pomodoro)
         try session.scroll(angle: angle, delta: 1)
@@ -84,9 +84,19 @@ struct ScrollTimeAdjusterTests {
         #expect(session.timer.pomodoro.focusDuration == 1_500)
     }
 
-    @Test
-    func optionAccumulatesWholeMinutesAndClearsOnTargetBackgroundOrdinaryAndModeChanges() throws {
-        let session = Session()
+    @Test(arguments: [0.0, 16, 16.001, 20], [0.0, 15, 27])
+    func compactCircleIncludesThePerimeterButNotTheCenterOrOutside(radius: Double, angle: Double) throws {
+        let session = Session(isCompact: true)
+        defer { session.close() }
+        session.timer.selectMode(.pomodoro)
+        try session.scroll(angle: angle, radius: radius, delta: -1)
+        #expect(session.timer.pomodoro.breakDuration == (radius == 16 ? 240 : 300))
+        #expect(session.timer.pomodoro.focusDuration == 1_500)
+    }
+
+    @Test(arguments: [false, true])
+    func optionAccumulatesWholeMinutesAndClearsOnTargetBackgroundOrdinaryAndModeChanges(isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
@@ -127,9 +137,9 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.breakDuration == 180)
     }
 
-    @Test(arguments: [PomodoroModel.Phase.focus, .shortBreak])
-    func scrollClampsBothPhasesBelowAtAndAboveCapacityWithoutChangingTheOther(phase: PomodoroModel.Phase) throws {
-        let session = Session()
+    @Test(arguments: [PomodoroModel.Phase.focus, .shortBreak], [false, true])
+    func scrollClampsBothPhasesBelowAtAndAboveCapacityWithoutChangingTheOther(phase: PomodoroModel.Phase, isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
@@ -183,9 +193,9 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.focusDuration == 1_440)
     }
 
-    @Test(arguments: [false, true])
-    func scrollEditsRunningAndPausedAllocationsWithoutRefillingExpiredPhases(paused: Bool) throws {
-        let session = Session()
+    @Test(arguments: [false, true], [false, true])
+    func scrollEditsRunningAndPausedAllocationsWithoutRefillingExpiredPhases(paused: Bool, isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
@@ -284,22 +294,27 @@ struct ScrollTimeAdjusterTests {
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
         let window: NSWindow
+        let isCompact: Bool
         lazy var timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
-        lazy var adapter = ScrollTimeAdjuster(timer: timer, window: window)
+        lazy var adapter = ScrollTimeAdjuster(timer: timer, window: window, isCompact: { [unowned self] in isCompact })
 
-        init() {
+        init(isCompact: Bool = false) {
+            self.isCompact = isCompact
             _ = NSApplication.shared
-            window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 188, height: 188), styleMask: .borderless, backing: .buffered, defer: false)
+            let side = isCompact ? 32 : 188
+            window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: side, height: side), styleMask: .borderless, backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
         }
 
-        func scroll(angle: Double, radius: Double = 66, delta: Int32, option: Bool = false) throws {
+        func scroll(angle: Double, radius: Double? = nil, delta: Int32, option: Bool = false) throws {
             let radians = angle * .pi / 180
-            let point = NSPoint(x: 94 + radius * sin(radians), y: 94 + radius * cos(radians))
+            let radius = radius ?? (isCompact ? 14 : 66)
+            let center = isCompact ? 16.0 : 94
+            let point = NSPoint(x: center + radius * sin(radians), y: center + radius * cos(radians))
             adapter.handle(try scrollEvent(in: window, at: point, delta: delta, option: option))
         }
 

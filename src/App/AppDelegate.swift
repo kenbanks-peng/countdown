@@ -50,7 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         timerModeCancellable = timer.$mode.dropFirst().sink { [weak self] _ in
             self?.returnToCompactTask?.cancel()
         }
-        scrollTimeAdjuster = ScrollTimeAdjuster(timer: timer, window: panel)
+        scrollTimeAdjuster = ScrollTimeAdjuster(timer: timer, window: panel, isCompact: { [weak self] in
+            self?.panelMode == .compact
+        })
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -100,14 +102,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func normalContentView(for timer: TimerController) -> NSView {
         NSHostingView(rootView: TimerView(
             timer: timer,
-            compact: { [weak self] in self?.enterCompactMode() }
+            changePresentation: { [weak self] in self?.enterCompactMode() }
         ))
     }
 
     private func compactContentView(for timer: TimerController) -> NSView {
-        NSHostingView(rootView: CompactCountdownView(model: timer.countdown, expand: { [weak self] in
-            self?.exitCompactMode()
-        }))
+        NSHostingView(rootView: TimerView(
+            timer: timer,
+            isCompact: true,
+            changePresentation: { [weak self] in self?.exitCompactMode() }
+        ))
     }
 
     private func restoreOrPosition(_ panel: NSPanel, for mode: PanelMode, size: NSSize) {
@@ -151,8 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func enterCompactMode() {
-        guard timer?.mode == .countdown,
-              panelMode == .normal,
+        guard panelMode == .normal,
               !isModeTransitionInProgress,
               let panel,
               let timer else { return }

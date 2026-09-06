@@ -10,15 +10,17 @@ final class ScrollTimeAdjuster {
 
     private weak var timer: TimerController?
     private weak var window: NSWindow?
+    private let isCompact: () -> Bool
     private var previousTarget: Target?
     private var monitor: Any?
     private var modeCancellable: AnyCancellable?
     private var optionScrollDelta: CGFloat = 0
     private let preciseScrollThreshold: CGFloat = 12
 
-    init(timer: TimerController, window: NSWindow? = nil) {
+    init(timer: TimerController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false }) {
         self.timer = timer
         self.window = window
+        self.isCompact = isCompact
         modeCancellable = timer.$mode.sink { [weak self] _ in
             self?.optionScrollDelta = 0
             self?.previousTarget = nil
@@ -79,7 +81,8 @@ final class ScrollTimeAdjuster {
         let point = content.convert(windowPoint, from: nil)
         let x = point.x - content.bounds.midX
         let y = (content.isFlipped ? -1.0 : 1.0) * (point.y - content.bounds.midY)
-        let radius = min(content.bounds.width, content.bounds.height) / 2 - PomodoroView.circleInset
+        let inset = isCompact() ? 0 : PomodoroView.circleInset
+        let radius = min(content.bounds.width, content.bounds.height) / 2 - inset
         let distance = hypot(x, y)
         // Coordinate conversion can put a perimeter point a few ULPs outside.
         guard radius > 0, distance > 0, distance <= radius + 1e-9 else { return nil }

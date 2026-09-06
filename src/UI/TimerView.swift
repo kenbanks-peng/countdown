@@ -1,25 +1,30 @@
 import AppKit
 import SwiftUI
 
-/// Normal presentation. Compact Pomodoro is supplied by its own feature slice.
+/// Both presentations use the same timer; changing size is not a timer-mode change.
 struct TimerView: View {
     @ObservedObject var timer: TimerController
-    let compact: () -> Void
+    var isCompact = false
+    let changePresentation: () -> Void
 
     var body: some View {
         Group {
             switch timer.mode {
             case .countdown:
-                CountdownView(model: timer.countdown, compact: compact)
+                if isCompact {
+                    CompactCountdownView(model: timer.countdown, expand: changePresentation)
+                } else {
+                    CountdownView(model: timer.countdown, compact: changePresentation)
+                }
             case .pomodoro:
                 Button(action: timer.togglePomodoroRunning) {
-                    PomodoroView(model: timer.pomodoro)
+                    PomodoroView(model: timer.pomodoro, isCompact: isCompact)
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(timer.pomodoro.accessibilityDescription)
-                .accessibilityHint("Click to \(timer.pomodoro.controlLabel.lowercased()). Use the context menu to reset the pair.")
-                .help("Click to \(timer.pomodoro.controlLabel.lowercased()). Scroll blue to adjust break; scroll green to adjust focus. Option-scroll is slower. Each phase is at least 1 minute; the pair is at most 60 minutes.")
+                .accessibilityHint("Click to \(timer.pomodoro.controlLabel.lowercased()). Use the context menu to reset the pair or change presentation.")
+                .help("Click to \(timer.pomodoro.controlLabel.lowercased()). Scroll blue to adjust break; scroll green to adjust focus. Option-scroll is slower. Each phase is at least 1 minute; the pair is at most 60 minutes. Use the context menu to change presentation.")
                 .task {
                     while !Task.isCancelled {
                         timer.update()
@@ -41,6 +46,8 @@ struct TimerView: View {
             } else {
                 Button(timer.pomodoro.controlLabel, action: timer.togglePomodoroRunning)
                 Button("Reset", action: timer.resetPomodoro)
+                Divider()
+                Button(isCompact ? "Normal" : "Compact", action: changePresentation)
             }
             Divider()
             Button("Quit Countdown") {

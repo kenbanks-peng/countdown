@@ -16,7 +16,7 @@ struct TimerViewTests {
             playSound: { _ in }
         )
         timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: TimerView(timer: timer, compact: {}))
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, changePresentation: {}))
         let bitmap = try render(hosting)
 
         // Literal samples on each side of the specified 0°, 30°, and 180° boundaries.
@@ -71,7 +71,7 @@ struct TimerViewTests {
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: TimerView(timer: timer, compact: { expansions += 1 }))
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, changePresentation: { expansions += 1 }))
         _ = try render(hosting)
         let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
         let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
@@ -153,7 +153,7 @@ struct TimerViewTests {
             playSound: { _ in }, now: { now }
         )
         timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: TimerView(timer: timer, compact: { expansions += 1 }))
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, changePresentation: { expansions += 1 }))
         _ = try render(hosting)
         let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
         let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
@@ -198,7 +198,7 @@ struct TimerViewTests {
         )
         timer.adjustCountdownDuration(by: 1_200)
         timer.toggleCountdownRunning()
-        let hosting = NSHostingView(rootView: TimerView(timer: timer, compact: {}))
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, changePresentation: {}))
         let before = try render(hosting)
         timer.selectMode(.pomodoro)
         let adapter = ScrollTimeAdjuster(timer: timer)
@@ -234,7 +234,7 @@ struct TimerViewTests {
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: TimerView(timer: timer, compact: {}))
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, changePresentation: {}))
         _ = try render(hosting)
         let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
         let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
@@ -294,10 +294,248 @@ struct TimerViewTests {
         #expect(timer.countdown.status == .empty)
     }
 
-    private func render<V: View>(_ hosting: NSHostingView<V>) throws -> NSBitmapImageRep {
+    @Test(arguments: [32.0, 71, 123, 188], [false, true])
+    func pomodoroStaysCircularAtBothPresentationsAndSquareTransitionSizes(side: Double, isCompact: Bool) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let timer = TimerController(
+            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }
+        )
+        timer.selectMode(.pomodoro)
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, isCompact: isCompact, changePresentation: {}))
+        let bitmap = try render(hosting, side: side)
+        let radius = (side / 2 - (isCompact ? 0 : 6) - 4) / side
+        #expect(try sample(bitmap, angle: 15, radius: radius).blueComponent > 0.8)
+        #expect(try sample(bitmap, angle: 90, radius: radius).greenComponent > 0.6)
+        #expect(try sample(bitmap, angle: 270, radius: radius).greenComponent < 0.2)
+        if isCompact { #expect(try recognizedText(bitmap).isEmpty) }
+        if isCompact && side == 188 {
+            #expect(try sample(bitmap, angle: 27).blueComponent > 0.8)
+            #expect(try sample(bitmap, angle: 33).greenComponent > 0.6)
+            #expect(try sample(bitmap, angle: 177).greenComponent > 0.6)
+            #expect(try sample(bitmap, angle: 183).greenComponent < 0.2)
+        }
+        #expect(try sample(bitmap, angle: 90, radius: 0.12).greenComponent > 0.6)
+        let maxX = bitmap.pixelsWide - 1
+        let maxY = bitmap.pixelsHigh - 1
+        for (x, y) in [(1, 1), (maxX - 1, 1), (1, maxY - 1), (maxX - 1, maxY - 1)] {
+            #expect(try #require(bitmap.colorAt(x: x, y: y)).alphaComponent < 0.05)
+        }
+        for angle in [0.0, 90, 180, 270] {
+            #expect(try sample(bitmap, angle: angle, radius: radius).alphaComponent > 0.95)
+        }
+        let scale = Double(bitmap.pixelsWide) / side
+        let outerRadius = (side / 2 - (isCompact ? 0 : 6) + 1) * scale
+        var outsideAlpha: CGFloat = 0
+        for y in 0..<bitmap.pixelsHigh {
+            for x in 0..<bitmap.pixelsWide {
+                if hypot(Double(x) + 0.5 - Double(bitmap.pixelsWide) / 2,
+                         Double(y) + 0.5 - Double(bitmap.pixelsHigh) / 2) > outerRadius {
+                    outsideAlpha = max(outsideAlpha, bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 1)
+                }
+            }
+        }
+        #expect(outsideAlpha < 0.05)
+    }
+
+    @Test(arguments: [false, true])
+    func sectorScrollUsesTheRenderedCircleInBothPresentations(isCompact: Bool) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let timer = TimerController(
+            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in },
+            now: { Date(timeIntervalSince1970: 1_700_000_000) }
+        )
+        timer.selectMode(.pomodoro)
+        let side = isCompact ? 32.0 : 188
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, isCompact: isCompact, changePresentation: {}))
+        _ = try render(hosting, side: side)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        defer { window.close() }
+        let adapter = ScrollTimeAdjuster(timer: timer, window: window, isCompact: { isCompact })
+        let radius = isCompact ? 14.0 : 80
+        let blue = NSPoint(x: side / 2 + radius * sin(.pi / 12), y: side / 2 + radius * cos(.pi / 12))
+        let green = NSPoint(x: side / 2 + radius, y: side / 2)
+        adapter.handle(try scrollEvent(in: window, at: blue, delta: 30))
+        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.focusDuration == 1_500)
+        adapter.handle(try scrollEvent(in: window, at: green, delta: 7, option: true))
+        #expect(timer.pomodoro.focusDuration == 1_500)
+        adapter.handle(try scrollEvent(in: window, at: green, delta: 5, option: true))
+        #expect(timer.pomodoro.focusDuration == 1_560)
+        let edited = try render(hosting, side: side)
+        #expect(try sample(edited, angle: 24).blueComponent > 0.8)
+        #expect(try sample(edited, angle: 48).greenComponent > 0.6)
+        #expect(try sample(edited, angle: 180).greenComponent > 0.6)
+        #expect(try sample(edited, angle: 210).greenComponent < 0.2)
+        #expect(try recognizedText(edited) == (isCompact ? [] : ["Focus"]))
+        #expect(timer.countdown.status == .empty)
+    }
+
+    @Test
+    func presentationReplacementKeepsEditedReadyRunningAndPausedPair() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var sounds = 0
+        var presentationRequests = 0
+        let timer = TimerController(
+            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, autosetEnabled: true, wakeupEnabled: true),
+            playSound: { _ in sounds += 1 }, now: { now }
+        )
+        timer.selectMode(.pomodoro)
+        let normal = NSHostingView(rootView: TimerView(timer: timer, changePresentation: { presentationRequests += 1 }))
+        let compact = NSHostingView(rootView: TimerView(timer: timer, isCompact: true, changePresentation: { presentationRequests += 1 }))
+        _ = try render(normal)
+        _ = try render(compact, side: 32)
+        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
+        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
+        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
+        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
+        let window = NSWindow(contentRect: normal.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = normal
+        defer { window.close() }
+        var isCompact = false
+        let adapter = ScrollTimeAdjuster(timer: timer, window: window, isCompact: { isCompact })
+        adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 110, y: 158), delta: 60, option: true))
+        adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 160, y: 94), delta: -60, option: true))
+        #expect(timer.pomodoro.focusDuration == 1_200)
+        #expect(timer.pomodoro.breakDuration == 600)
+
+        func showCompact() throws {
+            isCompact = true
+            window.contentView = compact
+            window.setContentSize(NSSize(width: 32, height: 32))
+            let bitmap = try render(compact, side: 32)
+            #expect(try recognizedText(bitmap).isEmpty)
+            #expect(timer.mode == .pomodoro)
+            #expect(timer.pomodoro.focusDuration == 1_200)
+            #expect(timer.pomodoro.breakDuration == 600)
+        }
+        func showNormal() throws {
+            isCompact = false
+            window.contentView = normal
+            window.setContentSize(NSSize(width: 188, height: 188))
+            _ = try render(normal)
+            #expect(timer.mode == .pomodoro)
+            #expect(timer.pomodoro.focusDuration == 1_200)
+            #expect(timer.pomodoro.breakDuration == 600)
+        }
+
+        try showCompact()
+        #expect(timer.pomodoro.status == .ready)
+        #expect(accessibilityLabels(compact).contains("Pomodoro ready. Focus: 20 minutes allocated. Break: 10 minutes allocated."))
+        let ready = try render(compact, side: 32)
+        #expect(try sample(ready, angle: 30).blueComponent > 0.8)
+        #expect(try sample(ready, angle: 90).greenComponent > 0.6)
+        #expect(try sample(ready, angle: 210).greenComponent < 0.2)
+        try showNormal()
+        #expect(timer.pomodoro.status == .ready)
+        #expect(pressPomodoro(normal))
+        now += 600
+        timer.update()
+        try showCompact()
+        #expect(timer.pomodoro.status == .running)
+        #expect(timer.pomodoro.focusRemaining == 600)
+        #expect(timer.pomodoro.breakRemaining == 600)
+        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 10 minutes remaining. Break: 10 minutes remaining."))
+        let focus = try render(compact, side: 32)
+        #expect(try sample(focus, angle: 30).blueComponent > 0.8)
+        #expect(try sample(focus, angle: 90).greenComponent > 0.6)
+        #expect(try sample(focus, angle: 150).greenComponent < 0.2)
+
+        // Both hosts can exist during the app's cross-fade. Repeated updates at
+        // one command time must not consume elapsed time twice or repeat a pair.
+        now += 600
+        timer.update()
+        try showNormal()
+        timer.update()
+        #expect(timer.pomodoro.status == .running)
+        #expect(timer.pomodoro.focusRemaining == 0)
+        #expect(timer.pomodoro.breakRemaining == 600)
+        #expect(try recognizedText(render(normal)) == ["Break"])
+        now += 120
+        #expect(pressPomodoro(normal))
+        try showCompact()
+        now += 1_200
+        timer.update()
+        #expect(timer.pomodoro.status == .paused)
+        #expect(timer.pomodoro.breakRemaining == 480)
+        #expect(accessibilityLabels(compact).contains("Pomodoro paused. Break: 8 minutes remaining. Focus complete."))
+        let paused = try render(compact, side: 32)
+        #expect(try sample(paused, angle: 30).blueComponent > 0.8)
+        #expect(try sample(paused, angle: 90).greenComponent < 0.2)
+        try showNormal()
+        #expect(timer.pomodoro.status == .paused)
+        #expect(timer.pomodoro.breakRemaining == 480)
+        try showCompact()
+        #expect(pressPomodoro(compact))
+        now += 420
+        timer.update()
+        _ = try render(compact, side: 32)
+        #expect(timer.pomodoro.status == .running)
+        #expect(timer.pomodoro.breakRemaining == 60)
+        #expect(presentationRequests == 0)
+        now += 60
+        timer.update()
+        timer.update()
+        let completed = try render(compact, side: 32)
+        #expect(timer.pomodoro.status == .completed)
+        #expect(timer.pomodoro.focusRemaining == 0)
+        #expect(timer.pomodoro.breakRemaining == 0)
+        #expect(try sample(completed, angle: 30).blueComponent < 0.2)
+        #expect(try sample(completed, angle: 90).greenComponent < 0.2)
+        #expect(accessibilityLabels(compact).contains("Pomodoro complete. Focus: 0 minutes remaining. Break: 0 minutes remaining."))
+        try showNormal()
+        #expect(timer.pomodoro.status == .completed)
+        #expect(presentationRequests == 0)
+        #expect(sounds == 0)
+        #expect(timer.countdown.isPaused)
+        #expect(timer.countdown.wakeupIntervalCount == 0)
+    }
+
+    @Test
+    func modeAwareCompactKeepsCountdownRenderingAndPausedReturn() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let timer = TimerController(
+            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in },
+            now: { Date(timeIntervalSince1970: 1_700_000_000) }
+        )
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, isCompact: true, changePresentation: {}))
+        let original = NSHostingView(rootView: CompactCountdownView(model: timer.countdown, expand: {}))
+        func expectUnchangedBitmap() throws {
+            let actual = try render(hosting, side: 32)
+            let expected = try render(original, side: 32)
+            #expect(actual.representation(using: .png, properties: [:]) == expected.representation(using: .png, properties: [:]))
+        }
+        try expectUnchangedBitmap() // Empty Countdown.
+        timer.adjustCountdownDuration(by: 1_200)
+        try expectUnchangedBitmap() // Active Countdown.
+        timer.toggleCountdownRunning()
+        try expectUnchangedBitmap() // Paused Countdown.
+        timer.selectMode(.pomodoro)
+        let pomodoro = try render(hosting, side: 32)
+        #expect(try sample(pomodoro, angle: 15).blueComponent > 0.8)
+        #expect(try recognizedText(pomodoro).isEmpty)
+        timer.selectMode(.countdown)
+        #expect(timer.countdown.isPaused)
+        #expect(timer.countdown.remaining == 1_200)
+        try expectUnchangedBitmap()
+    }
+
+    private func render<V: View>(_ hosting: NSHostingView<V>, side: Double = 188) throws -> NSBitmapImageRep {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = NSColor.clear.cgColor
-        hosting.frame = NSRect(x: 0, y: 0, width: 188, height: 188)
+        hosting.frame = NSRect(x: 0, y: 0, width: side, height: side)
         hosting.layoutSubtreeIfNeeded()
         let bitmap = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
         bitmap.bitmapData?.initialize(repeating: 0, count: bitmap.bytesPerRow * bitmap.pixelsHigh)

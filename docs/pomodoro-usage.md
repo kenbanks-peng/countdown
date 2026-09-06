@@ -1,10 +1,10 @@
-# Pomodoro in the normal window
+# Pomodoro
 
-1. If Countdown is Compact, click it to open the normal window.
-2. Right-click the normal circle. Under **Timer Mode**, select **Pomodoro**.
+1. Right-click the circle in either presentation.
+2. Under **Timer Mode**, select **Pomodoro**.
 3. The ready circle shows 5 minutes of break in blue, then 25 minutes of focus in green. Each minute is 6 degrees. The unused half keeps the Countdown background color.
-4. Click the circle, or select **Start** in the context menu, to start focus. Green decreases while blue stays full. The small **Focus** label identifies the phase; no numeric countdown is shown.
-5. Break starts automatically when focus ends. The label changes to **Break**, and blue decreases. Expired areas show background. Phase placement does not shift as time passes.
+4. Click the circle, or select **Start** in the context menu, to start focus. Green decreases while blue stays full. In normal presentation, the small **Focus** label identifies the phase. Neither size shows a numeric countdown.
+5. Break starts automatically when focus ends. The normal label changes to **Break**, and blue decreases. Expired areas show background. Phase placement does not shift as time passes.
 6. Click to pause or resume. The context menu also shows **Pause** or **Resume**. The accessible description gives the state, phase, and remaining time without use of color.
 7. After break, both sectors are empty and the pair stops. Click or select **Start** to start a new full pair. There are no long breaks or Pomodoro sounds.
 8. Select **Reset** in the context menu to stop and return to the full ready pair.
@@ -23,6 +23,14 @@ Allocated areas remain scroll targets after their color disappears. Unallocated 
 
 In ready state, edits change the full pair. During running or paused activity, an active-phase edit keeps elapsed time and changes the remaining time. An edit that removes all remaining focus time moves to the full break, still paused if focus was paused. Removing all remaining break time stops the pair. A future-phase edit changes its full allocation; a completed-phase edit changes only the next pair. Start after completion and Reset use the edited durations.
 
-Compact Pomodoro and saved mode/durations are separate feature slices. Duration edits in this version apply to the normal Pomodoro window and are not saved across app restarts.
+## Compact presentation
+
+In Pomodoro, right-click and select **Compact** to use the small circle. Right-click it and select **Normal** to return. The same pair stays ready, running, paused, or complete; a presentation change does not pause or restart it.
+
+Both sizes show blue break and green focus on the same 60-minute scale. Compact has no visible phase label or number. Its accessible description still gives the phase and remaining time. Click still starts, pauses, or resumes the pair. Reset is available in both context menus.
+
+Scroll over each allocated sector in either size, including its depleted area. The same 1-minute steps, Option sensitivity, minimum, and combined limit apply. Compact does not use whole-circle adjustment. Pomodoro does not expand automatically, even in the final minute or at completion.
+
+Saved mode and durations are a separate feature slice. Duration edits in this version are not saved across app restarts.
 
 For build and automated checks, see [testing.md](testing.md).
