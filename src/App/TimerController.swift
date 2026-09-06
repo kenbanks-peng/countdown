@@ -53,6 +53,11 @@ final class TimerController: ObservableObject {
         countdown.setDurationToNextHour()
     }
 
+    func adjustPomodoroDuration(_ phase: PomodoroModel.Phase, by amount: TimeInterval) {
+        guard mode == .pomodoro else { return }
+        pomodoro.adjustDuration(phase, by: amount, at: now())
+    }
+
     func togglePomodoroRunning() {
         guard mode == .pomodoro else { return }
         pomodoro.toggleRunning(at: now())

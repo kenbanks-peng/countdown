@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PomodoroView: View {
+    static let circleInset: CGFloat = 6
     let model: PomodoroModel
 
     var body: some View {
@@ -21,6 +22,6 @@ struct PomodoroView: View {
                 .foregroundStyle(.white)
                 .offset(y: 32)
         }
-        .padding(6)
+        .padding(Self.circleInset)
     }
 }

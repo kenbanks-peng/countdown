@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         timerModeCancellable = timer.$mode.dropFirst().sink { [weak self] _ in
             self?.returnToCompactTask?.cancel()
         }
-        scrollTimeAdjuster = ScrollTimeAdjuster(timer: timer)
+        scrollTimeAdjuster = ScrollTimeAdjuster(timer: timer, window: panel)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

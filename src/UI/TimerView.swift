@@ -19,7 +19,7 @@ struct TimerView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(timer.pomodoro.accessibilityDescription)
                 .accessibilityHint("Click to \(timer.pomodoro.controlLabel.lowercased()). Use the context menu to reset the pair.")
-                .help("Click to \(timer.pomodoro.controlLabel.lowercased()). Focus changes to break automatically. The pair stops after break.")
+                .help("Click to \(timer.pomodoro.controlLabel.lowercased()). Scroll blue to adjust break; scroll green to adjust focus. Option-scroll is slower. Each phase is at least 1 minute; the pair is at most 60 minutes.")
                 .task {
                     while !Task.isCancelled {
                         timer.update()

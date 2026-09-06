@@ -222,6 +222,78 @@ struct TimerViewTests {
         #expect(request.results?.contains { $0.topCandidates(1).first?.string == "20" } == true)
     }
 
+    @Test
+    func sectorScrollUpdatesHostedGeometryPhaseTextAndAccessibility() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var sounds = 0
+        let timer = TimerController(
+            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            playSound: { _ in sounds += 1 }, now: { now }
+        )
+        timer.selectMode(.pomodoro)
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, compact: {}))
+        _ = try render(hosting)
+        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
+        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
+        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
+        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
+        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        defer { window.close() }
+        let adapter = ScrollTimeAdjuster(timer: timer, window: window)
+        let blue = NSPoint(x: 110, y: 158)
+        let green = NSPoint(x: 160, y: 94)
+        adapter.handle(try scrollEvent(in: window, at: blue, delta: 1))
+        let largerBreak = try render(hosting)
+        #expect(try sample(largerBreak, angle: 33).blueComponent > 0.8)
+        #expect(try sample(largerBreak, angle: 39).greenComponent > 0.6)
+        #expect(try sample(largerBreak, angle: 183).greenComponent > 0.6)
+        #expect(try sample(largerBreak, angle: 189).greenComponent < 0.2)
+        #expect(accessibilityLabels(hosting).contains("Pomodoro ready. Focus: 25 minutes allocated. Break: 6 minutes allocated."))
+        adapter.handle(try scrollEvent(in: window, at: green, delta: 1))
+        let largerFocus = try render(hosting)
+        #expect(try sample(largerFocus, angle: 33).blueComponent > 0.8)
+        #expect(try sample(largerFocus, angle: 189).greenComponent > 0.6)
+        #expect(try sample(largerFocus, angle: 195).greenComponent < 0.2)
+        adapter.handle(try scrollEvent(in: window, at: blue, delta: -1))
+        let smallerBreak = try render(hosting)
+        #expect(try sample(smallerBreak, angle: 27).blueComponent > 0.8)
+        #expect(try sample(smallerBreak, angle: 33).greenComponent > 0.6)
+        #expect(try sample(smallerBreak, angle: 183).greenComponent > 0.6)
+        #expect(try sample(smallerBreak, angle: 189).greenComponent < 0.2)
+
+        timer.togglePomodoroRunning()
+        now += 600
+        adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 127, y: 36), delta: -1))
+        let running = try render(hosting)
+        #expect(try sample(running, angle: 27).blueComponent > 0.8)
+        #expect(try sample(running, angle: 117).greenComponent > 0.6)
+        #expect(try sample(running, angle: 123).greenComponent < 0.2)
+        #expect(try recognizedText(running) == ["Focus"])
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 15 minutes remaining. Break: 5 minutes remaining."))
+        timer.togglePomodoroRunning()
+        now += 1_200
+        adapter.handle(try scrollEvent(in: window, at: blue, delta: 1))
+        let paused = try render(hosting)
+        #expect(try sample(paused, angle: 33).blueComponent > 0.8)
+        #expect(try sample(paused, angle: 39).greenComponent > 0.6)
+        #expect(try sample(paused, angle: 123).greenComponent > 0.6)
+        #expect(try sample(paused, angle: 129).greenComponent < 0.2)
+        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Focus: 15 minutes remaining. Break: 6 minutes remaining."))
+        adapter.handle(try scrollEvent(in: window, at: green, delta: -180, option: true))
+        let shortBreak = try render(hosting)
+        #expect(try sample(shortBreak, angle: 33).blueComponent > 0.8)
+        #expect(try sample(shortBreak, angle: 39).greenComponent < 0.2)
+        #expect(try recognizedText(shortBreak) == ["Break"])
+        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Break: 6 minutes remaining. Focus complete."))
+        #expect(sounds == 0)
+        #expect(timer.countdown.status == .empty)
+    }
+
     private func render<V: View>(_ hosting: NSHostingView<V>) throws -> NSBitmapImageRep {
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = NSColor.clear.cgColor
