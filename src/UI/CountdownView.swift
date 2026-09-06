@@ -35,7 +35,6 @@ struct CountdownView: View {
 
             countdownLabel
         }
-        .frame(width: 176, height: 176)
         .contentShape(Circle())
         .onHover { isHovering = $0 }
         .onTapGesture {
@@ -49,7 +48,6 @@ struct CountdownView: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint("Click the circle to use Compact mode. Option-click the circle to set the timeout to the next hour. Scroll to adjust by one minute. Hold Option while you scroll for slower, precise one-minute adjustment.")
         .padding(6)
-        .frame(width: 188, height: 188)
         .contextMenu { CountdownContextMenu(model: model) }
         .task { await updateClock() }
     }
