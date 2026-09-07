@@ -552,7 +552,7 @@ struct CountdownViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in },
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false), playSound: { _ in },
             now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: true, changePresentation: {}))
@@ -575,6 +575,34 @@ struct CountdownViewTests {
         #expect(timer.timer.isPaused)
         #expect(timer.timer.remaining == 1_200)
         try expectUnchangedBitmap()
+    }
+
+    @Test(arguments: CountdownMode.allCases)
+    func compactDirectionFollowsClockFaceSetting(mode: CountdownMode) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
+        let timer = CountdownController(
+            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: true, clockHandsEnabled: false, wakeupEnabled: false),
+            playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
+        )
+        timer.adjustTimerDuration(by: 1_800)
+        timer.selectMode(mode)
+        let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: true, changePresentation: {}))
+        let clock = try render(hosting, side: 32)
+        #expect(try sample(clock, angle: 240).greenComponent > 0.6)
+        #expect(try sample(clock, angle: 15).greenComponent < 0.2)
+        #expect(try sample(clock, angle: 15).blueComponent < 0.2)
+        if mode == .pomodoro { #expect(try sample(clock, angle: 282).blueComponent > 0.8) }
+        timer.features.setClockFaceEnabled(false)
+        let duration = try render(hosting, side: 32)
+        #expect(try sample(duration, angle: 240).greenComponent < 0.2)
+        #expect(try sample(duration, angle: 90).greenComponent > 0.6)
+        timer.features.setClockHandsEnabled(true)
+        #expect(try render(hosting, side: 32).representation(using: .png, properties: [:]) == duration.representation(using: .png, properties: [:]))
+        timer.features.setClockFaceEnabled(true)
+        #expect(try render(hosting, side: 32).representation(using: .png, properties: [:]) == clock.representation(using: .png, properties: [:]))
     }
 
     @Test(arguments: CountdownMode.allCases)

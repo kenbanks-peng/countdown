@@ -12,6 +12,8 @@ final class CountdownController: ObservableObject {
     private let settingsStore: CountdownSettingsStore
     private let timeoutPolicy: TimeoutPolicy
     private var countdownChanges: AnyCancellable?
+    private let now: () -> Date
+    var currentTime: Date { now() }
 
     private final class TimeoutPolicy {
         var mode: CountdownMode
@@ -25,6 +27,7 @@ final class CountdownController: ObservableObject {
         now: @escaping () -> Date = Date.init,
         saveEnablement: @escaping (String, Bool) -> Void = { CountdownConfiguration.saveEnablement($0, enabled: $1) }
     ) {
+        self.now = now
         settingsStore = CountdownSettingsStore(
             fileManager: stateStore.fileManager, stateDirectory: stateStore.stateDirectory
         )

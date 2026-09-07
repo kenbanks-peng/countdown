@@ -14,6 +14,7 @@ struct CountdownView: View {
         self.isCompact = isCompact
         self.changePresentation = changePresentation
         self.features = countdown.features
+        self._currentTime = State(initialValue: countdown.currentTime)
     }
 
     var body: some View {
@@ -57,7 +58,7 @@ struct CountdownView: View {
         .task {
             while !Task.isCancelled {
                 countdown.update()
-                currentTime = .now
+                currentTime = countdown.currentTime
                 expandAtOneMinuteRemaining()
                 try? await Task.sleep(for: .milliseconds(100))
             }
@@ -69,7 +70,7 @@ struct CountdownView: View {
         switch countdown.mode {
         case .timer:
             if isCompact {
-                CompactTimerView(model: countdown.timer)
+                CompactTimerView(model: countdown.timer, clockDate: clockDate)
             } else {
                 TimerView(model: countdown.timer, clockDate: clockDate)
             }
@@ -79,7 +80,7 @@ struct CountdownView: View {
     }
 
     private var clockDate: Date? {
-        !isCompact && features.isClockFaceEnabled ? currentTime : nil
+        features.isClockFaceEnabled ? currentTime : nil
     }
 
     private var accessibilityLabel: String {

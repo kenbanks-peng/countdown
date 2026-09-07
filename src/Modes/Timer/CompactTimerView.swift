@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CompactTimerView: View {
     @ObservedObject var model: TimerModel
+    var clockDate: Date? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -12,7 +13,7 @@ struct CompactTimerView: View {
                 .fill(model.status == .empty ? indicatorColor : Color.countdownSurface)
 
             if model.status != .empty {
-                RadialSector(proportion: model.hourProportion)
+                RadialSector(proportion: arc.proportion, startProportion: arc.startProportion)
                     .fill(indicatorColor)
                     .animation(arcAnimation, value: model.hourProportion)
             }
@@ -31,6 +32,10 @@ struct CompactTimerView: View {
         .contentShape(Circle())
         .onHover { isHovering = $0 }
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var arc: CountdownArcLayout {
+        CountdownArcLayout.timer(remaining: model.remaining, at: clockDate)
     }
 
     private var arcAnimation: Animation? {

@@ -12,6 +12,7 @@ final class CountdownFeatures: ObservableObject {
     private let configuration: CountdownConfiguration
     private let playSound: @MainActor (URL?) -> Void
     private let saveEnablement: (String, Bool) -> Void
+    private var elapsedSinceWakeup: TimeInterval = 0
 
     init(
         configuration: CountdownConfiguration,
@@ -37,17 +38,26 @@ final class CountdownFeatures: ObservableObject {
     }
 
     func setWakeupEnabled(_ enabled: Bool) {
+        if enabled != isWakeupEnabled { elapsedSinceWakeup = 0 }
         isWakeupEnabled = enabled
         saveEnablement("wakeup_enabled", enabled)
     }
 
     /// Report only elapsed time, not duration edits or mode changes.
     func reportElapsed(previousRemaining: TimeInterval, remaining: TimeInterval) {
+        guard isWakeupEnabled else { return }
+        guard remaining > 0 else {
+            elapsedSinceWakeup = 0
+            return
+        }
+        guard previousRemaining > remaining else { return }
+        elapsedSinceWakeup += previousRemaining - remaining
         let interval = TimeInterval(max(1, configuration.wakeupTime)) * 60
-        guard isWakeupEnabled, remaining > 0, previousRemaining > remaining,
-              ceil(previousRemaining / interval) > ceil(remaining / interval)
-        else { return }
+        guard elapsedSinceWakeup >= interval else { return }
 
+        // One shared interval follows visible elapsed time, not remaining-time boundaries.
+        // A late update emits once and starts a new interval, without catch-up sounds.
+        elapsedSinceWakeup = 0
         wakeupIntervalCount += 1
         let sound: URL?
         switch remaining {

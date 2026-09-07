@@ -38,11 +38,20 @@ src/
 - The selected UI mode controls timeout actions through `CountdownController`.
   Timer mode enables its alarm and Autoset actions. Hidden Timer timeouts are
   discarded, not replayed when Timer mode is selected. A Pomodoro pair ends
-  without an alarm. Wakeup uses elapsed time from the selected mode only.
+  without an alarm. Wakeup counts elapsed time from the selected mode toward
+  one shared interval. Duration edits and mode changes do not move its boundary.
+  Hidden records and restored elapsed time do not produce Wakeup events. A late
+  update emits at most one event and starts a new interval.
 - Countdown also owns clock settings, Wakeup notifications, sound playback,
   configuration, and session storage. Modes own presentation, not timing.
 - Shared UI colors are in `Core/UI/CountdownColors.swift`. Each mode owns its
   specific appearance rules.
+- `CountdownArcLayout` supplies sector positions for drawing and scroll selection.
+  The Clock Face setting selects clockwise clock-aligned sectors in both window
+  sizes. Compact view omits the clock face and hands, but keeps the same sectors.
+  With this setting off, sectors stay fixed at 12. In clock-aligned mode, Pomodoro
+  scroll selection follows the remaining colored sectors. In duration-only mode,
+  configured allocations remain scroll targets after their color has depleted.
 
 These folders belong to one SwiftPM executable target. They are source ownership
 boundaries, not separate compiled modules. `tools/check-architecture` checks

@@ -188,7 +188,7 @@ struct PomodoroPersistenceTests {
         case .active:
             #expect(restored.timer.status == .active)
             #expect(restored.timer.remaining == 899)
-            #expect(session.sounds == (selectedMode == "Pomodoro" ? 0 : 1))
+            #expect(session.sounds == 0) // Restored elapsed time must not replay Wakeup.
         case .prepared:
             #expect(restored.timer.isPaused)
             #expect(restored.timer.remaining == 1_200)

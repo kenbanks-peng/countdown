@@ -179,18 +179,18 @@ final class TimerModel: ObservableObject {
         stateStore.remove()
     }
 
-    func update(reportCompletion: Bool = true) {
+    func update(reportEvents: Bool = true) {
         guard status == .active, let endDate else { return }
 
         let previousRemaining = remaining
         remaining = max(0, endDate.timeIntervalSince(now()))
-        reportElapsed(previousRemaining, remaining)
+        if reportEvents { reportElapsed(previousRemaining, remaining) }
 
         if remaining == 0 {
             self.endDate = nil
             status = .empty
             duration = 0
-            if reportCompletion && timeoutActionsEnabled() && !completionWasReported {
+            if reportEvents && timeoutActionsEnabled() && !completionWasReported {
                 completionWasReported = true
                 completionCount += 1
                 if configuration.alarmEnabled {
@@ -239,7 +239,7 @@ final class TimerModel: ObservableObject {
             }
             self.endDate = endDate
             status = .active
-            update(reportCompletion: false)
+            update(reportEvents: false)
         case .prepared:
             status = .prepared
         }

@@ -5,6 +5,19 @@ struct CountdownArcLayout {
     let startProportion: Double
     let proportion: Double
 
+    /// Start-inclusive and end-exclusive, including sectors that cross 12.
+    func contains(_ turn: Double) -> Bool {
+        guard proportion > 0 else { return false }
+        if proportion >= 1 { return true }
+        // Remove coordinate conversion noise at shared boundaries.
+        let scale = 1_000_000_000_000.0
+        var offset = ((turn - startProportion) * scale).rounded() / scale
+        offset = offset.truncatingRemainder(dividingBy: 1)
+        if offset < 0 { offset += 1 }
+        offset = (offset * scale).rounded() / scale
+        return offset < (proportion * scale).rounded() / scale
+    }
+
     static func minuteProportion(at date: Date, calendar: Calendar = .current) -> Double {
         let parts = calendar.dateComponents([.minute, .second, .nanosecond], from: date)
         let seconds = Double(parts.second ?? 0) + Double(parts.nanosecond ?? 0) / 1_000_000_000

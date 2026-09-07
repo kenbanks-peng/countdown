@@ -286,6 +286,93 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.focusDuration == 1_440)
     }
 
+    @Test(arguments: [false, true])
+    func clockFaceScrollTargetsTheVisibleFocusAndBreak(isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
+        defer { session.close() }
+        session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
+        let timer = session.timer
+        timer.features.setClockFaceEnabled(true)
+        timer.selectMode(.pomodoro)
+        try session.scroll(angle: 150, delta: 1) // 25 minutes: green, from 20 to 45.
+        #expect(timer.pomodoro.focusDuration == 1_560)
+        try session.scroll(angle: 282, delta: 1) // 47 minutes: blue, now from 46 to 51.
+        #expect(timer.pomodoro.breakDuration == 360)
+        try session.scroll(angle: 15, delta: 1) // Old blue position is now background.
+        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.focusDuration == 1_560)
+    }
+
+    @Test(arguments: [0.0, 119.999, 120, 149.999, 150, 329.999, 330, 359.999], [false, true])
+    func clockFaceScrollWrapsAtTwelveAndUsesVisibleBoundaries(angle: Double, isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
+        defer { session.close() }
+        session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 55))!
+        let timer = session.timer
+        timer.features.setClockFaceEnabled(true)
+        timer.selectMode(.pomodoro)
+        try session.scroll(angle: angle, delta: 1)
+        let focus = angle < 120 || angle >= 330
+        let shortBreak = angle >= 120 && angle < 150
+        #expect(timer.pomodoro.focusDuration == (focus ? 1_560 : 1_500))
+        #expect(timer.pomodoro.breakDuration == (shortBreak ? 360 : 300))
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func clockFaceTargetsFollowElapsedTimeAndPausedClock(paused: Bool, isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
+        defer { session.close() }
+        session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
+        let timer = session.timer
+        timer.features.setClockFaceEnabled(true)
+        timer.selectMode(.pomodoro)
+        session.now += 600 // 22:30, 15 minutes of focus remain.
+        if paused {
+            timer.toggleRunning()
+            session.now += 600 // 22:40, still 15 minutes of focus.
+        }
+        // No explicit update before the event: hit testing must settle stale progress.
+        try session.scroll(angle: paused ? 342 : 282, delta: 1) // 57 or 47 minutes: blue.
+        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.focusDuration == 1_500)
+        try session.scroll(angle: 150, delta: 1) // Depleted green must not take the event.
+        #expect(timer.pomodoro.focusDuration == 1_500)
+        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.focusRemaining == 900)
+    }
+
+    @Test(arguments: [false, true])
+    func clockFaceBreakPhaseDoesNotTargetCompletedFocus(isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
+        defer { session.close() }
+        session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
+        let timer = session.timer
+        timer.features.setClockFaceEnabled(true)
+        timer.selectMode(.pomodoro)
+        session.now += 1_620 // 22:47, three minutes of blue remain.
+        try session.scroll(angle: 288, delta: 1)
+        #expect(timer.pomodoro.focusRemaining == 0)
+        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.breakRemaining == 240)
+        try session.scroll(angle: 240, delta: 1)
+        #expect(timer.pomodoro.focusDuration == 1_500)
+    }
+
+    @Test
+    func faceSettingChangesClearOptionRemainderEvenWhenTargetStaysFocus() throws {
+        let session = Session()
+        defer { session.close() }
+        session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
+        let timer = session.timer
+        timer.selectMode(.pomodoro)
+        try session.scroll(angle: 150, delta: 7, option: true)
+        timer.features.setClockFaceEnabled(true)
+        try session.scroll(angle: 150, delta: 5, option: true)
+        #expect(timer.pomodoro.focusDuration == 1_500)
+        try session.scroll(angle: 150, delta: 7, option: true)
+        #expect(timer.pomodoro.focusDuration == 1_560)
+    }
+
     @MainActor
     private final class Session {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -295,8 +382,9 @@ struct ScrollTimeAdjusterTests {
         let isCompact: Bool
         lazy var timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
-            playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, wakeupEnabled: false),
+            playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now },
+            saveEnablement: { _, _ in }
         )
         lazy var adapter = ScrollTimeAdjuster(countdown: timer, window: window, isCompact: { [unowned self] in isCompact })
 
