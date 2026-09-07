@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         self.panel = panel
         self.countdown = countdown
-        observeWakeupIntervals(from: countdown.features)
+        observeReminderIntervals(from: countdown.features)
         scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, isCompact: { [weak self] in
             self?.panelMode == .compact
         })
@@ -75,15 +75,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @MainActor
-    private func observeWakeupIntervals(from model: CountdownFeatures) {
-        intervalAlertCancellable = model.$wakeupIntervalCount
+    private func observeReminderIntervals(from model: CountdownFeatures) {
+        intervalAlertCancellable = model.$reminderIntervalCount
             .dropFirst()
             .sink { [weak self] _ in
-                self?.handleWakeupInterval()
+                self?.handleReminderInterval()
             }
     }
 
-    private func handleWakeupInterval() {
+    private func handleReminderInterval() {
         guard panelMode == .compact else { return }
 
         exitCompactMode()

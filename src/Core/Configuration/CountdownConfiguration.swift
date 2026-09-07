@@ -9,8 +9,8 @@ struct CountdownConfiguration {
     let clockHandsEnabled: Bool
     let currentTimeoutEnabled: Bool
     let autosetEnabled: Bool
-    let wakeupEnabled: Bool
-    let wakeupTime: Int
+    let reminderEnabled: Bool
+    let reminderTime: Int
     let alarmEnabled: Bool
 
     init(
@@ -22,8 +22,8 @@ struct CountdownConfiguration {
         clockHandsEnabled: Bool = true,
         currentTimeoutEnabled: Bool = true,
         autosetEnabled: Bool = false,
-        wakeupEnabled: Bool = true,
-        wakeupTime: Int = 5,
+        reminderEnabled: Bool = true,
+        reminderTime: Int = 5,
         alarmEnabled: Bool = true
     ) {
         self.greenNotificationURL = greenNotificationURL
@@ -34,8 +34,8 @@ struct CountdownConfiguration {
         self.clockHandsEnabled = clockHandsEnabled
         self.currentTimeoutEnabled = currentTimeoutEnabled
         self.autosetEnabled = autosetEnabled
-        self.wakeupEnabled = wakeupEnabled
-        self.wakeupTime = wakeupTime
+        self.reminderEnabled = reminderEnabled
+        self.reminderTime = reminderTime > 0 && reminderTime.isMultiple(of: 5) ? reminderTime : 5
         self.alarmEnabled = alarmEnabled
     }
 
@@ -68,8 +68,8 @@ struct CountdownConfiguration {
             clockHandsEnabled: configurationFile.boolValue(for: "clock_hands_enabled", in: contents) ?? true,
             currentTimeoutEnabled: configurationFile.boolValue(for: "current_timeout_enabled", in: contents) ?? true,
             autosetEnabled: configurationFile.boolValue(for: "autoset_enabled", in: contents) ?? false,
-            wakeupEnabled: configurationFile.boolValue(for: "wakeup_enabled", in: contents) ?? true,
-            wakeupTime: max(1, configurationFile.intValue(for: "wakeup_time", in: contents) ?? 5),
+            reminderEnabled: configurationFile.boolValue(for: "reminder_enabled", in: contents) ?? true,
+            reminderTime: configurationFile.intValue(for: "reminder_time", in: contents) ?? 5,
             alarmEnabled: configurationFile.boolValue(for: "alarm_enabled", in: contents) ?? true
         )
     }

@@ -5,15 +5,15 @@ import Testing
 @MainActor
 struct CountdownCoreTests {
     @Test(arguments: CountdownMode.allCases)
-    func sharedControlsAndWakeupFollowTheActiveMode(mode: CountdownMode) {
+    func sharedControlsAndReminderFollowTheActiveMode(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         var settings: [String: Bool] = [:]
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
             playSound: { _ in sounds += 1 }, now: { now },
             saveEnablement: { settings[$0] = $1 }
         )
@@ -22,25 +22,25 @@ struct CountdownCoreTests {
         #expect(timer.controlLabel == "Pause")
         now += 300
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 1)
+        #expect(timer.features.reminderIntervalCount == 1)
         #expect(sounds == 1)
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 1)
+        #expect(timer.features.reminderIntervalCount == 1)
 
         timer.toggleRunning()
         #expect(timer.controlLabel == "Resume")
         now += 900
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 1)
+        #expect(timer.features.reminderIntervalCount == 1)
         timer.toggleRunning()
         now += 300
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 2)
+        #expect(timer.features.reminderIntervalCount == 2)
 
-        timer.features.setWakeupEnabled(false)
+        timer.features.setReminderEnabled(false)
         now += 300
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 2)
+        #expect(timer.features.reminderIntervalCount == 2)
         timer.features.setClockFaceEnabled(false)
         timer.features.setClockHandsEnabled(false)
         let features = timer.features
@@ -48,19 +48,19 @@ struct CountdownCoreTests {
         #expect(timer.features === features)
         #expect(!timer.features.isClockFaceEnabled)
         #expect(!timer.features.isClockHandsEnabled)
-        #expect(!timer.features.isWakeupEnabled)
+        #expect(!timer.features.isReminderEnabled)
         now += 600
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 2)
+        #expect(timer.features.reminderIntervalCount == 2)
         #expect(sounds == 2)
-        #expect(settings == ["clock_face_enabled": false, "clock_hands_enabled": false, "wakeup_enabled": false])
+        #expect(settings == ["clock_face_enabled": false, "clock_hands_enabled": false, "reminder_enabled": false])
     }
 
     @Test
-    func restoringTimerDoesNotReplayWakeupsFromTimeWhileClosed() {
+    func restoringTimerDoesNotReplayRemindersFromTimeWhileClosed() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
         store.save(.init(status: .active, duration: 1_800, remaining: 1_800,
                          endDate: now.addingTimeInterval(1_800), savedAt: now))
@@ -68,25 +68,28 @@ struct CountdownCoreTests {
         var sounds = 0
         let controller = CountdownController(
             stateStore: store,
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         #expect(controller.timer.remaining == 1_440)
         #expect(sounds == 0)
-        now += 300
+        now += 539
+        controller.update()
+        #expect(sounds == 0)
+        now += 1
         controller.update()
         #expect(sounds == 1)
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func durationIncreaseDoesNotRepeatWakeupAfterOnlyOneMinute(mode: CountdownMode) {
+    func durationIncreaseDoesNotRepeatReminderAfterOnlyOneMinute(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)
@@ -105,14 +108,14 @@ struct CountdownCoreTests {
     }
 
     @Test
-    func hiddenModeIsSilentAndSwitchingDoesNotCauseAnEarlyWakeup() {
+    func hiddenModeIsSilentAndSwitchingDoesNotCauseAnEarlyReminder() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.adjustTimerDuration(by: 610)
@@ -131,13 +134,13 @@ struct CountdownCoreTests {
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func durationEditsDoNotCauseWakeupAndCompletionDoesNotRepeatIt(mode: CountdownMode) {
+    func durationEditsDoNotCauseReminderAndCompletionDoesNotRepeatIt(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupTime: 2),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
@@ -147,19 +150,19 @@ struct CountdownCoreTests {
         } else {
             timer.adjustPomodoroDuration(.focus, by: -600)
         }
-        #expect(timer.features.wakeupIntervalCount == 0)
-        now += 119
+        #expect(timer.features.reminderIntervalCount == 0)
+        now += 299
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 0)
+        #expect(timer.features.reminderIntervalCount == 0)
         now += 1
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 1)
-        now += 361 // A delayed update reports one Wakeup, not a burst.
+        #expect(timer.features.reminderIntervalCount == 1)
+        now += 361 // A delayed update reports one Reminder, not a burst.
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 2)
+        #expect(timer.features.reminderIntervalCount == 2)
         now += 10_000
         timer.update()
         timer.update()
-        #expect(timer.features.wakeupIntervalCount == 2)
+        #expect(timer.features.reminderIntervalCount == 2)
     }
 }

@@ -38,11 +38,15 @@ src/
 - The selected UI mode controls timeout actions through `CountdownController`.
   Timer mode enables its alarm and Autoset actions. Hidden Timer timeouts are
   discarded, not replayed when Timer mode is selected. A Pomodoro pair ends
-  without an alarm. Wakeup counts elapsed time from the selected mode toward
-  one shared interval. Duration edits and mode changes do not move its boundary.
-  Hidden records and restored elapsed time do not produce Wakeup events. A late
-  update emits at most one event and starts a new interval.
-- Countdown also owns clock settings, Wakeup notifications, sound playback,
+  without an alarm. Reminder uses one shared clock schedule with an interval
+  that is a positive multiple of five minutes. Invalid intervals use five minutes.
+  The first reminder is the start time plus the interval, rounded up to a
+  five-minute clock boundary. Later reminders retain that schedule, including
+  after a pause. Paused reminders are skipped. Duration edits and mode changes
+  do not move the schedule. Hidden records and restored elapsed time do not
+  produce Reminder events. A late update emits at most one event and advances
+  to the next original clock boundary. Completion clears the schedule.
+- Countdown also owns clock settings, Reminder notifications, sound playback,
   configuration, and session storage. Modes own presentation, not timing.
 - Shared UI colors are in `Core/UI/CountdownColors.swift`. Each mode owns its
   specific appearance rules.

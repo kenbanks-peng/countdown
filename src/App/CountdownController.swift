@@ -35,7 +35,7 @@ final class CountdownController: ObservableObject {
         mode = settings.mode
         let policy = TimeoutPolicy(mode: settings.mode)
         timeoutPolicy = policy
-        let features = CountdownFeatures(configuration: configuration, playSound: playSound, saveEnablement: saveEnablement)
+        let features = CountdownFeatures(configuration: configuration, playSound: playSound, now: now, saveEnablement: saveEnablement)
         self.features = features
         let timer = TimerModel(
             stateStore: stateStore, configuration: configuration, playSound: playSound, now: now,
@@ -61,6 +61,7 @@ final class CountdownController: ObservableObject {
 
     func toggleRunning() {
         update()
+        if countdown.isPaused { features.skipPausedReminders() }
         countdown.toggleRunning()
         saveSettings()
     }
@@ -114,6 +115,8 @@ final class CountdownController: ObservableObject {
         countdown.update()
         if mode == .pomodoro {
             features.reportElapsed(previousRemaining: previous, remaining: pomodoro.focusRemaining + pomodoro.breakRemaining)
+        } else if timer.remaining == 0 {
+            features.reportElapsed(previousRemaining: 0, remaining: 0)
         }
     }
 

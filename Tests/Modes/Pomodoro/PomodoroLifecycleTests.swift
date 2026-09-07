@@ -121,7 +121,7 @@ struct PomodoroLifecycleTests {
         var sounds = 0
         lazy var timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
         func removeState() { try? FileManager.default.removeItem(at: directory) }

@@ -10,7 +10,7 @@ struct SharedCountdownTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
-        let configuration = CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false)
+        let configuration = CountdownConfiguration(alarmNotificationURL: nil, reminderEnabled: false)
         let controller = CountdownController(stateStore: store, configuration: configuration, playSound: { _ in }, now: { now })
         controller.selectMode(mode)
         #expect(controller.canToggleRunning)
@@ -44,7 +44,7 @@ struct SharedCountdownTests {
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.adjustTimerDuration(by: 1_200)

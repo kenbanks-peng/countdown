@@ -5,8 +5,9 @@ current_timeout_enabled = true
 autoset_enabled = false
 
 [notifications]
-wakeup_enabled = true
-wakeup_time = 5
+reminder_enabled = true
+# Positive multiples of 5 minutes; invalid values use 5.
+reminder_time = 5
 alarm_enabled = true
 
 # Paths are relative to this file.

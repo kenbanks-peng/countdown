@@ -23,8 +23,8 @@ clock_hands_enabled = true
 current_timeout_enabled = true
 
 [notifications]
-wakeup_enabled = true
-wakeup_time = 5
+reminder_enabled = true
+reminder_time = 5
 alarm_enabled = true
 
 # Relative paths are relative to config.toml.
@@ -34,7 +34,9 @@ red_notification = "red_notification.mp3"
 alarm_notification = "alarm_notification.mp3"
 ```
 
-`wakeup_time` is the wakeup interval in minutes.
+`reminder_time` is the reminder interval in minutes: 5, 10, 15, 20, and so on.
+Invalid values use 5 minutes. The first reminder rounds up to a 5-minute clock
+boundary after the interval; later reminders keep that clock schedule.
 
 ## Dev 
 
