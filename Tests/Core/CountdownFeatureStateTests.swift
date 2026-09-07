@@ -26,16 +26,16 @@ struct CountdownFeatureStateTests {
         clock_enabled = true
         current_timeout_enabled = true
         [notifications]
-        reminder_enabled = true
+        popup_enabled = true
         alarm_enabled = true
-        reminder_time = 15
+        popup_time = 15
         alarm_notification = "alarm.mp3"
         """
         try contents.write(to: configURL, atomically: true, encoding: .utf8)
         let configuration = CountdownConfiguration.load(environment: [
             "XDG_CONFIG_HOME": directory.appendingPathComponent("config").path
         ])
-        #expect(configuration.reminderTime == 15)
+        #expect(configuration.popupTime == 15)
         #expect(configuration.alarmNotificationURL?.standardizedFileURL
             == configDirectory.appendingPathComponent("alarm.mp3"))
         let timerStore = TimerStateStore(environment: ["XDG_STATE_HOME": directory.appendingPathComponent("state").path])
@@ -51,13 +51,18 @@ struct CountdownFeatureStateTests {
         }
         let original = controller()
         original.features.setClockEnabled(false)
-        original.features.setReminderEnabled(false)
+        original.features.setPopupEnabled(false)
         original.timer.setCurrentTimeoutEnabled(false)
         original.timer.setAutosetEnabled(true)
         original.save()
+        let savedFeatures = try JSONDecoder().decode(
+            [String: Bool].self,
+            from: Data(contentsOf: timerStore.stateDirectory.appendingPathComponent("features.json"))
+        )
+        #expect(savedFeatures["popup_enabled"] == false)
         let restored = controller()
         #expect(!restored.features.isClockEnabled)
-        #expect(!restored.features.isReminderEnabled)
+        #expect(!restored.features.isPopupEnabled)
         #expect(!restored.timer.isCurrentTimeoutEnabled)
         #expect(restored.timer.isAutosetEnabled)
         #expect(stateStore.load().alarmEnabled == alarmEnabled)
@@ -82,7 +87,7 @@ struct CountdownFeatureStateTests {
         let state = CountdownFeatureStateStore(stateDirectory: directory).load()
         #expect(state.clockEnabled == (contents != "{\"clock_enabled\":false}"))
         #expect(state.currentTimeoutEnabled)
-        #expect(state.reminderEnabled)
+        #expect(state.popupEnabled)
         #expect(state.alarmEnabled)
         #expect(!state.autosetEnabled)
     }
@@ -97,11 +102,11 @@ struct CountdownFeatureStateTests {
             configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in }
         )
         controller.features.setClockEnabled(false)
-        controller.features.setReminderEnabled(false)
+        controller.features.setPopupEnabled(false)
         controller.timer.setCurrentTimeoutEnabled(false)
         controller.timer.setAutosetEnabled(true)
         #expect(!controller.features.isClockEnabled)
-        #expect(!controller.features.isReminderEnabled)
+        #expect(!controller.features.isPopupEnabled)
         #expect(!controller.timer.isCurrentTimeoutEnabled)
         #expect(controller.timer.isAutosetEnabled)
         #expect(try String(contentsOf: directory, encoding: .utf8) == "blocked")
@@ -115,14 +120,14 @@ struct CountdownFeatureStateTests {
         let stateStore = CountdownFeatureStateStore(stateDirectory: timerStore.stateDirectory)
         stateStore.saveEnablement("clock_enabled", enabled: false)
         stateStore.saveEnablement("current_timeout_enabled", enabled: false)
-        stateStore.saveEnablement("reminder_enabled", enabled: false)
+        stateStore.saveEnablement("popup_enabled", enabled: false)
         let controller = CountdownController(
             stateStore: timerStore,
             configuration: CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path]),
             playSound: { _ in }
         )
         #expect(!controller.features.isClockEnabled)
-        #expect(!controller.features.isReminderEnabled)
+        #expect(!controller.features.isPopupEnabled)
         #expect(!controller.timer.isCurrentTimeoutEnabled)
     }
 }

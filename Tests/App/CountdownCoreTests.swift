@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct CountdownCoreTests {
     @Test(arguments: CountdownMode.allCases)
-    func sharedControlsAndReminderFollowTheActiveMode(mode: CountdownMode) {
+    func sharedControlsAndPopupFollowTheActiveMode(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
@@ -13,7 +13,7 @@ struct CountdownCoreTests {
         var settings: [String: Bool] = [:]
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
             playSound: { _ in sounds += 1 }, now: { now },
             saveEnablement: { settings[$0] = $1 }
         )
@@ -22,40 +22,40 @@ struct CountdownCoreTests {
         #expect(timer.controlLabel == "Pause")
         now += 300
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 1)
+        #expect(timer.features.popupIntervalCount == 1)
         #expect(sounds == 1)
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 1)
+        #expect(timer.features.popupIntervalCount == 1)
 
         timer.toggleRunning()
         #expect(timer.controlLabel == "Resume")
         now += 900
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 1)
+        #expect(timer.features.popupIntervalCount == 1)
         timer.toggleRunning()
         now += 300
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 2)
+        #expect(timer.features.popupIntervalCount == 2)
 
-        timer.features.setReminderEnabled(false)
+        timer.features.setPopupEnabled(false)
         now += 300
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 2)
+        #expect(timer.features.popupIntervalCount == 2)
         timer.features.setClockEnabled(false)
         let features = timer.features
         timer.selectMode(mode == .timer ? .pomodoro : .timer)
         #expect(timer.features === features)
         #expect(!timer.features.isClockEnabled)
-        #expect(!timer.features.isReminderEnabled)
+        #expect(!timer.features.isPopupEnabled)
         now += 600
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 2)
+        #expect(timer.features.popupIntervalCount == 2)
         #expect(sounds == 2)
-        #expect(settings == ["clock_enabled": false, "reminder_enabled": false])
+        #expect(settings == ["clock_enabled": false, "popup_enabled": false])
     }
 
     @Test
-    func restoringTimerDoesNotReplayRemindersFromTimeWhileClosed() {
+    func restoringTimerDoesNotReplayPopupsFromTimeWhileClosed() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
@@ -66,7 +66,7 @@ struct CountdownCoreTests {
         var sounds = 0
         let controller = CountdownController(
             stateStore: store,
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         #expect(controller.timer.remaining == 1_440)
@@ -80,14 +80,14 @@ struct CountdownCoreTests {
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func durationIncreaseDoesNotRepeatReminderAfterOnlyOneMinute(mode: CountdownMode) {
+    func durationIncreaseDoesNotRepeatPopupAfterOnlyOneMinute(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)
@@ -106,14 +106,14 @@ struct CountdownCoreTests {
     }
 
     @Test
-    func hiddenModeIsSilentAndSwitchingDoesNotCauseAnEarlyReminder() {
+    func hiddenModeIsSilentAndSwitchingDoesNotCauseAnEarlyPopup() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.adjustTimerDuration(by: 610)
@@ -132,13 +132,13 @@ struct CountdownCoreTests {
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func durationEditsDoNotCauseReminderAndCompletionDoesNotRepeatIt(mode: CountdownMode) {
+    func durationEditsDoNotCausePopupAndCompletionDoesNotRepeatIt(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderTime: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
@@ -148,19 +148,19 @@ struct CountdownCoreTests {
         } else {
             timer.adjustPomodoroDuration(.focus, by: -600)
         }
-        #expect(timer.features.reminderIntervalCount == 0)
+        #expect(timer.features.popupIntervalCount == 0)
         now += 299
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 0)
+        #expect(timer.features.popupIntervalCount == 0)
         now += 1
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 1)
-        now += 361 // A delayed update reports one Reminder, not a burst.
+        #expect(timer.features.popupIntervalCount == 1)
+        now += 361 // A delayed update reports one Popup, not a burst.
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 2)
+        #expect(timer.features.popupIntervalCount == 2)
         now += 10_000
         timer.update()
         timer.update()
-        #expect(timer.features.reminderIntervalCount == (mode == .pomodoro ? 3 : 2))
+        #expect(timer.features.popupIntervalCount == (mode == .pomodoro ? 3 : 2))
     }
 }

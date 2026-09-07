@@ -24,7 +24,7 @@ rest = 5
 long-rest = 15
 
 [notifications]
-reminder_time = 5
+popup_time = 5
 
 # Relative paths are relative to config.toml.
 green_notification = "green_notification.mp3"
@@ -33,11 +33,11 @@ red_notification = "red_notification.mp3"
 alarm_notification = "alarm_notification.mp3"
 ```
 
-`reminder_time` is the reminder interval in minutes: 5, 10, 15, 20, and so on.
-Invalid values use 5 minutes. The first reminder rounds up to a 5-minute clock
-boundary after the interval; later reminders keep that clock schedule.
+`popup_time` is the popup interval in minutes: 5, 10, 15, 20, and so on.
+Invalid values use 5 minutes. The first popup rounds up to a 5-minute clock
+boundary after the interval; later popups keep that clock schedule.
 
-Display choices, reminder and alarm enablement, auto-set, and timer state are stored
+Display choices, popup and alarm enablement, auto-set, and timer state are stored
 under `${XDG_STATE_HOME:-$HOME/.local/state}/countdown/`. Menu choices use
 `features.json`; menu changes do not modify `config.toml`.
 

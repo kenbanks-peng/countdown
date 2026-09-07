@@ -8,7 +8,7 @@ long-rest = 15
 
 [notifications]
 # Positive multiples of 5 minutes; invalid values use 5.
-reminder_time = 5
+popup_time = 5
 
 # Paths are relative to this file.
 green_notification = "green_notification.mp3"

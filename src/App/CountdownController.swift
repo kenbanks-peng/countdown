@@ -76,7 +76,7 @@ final class CountdownController: ObservableObject {
 
     func toggleRunning() {
         update()
-        if countdown.isPaused { features.skipPausedReminders() }
+        if countdown.isPaused { features.skipPausedPopups() }
         countdown.toggleRunning()
         saveSettings()
     }

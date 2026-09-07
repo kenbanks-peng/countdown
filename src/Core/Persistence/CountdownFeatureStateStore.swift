@@ -5,7 +5,7 @@ struct CountdownFeatureState {
     var clockEnabled = true
     var currentTimeoutEnabled = true
     var autosetEnabled = false
-    var reminderEnabled = true
+    var popupEnabled = true
     var alarmEnabled = true
 }
 
@@ -19,7 +19,7 @@ struct CountdownFeatureStateStore {
             clockEnabled: values["clock_enabled"] ?? true,
             currentTimeoutEnabled: values["current_timeout_enabled"] ?? true,
             autosetEnabled: values["autoset_enabled"] ?? false,
-            reminderEnabled: values["reminder_enabled"] ?? true,
+            popupEnabled: values["popup_enabled"] ?? true,
             alarmEnabled: values["alarm_enabled"] ?? true
         )
     }

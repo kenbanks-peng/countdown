@@ -5,7 +5,7 @@ struct CountdownConfiguration {
     let yellowNotificationURL: URL?
     let redNotificationURL: URL?
     let alarmNotificationURL: URL?
-    let reminderTime: Int
+    let popupTime: Int
     let pomodoroFocusMinutes: Int
     let pomodoroRestMinutes: Int
     let pomodoroLongRestMinutes: Int
@@ -15,7 +15,7 @@ struct CountdownConfiguration {
         greenNotificationURL: URL? = nil,
         yellowNotificationURL: URL? = nil,
         redNotificationURL: URL? = nil,
-        reminderTime: Int = 5,
+        popupTime: Int = 5,
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
         pomodoroLongRestMinutes: Int = 15
@@ -24,7 +24,7 @@ struct CountdownConfiguration {
         self.yellowNotificationURL = yellowNotificationURL
         self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
-        self.reminderTime = reminderTime > 0 && reminderTime.isMultiple(of: 5) ? reminderTime : 5
+        self.popupTime = popupTime > 0 && popupTime.isMultiple(of: 5) ? popupTime : 5
         let focus = (1...59).contains(pomodoroFocusMinutes) ? pomodoroFocusMinutes : 25
         let rest = (1...59).contains(pomodoroRestMinutes) ? pomodoroRestMinutes : 5
         let longRest = (1...59).contains(pomodoroLongRestMinutes) ? pomodoroLongRestMinutes : 15
@@ -51,7 +51,7 @@ struct CountdownConfiguration {
             greenNotificationURL: configurationFile.soundURL(for: "green_notification", in: contents) ?? alarmNotificationURL,
             yellowNotificationURL: configurationFile.soundURL(for: "yellow_notification", in: contents) ?? alarmNotificationURL,
             redNotificationURL: configurationFile.soundURL(for: "red_notification", in: contents) ?? alarmNotificationURL,
-            reminderTime: configurationFile.intValue(for: "reminder_time", in: contents) ?? 5,
+            popupTime: configurationFile.intValue(for: "popup_time", in: contents) ?? 5,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", in: contents, section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", in: contents, section: "pomodoro") ?? 5,
             pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", in: contents, section: "pomodoro") ?? 15

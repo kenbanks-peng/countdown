@@ -5,16 +5,16 @@ import Foundation
 @MainActor
 final class CountdownFeatures: ObservableObject {
     @Published private(set) var isClockEnabled: Bool
-    @Published private(set) var isReminderEnabled: Bool
-    @Published private(set) var reminderIntervalCount = 0
+    @Published private(set) var isPopupEnabled: Bool
+    @Published private(set) var popupIntervalCount = 0
 
     private let configuration: CountdownConfiguration
     private let playSound: @MainActor (URL?) -> Void
     private let saveEnablement: (String, Bool) -> Void
     private let now: () -> Date
-    private var nextReminder: Date?
+    private var nextPopup: Date?
 
-    private var reminderInterval: TimeInterval { TimeInterval(configuration.reminderTime) * 60 }
+    private var popupInterval: TimeInterval { TimeInterval(configuration.popupTime) * 60 }
 
     init(
         configuration: CountdownConfiguration,
@@ -28,7 +28,7 @@ final class CountdownFeatures: ObservableObject {
         self.playSound = playSound
         self.saveEnablement = saveEnablement
         isClockEnabled = state.clockEnabled
-        isReminderEnabled = state.reminderEnabled
+        isPopupEnabled = state.popupEnabled
     }
 
     func setClockEnabled(_ enabled: Bool) {
@@ -36,21 +36,21 @@ final class CountdownFeatures: ObservableObject {
         saveEnablement("clock_enabled", enabled)
     }
 
-    func setReminderEnabled(_ enabled: Bool) {
-        if enabled != isReminderEnabled {
-            nextReminder = enabled ? firstReminder(after: now()) : nil
+    func setPopupEnabled(_ enabled: Bool) {
+        if enabled != isPopupEnabled {
+            nextPopup = enabled ? firstPopup(after: now()) : nil
         }
-        isReminderEnabled = enabled
-        saveEnablement("reminder_enabled", enabled)
+        isPopupEnabled = enabled
+        saveEnablement("popup_enabled", enabled)
     }
 
     /// Skip paused clock boundaries without changing the original schedule.
-    func skipPausedReminders() {
+    func skipPausedPopups() {
         advanceSchedule(past: now())
     }
 
-    private func firstReminder(after start: Date) -> Date {
-        let earliest = start.addingTimeInterval(reminderInterval)
+    private func firstPopup(after start: Date) -> Date {
+        let earliest = start.addingTimeInterval(popupInterval)
         let calendar = Calendar.current
         let minute = calendar.dateInterval(of: .minute, for: earliest)!.start
         let remainder = calendar.component(.minute, from: minute) % 5
@@ -59,27 +59,27 @@ final class CountdownFeatures: ObservableObject {
     }
 
     private func advanceSchedule(past date: Date) {
-        guard let nextReminder, nextReminder <= date else { return }
-        let intervals = floor(date.timeIntervalSince(nextReminder) / reminderInterval) + 1
-        self.nextReminder = nextReminder.addingTimeInterval(intervals * reminderInterval)
+        guard let nextPopup, nextPopup <= date else { return }
+        let intervals = floor(date.timeIntervalSince(nextPopup) / popupInterval) + 1
+        self.nextPopup = nextPopup.addingTimeInterval(intervals * popupInterval)
     }
 
-    /// Duration edits do not emit reminders. Late updates emit at most once.
+    /// Duration edits do not emit popups. Late updates emit at most once.
     func reportElapsed(previousRemaining: TimeInterval, remaining: TimeInterval) {
-        guard isReminderEnabled else { return }
+        guard isPopupEnabled else { return }
         guard remaining > 0 else {
-            nextReminder = nil
+            nextPopup = nil
             return
         }
         let currentTime = now()
-        if nextReminder == nil {
+        if nextPopup == nil {
             let elapsed = max(0, previousRemaining - remaining)
-            nextReminder = firstReminder(after: currentTime.addingTimeInterval(-elapsed))
+            nextPopup = firstPopup(after: currentTime.addingTimeInterval(-elapsed))
         }
         guard previousRemaining > remaining,
-              let nextReminder, currentTime >= nextReminder else { return }
+              let nextPopup, currentTime >= nextPopup else { return }
         advanceSchedule(past: currentTime)
-        reminderIntervalCount += 1
+        popupIntervalCount += 1
         let sound: URL?
         switch remaining {
         case 1_200...: sound = configuration.greenNotificationURL

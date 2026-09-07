@@ -191,7 +191,7 @@ struct PomodoroPersistenceTests {
         case .active:
             #expect(restored.timer.status == .active)
             #expect(restored.timer.remaining == 899)
-            #expect(session.sounds == 0) // Restored elapsed time must not replay Reminder.
+            #expect(session.sounds == 0) // Restored elapsed time must not replay Popup.
         case .prepared:
             #expect(restored.timer.isPaused)
             #expect(restored.timer.remaining == 1_200)

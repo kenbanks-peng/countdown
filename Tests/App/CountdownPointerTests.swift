@@ -27,7 +27,7 @@ struct CountdownPointerTests {
         let countdown = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, reminderEnabled: false),
+            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
             playSound: { _ in }
         )
         var changes = 0
