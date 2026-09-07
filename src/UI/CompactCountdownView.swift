@@ -2,7 +2,6 @@ import SwiftUI
 
 struct CompactCountdownView: View {
     @ObservedObject var model: CountdownModel
-    let expand: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -31,14 +30,7 @@ struct CompactCountdownView: View {
         }
         .contentShape(Circle())
         .onHover { isHovering = $0 }
-        .onTapGesture(perform: expand)
-        .help(helpText)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint("Click to expand the Countdown")
-        .task { await updateCountdown() }
-        .onChange(of: model.remaining) { _ in
-            expandAtOneMinuteRemaining()
-        }
     }
 
     private var arcAnimation: Animation? {
@@ -49,26 +41,8 @@ struct CompactCountdownView: View {
         CountdownAppearance.indicatorColor(for: model.remaining)
     }
 
-    private var helpText: String {
-        model.status == .empty
-            ? "Countdown complete. Click to expand."
-            : "\(model.remainingMinutes) minutes remaining. Click to expand."
-    }
-
     private var accessibilityLabel: String {
         model.status == .empty ? "Countdown complete" : "\(model.remainingMinutes) minutes remaining"
     }
 
-    private func updateCountdown() async {
-        while !Task.isCancelled {
-            model.update()
-            expandAtOneMinuteRemaining()
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-    }
-
-    private func expandAtOneMinuteRemaining() {
-        guard model.status == .active, model.remaining > 0, model.remaining <= 60 else { return }
-        expand()
-    }
 }

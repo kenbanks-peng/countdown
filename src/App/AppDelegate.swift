@@ -14,7 +14,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var panelMode: PanelMode = .normal
     private var isModeTransitionInProgress = false
     private var intervalAlertCancellable: AnyCancellable?
-    private var timerModeCancellable: AnyCancellable?
     private var returnToCompactTask: Task<Void, Never>?
 
     private let normalFrameKey = "Countdown.TimerPanel.NormalFrame"
@@ -46,10 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         self.panel = panel
         self.timer = timer
-        observeWakeupIntervals(from: timer.countdown)
-        timerModeCancellable = timer.$mode.dropFirst().sink { [weak self] _ in
-            self?.returnToCompactTask?.cancel()
-        }
+        observeWakeupIntervals(from: timer.features)
         scrollTimeAdjuster = ScrollTimeAdjuster(timer: timer, window: panel, isCompact: { [weak self] in
             self?.panelMode == .compact
         })
@@ -79,7 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @MainActor
-    private func observeWakeupIntervals(from model: CountdownModel) {
+    private func observeWakeupIntervals(from model: TimerFeatures) {
         intervalAlertCancellable = model.$wakeupIntervalCount
             .dropFirst()
             .sink { [weak self] _ in
@@ -88,7 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func handleWakeupInterval() {
-        guard timer?.mode == .countdown, panelMode == .compact else { return }
+        guard panelMode == .compact else { return }
 
         exitCompactMode()
         returnToCompactTask?.cancel()

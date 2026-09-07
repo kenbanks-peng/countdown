@@ -9,12 +9,8 @@ final class CountdownModel: ObservableObject {
     @Published private(set) var duration: TimeInterval = 0
     @Published private(set) var remaining: TimeInterval = 0
     @Published private(set) var completionCount = 0
-    @Published private(set) var wakeupIntervalCount = 0
-    @Published private(set) var isClockFaceEnabled = true
-    @Published private(set) var isClockHandsEnabled = true
     @Published private(set) var isCurrentTimeoutEnabled = true
     @Published private(set) var isAutosetEnabled = false
-    @Published private(set) var isWakeupEnabled = true
 
     private var endDate: Date?
     private var completionWasReported = false
@@ -22,22 +18,22 @@ final class CountdownModel: ObservableObject {
     private let configuration: CountdownConfiguration
     private let playSound: @MainActor (URL?) -> Void
     private let now: () -> Date
+    private let reportElapsed: (TimeInterval, TimeInterval) -> Void
 
     init(
         stateStore: CountdownStateStore = .default,
         configuration: CountdownConfiguration = .default,
         playSound: @escaping @MainActor (URL?) -> Void = CountdownModel.playSound,
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        reportElapsed: @escaping (TimeInterval, TimeInterval) -> Void = { _, _ in }
     ) {
         self.stateStore = stateStore
         self.configuration = configuration
         self.playSound = playSound
         self.now = now
-        isClockFaceEnabled = configuration.clockFaceEnabled
-        isClockHandsEnabled = configuration.clockHandsEnabled
+        self.reportElapsed = reportElapsed
         isCurrentTimeoutEnabled = configuration.currentTimeoutEnabled
         isAutosetEnabled = configuration.autosetEnabled
-        isWakeupEnabled = configuration.wakeupEnabled
         restore()
         autoset()
     }
@@ -59,24 +55,9 @@ final class CountdownModel: ObservableObject {
 
     var isPaused: Bool { status == .prepared && remaining > 0 }
 
-    func setClockFaceEnabled(_ enabled: Bool) {
-        isClockFaceEnabled = enabled
-        CountdownConfiguration.saveEnablement("clock_face_enabled", enabled: enabled)
-    }
-
-    func setClockHandsEnabled(_ enabled: Bool) {
-        isClockHandsEnabled = enabled
-        CountdownConfiguration.saveEnablement("clock_hands_enabled", enabled: enabled)
-    }
-
     func setCurrentTimeoutEnabled(_ enabled: Bool) {
         isCurrentTimeoutEnabled = enabled
         CountdownConfiguration.saveEnablement("current_timeout_enabled", enabled: enabled)
-    }
-
-    func setWakeupEnabled(_ enabled: Bool) {
-        isWakeupEnabled = enabled
-        CountdownConfiguration.saveEnablement("wakeup_enabled", enabled: enabled)
     }
 
     func setAutosetEnabled(_ enabled: Bool) {
@@ -205,7 +186,7 @@ final class CountdownModel: ObservableObject {
 
         let previousRemaining = remaining
         remaining = max(0, endDate.timeIntervalSince(now()))
-        reportWakeupIntervalIfNeeded(previousRemaining: previousRemaining)
+        reportElapsed(previousRemaining, remaining)
 
         if remaining == 0 {
             self.endDate = nil
@@ -251,29 +232,6 @@ final class CountdownModel: ObservableObject {
             return
         }
         sound.play()
-    }
-
-    private func reportWakeupIntervalIfNeeded(previousRemaining: TimeInterval) {
-        let interval = TimeInterval(configuration.wakeupTime * 60)
-        guard isWakeupEnabled,
-              remaining > 0,
-              previousRemaining > remaining,
-              Int(ceil(previousRemaining / interval)) > Int(ceil(remaining / interval))
-        else { return }
-
-        wakeupIntervalCount += 1
-        playSound(wakeupSoundURL(for: remaining))
-    }
-
-    private func wakeupSoundURL(for remaining: TimeInterval) -> URL? {
-        switch remaining {
-        case 1_200...:
-            configuration.greenNotificationURL
-        case 600...:
-            configuration.yellowNotificationURL
-        default:
-            configuration.redNotificationURL
-        }
     }
 
     private func restore() {

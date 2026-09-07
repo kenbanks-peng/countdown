@@ -16,12 +16,12 @@ struct CircleTransitionCheck {
             "XDG_STATE_HOME": directory.path
         ])
         let configuration = CountdownConfiguration(alarmNotificationURL: nil)
-        let model = CountdownModel(
+        let timer = TimerController(
             stateStore: stateStore,
             configuration: configuration,
             playSound: { _ in }
         )
-        let hostingView = NSHostingView(rootView: CountdownView(model: model, compact: {}))
+        let hostingView = NSHostingView(rootView: TimerView(timer: timer, changePresentation: {}))
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = NSColor.clear.cgColor
         var failures: [String] = []

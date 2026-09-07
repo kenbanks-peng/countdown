@@ -1,44 +1,48 @@
-# Pomodoro
+# Timer and Pomodoro
 
-1. Right-click the circle in either presentation.
-2. Under **Timer Mode**, select **Pomodoro**.
-3. The ready circle shows 5 minutes of break in blue, then 25 minutes of focus in green. Each minute is 6 degrees. The unused half keeps the Countdown background color.
-4. Click the circle, or select **Start** in the context menu, to start focus. Green decreases while blue stays full. In normal presentation, the small **Focus** label identifies the phase. Neither size shows a numeric countdown.
-5. Break starts automatically when focus ends. The normal label changes to **Break**, and blue decreases. Expired areas show background. Phase placement does not shift as time passes.
-6. Click to pause or resume. The context menu also shows **Pause** or **Resume**. The accessible description gives the state, phase, and remaining time without use of color.
-7. After break, both sectors are empty and the pair stops. Click or select **Start** to start a new full pair. There are no long breaks or Pomodoro sounds.
-8. Select **Reset** in the context menu to stop and return to the full ready pair.
+Right-click the circle and select **Timer** or **Pomodoro** under **Timer Mode**. The app name stays Countdown.
 
-A timer pauses when you select the other timer mode. Returning does not resume it. Click Pomodoro, or select **Resume** for Countdown, to continue. A completed Pomodoro stays complete until Start or Reset.
+## Shared controls
 
-Pomodoro clicks, including Option-clicks, control the pair. They do not change presentation or set the next hour. Countdown settings, Autoset, Wakeup, sounds, and automatic expansion do not apply to Pomodoro.
+Both modes use the same app controls:
+
+- Click the circle to change between normal and compact views. This does not pause or restart the active timer. The menu also has **Normal** or **Compact**.
+- Use **Face** and **Hands** in the menu to show or hide the clock face and hands in normal view. These settings apply to both modes. Compact stays a small status circle.
+- Use **Start**, **Pause**, or **Resume** in the menu to control the selected timer.
+- Use **Wakeup** to enable interval reminders. While time runs, each configured remaining-time interval can play the existing reminder sound. In compact view, the app expands to normal for 3 seconds, then returns to compact. In Pomodoro, the interval uses the total remaining focus and break time.
+
+A mode change pauses the timer you leave. The other timer does not start automatically. Return to a paused timer and select **Resume** to continue.
+
+Timer keeps its next-hour, Autoset, Timeout, completion alarm, and final-minute expansion behavior. Option-click in normal Timer view sets the next hour. In Pomodoro, Option-click changes the view, like a normal click.
+
+## Pomodoro lifecycle
+
+1. Select **Pomodoro**. The ready circle shows 5 minutes of break in blue, then 25 minutes of focus in green. Each minute is 6 degrees.
+2. Select **Start** in the menu. Green decreases while blue stays full. The normal view shows **Focus**. Neither view shows a numeric Pomodoro countdown.
+3. Break starts when focus ends. The label changes to **Break**, and blue decreases. The phase positions do not move as time passes.
+4. Select **Pause** or **Resume** as necessary. The accessible description gives the state, phase, and remaining time.
+5. After break, both sectors are empty and the pair stops. Select **Start** for a new full pair, or **Reset** to return to the full ready pair without starting it.
+
+There are no long breaks, automatic repeat pairs, or phase-completion sounds. Shared Wakeup reminders still apply when enabled. Pomodoro does not use Timer's final-minute expansion or completion alarm.
 
 ## Adjust durations
 
-Scroll over blue to change break, or green to change focus. Each ordinary vertical scroll event changes the selected phase by 1 minute in its direction. Hold Option for slower, accumulated 1-minute steps. Each phase has a 1-minute minimum. The pair has a 60-minute maximum. An increase stops at the available space; it never shortens the other phase.
+Scroll over blue to change break, or green to change focus, in either view. Each ordinary vertical scroll event changes the selected phase by 1 minute. Hold Option for slower, accumulated 1-minute steps. Each phase has a 1-minute minimum. The pair has a 60-minute maximum. An increase never shortens the other phase.
 
-A break edit moves the start of focus but keeps the configured focus duration. A focus edit keeps the break allocation. The circle always uses the 60-minute scale.
+Allocated areas remain scroll targets after their color disappears. The exact center, unused background, and points outside the circle do nothing. A shared boundary belongs to the following sector clockwise. Changing targets or modes clears partial Option motion.
 
-Allocated areas remain scroll targets after their color disappears. Unallocated background, the exact center, and points outside the circle do nothing. A shared boundary belongs to the following sector clockwise: at the default 30° boundary, scroll changes focus. Changing targets or timer mode clears partial Option motion.
+Edits preserve elapsed time. Removing the remaining focus time moves to break; a paused pair stays paused. Removing all remaining break time stops the pair. An edit to a completed phase changes the next pair only. Start after completion and Reset use the edited durations.
 
-In ready state, edits change the full pair. During running or paused activity, an active-phase edit keeps elapsed time and changes the remaining time. An edit that removes all remaining focus time moves to the full break, still paused if focus was paused. Removing all remaining break time stops the pair. A future-phase edit changes its full allocation; a completed-phase edit changes only the next pair. Start after completion and Reset use the edited durations.
-
-## Compact presentation
-
-In Pomodoro, right-click and select **Compact** to use the small circle. Right-click it and select **Normal** to return. The same pair stays ready, running, paused, or complete; a presentation change does not pause or restart it.
-
-Both sizes show blue break and green focus on the same 60-minute scale. Compact has no visible phase label or number. Its accessible description still gives the phase and remaining time. Click still starts, pauses, or resumes the pair. Reset is available in both context menus.
-
-Scroll over each allocated sector in either size, including its depleted area. The same 1-minute steps, Option sensitivity, minimum, and combined limit apply. Compact does not use whole-circle adjustment. Pomodoro does not expand automatically, even in the final minute or at completion.
+Compact has the same sectors and scroll controls, but no visible phase label or number. Its accessible description still gives the phase and remaining time.
 
 ## Restart
 
-The app saves the selected timer mode and configured focus and break durations when you change them and when you quit. These settings are separate from the Countdown session.
+The app saves the selected mode and configured Pomodoro durations separately from the Timer session. Clock and Wakeup settings use the existing configuration file.
 
-After restart, Pomodoro is always ready with the full saved pair. A running, paused, or completed pair does not resume. Time while the app is closed does not reduce either phase, and Pomodoro has no startup sounds. Click **Start** to begin focus again.
+After restart, Pomodoro is ready with the full saved pair. Time while closed does not reduce either phase. There is no Pomodoro startup sound. Select **Start** to begin focus.
 
-Countdown keeps its existing session restoration rules. If Pomodoro is selected at startup, Countdown then pauses and stays paused while hidden. Select Countdown and **Resume** to continue it.
+Timer keeps its session restoration rules. If Pomodoro is selected at startup, Timer stays paused while hidden. Select **Timer**, then **Resume**, to continue it.
 
-If saved mode or duration data is missing, invalid, or unreadable, the app selects Countdown and uses Pomodoro defaults of 25/5 minutes. If storage is not writable, you can still use the timer, but changes might not be saved.
+Missing, invalid, or unreadable mode and duration data selects Timer and uses Pomodoro defaults of 25/5 minutes. If storage is not writable, the app still works, but changes might not be saved.
 
-For build and automated checks, see [testing.md](testing.md).
+For checks, see [testing.md](testing.md).

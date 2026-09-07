@@ -1,5 +1,7 @@
 # Pomodoro decision contract
 
+> Historical record: the owner later required shared app controls instead of isolated Pomodoro controls. The click, clock display, and Wakeup restrictions below are superseded. Both modes now use the core presentation controls, Face and Hands settings, Pause/Resume menu, and Wakeup reminders. Click changes presentation; menu Start/Pause/Resume controls the selected timer. See [current usage](pomodoro-usage.md). The pair lifecycle, duration limits, and restart rules remain in effect.
+
 ## Authority and scope
 
 - Parent specification: [#1 — Requirements: add an isolated Pomodoro mode](https://github.com/kenbanks-peng/countdown/issues/1).

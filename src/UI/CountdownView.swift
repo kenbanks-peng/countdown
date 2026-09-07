@@ -3,11 +3,9 @@ import SwiftUI
 
 struct CountdownView: View {
     @ObservedObject var model: CountdownModel
-    let compact: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
-    @State private var currentTime = Date.now
 
     var body: some View {
         ZStack {
@@ -16,16 +14,6 @@ struct CountdownView: View {
 
             if model.status != .empty {
                 countdownProgress
-            }
-
-            if model.isClockFaceEnabled {
-                ClockFace()
-            }
-
-            if model.isClockHandsEnabled {
-                ClockHands(date: currentTime)
-                    .foregroundStyle(.white.opacity(0.42))
-                    .allowsHitTesting(false)
             }
 
             Circle()
@@ -37,18 +25,8 @@ struct CountdownView: View {
         }
         .contentShape(Circle())
         .onHover { isHovering = $0 }
-        .onTapGesture {
-            if NSEvent.modifierFlags.contains(.option) {
-                model.setDurationToNextHour()
-            } else {
-                compact()
-            }
-        }
-        .help("Click to use Compact mode. Option-click to set the timeout to the next hour.")
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint("Click the circle to use Compact mode. Option-click the circle to set the timeout to the next hour. Scroll to adjust by one minute. Hold Option while you scroll for slower, precise one-minute adjustment.")
         .padding(6)
-        .task { await updateClock() }
     }
 
     @ViewBuilder
@@ -109,13 +87,6 @@ struct CountdownView: View {
         model.status == .empty ? "Empty Countdown" : "\(model.remainingMinutes) minutes remaining"
     }
 
-    private func updateClock() async {
-        while !Task.isCancelled {
-            model.update()
-            currentTime = .now
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-    }
 }
 
 struct CountdownContextMenu: View {
@@ -123,11 +94,8 @@ struct CountdownContextMenu: View {
     let timer: TimerController
 
     var body: some View {
-        Toggle("Face", isOn: enablementBinding(\.isClockFaceEnabled, model.setClockFaceEnabled))
-        Toggle("Hands", isOn: enablementBinding(\.isClockHandsEnabled, model.setClockHandsEnabled))
         Toggle("Timeout", isOn: enablementBinding(\.isCurrentTimeoutEnabled, model.setCurrentTimeoutEnabled))
         Toggle("Autoset", isOn: enablementBinding(\.isAutosetEnabled, model.setAutosetEnabled))
-        Toggle("Wakeup", isOn: enablementBinding(\.isWakeupEnabled, model.setWakeupEnabled))
 
         Divider()
 
@@ -135,10 +103,6 @@ struct CountdownContextMenu: View {
             timer.setCountdownToNextHour()
         }
 
-        Button(model.isPaused ? "Resume" : "Pause") {
-            timer.toggleCountdownRunning()
-        }
-        .disabled(model.status == .empty)
     }
 
     private func enablementBinding(

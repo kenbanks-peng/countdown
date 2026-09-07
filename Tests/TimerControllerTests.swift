@@ -57,7 +57,7 @@ struct TimerControllerTests {
         now += 61
         timer.update()
         #expect(timer.countdown.remaining == 299)
-        #expect(timer.countdown.wakeupIntervalCount == 1)
+        #expect(timer.features.wakeupIntervalCount == 1)
         #expect(sounds == 1)
         timer.save()
         now += 9
@@ -66,8 +66,8 @@ struct TimerControllerTests {
         #expect(restored.countdown.remaining == 290)
         restored.selectMode(.pomodoro)
         restored.save()
-        #expect(!restored.countdown.isClockFaceEnabled)
-        #expect(!restored.countdown.isClockHandsEnabled)
+        #expect(!restored.features.isClockFaceEnabled)
+        #expect(!restored.features.isClockHandsEnabled)
         #expect(!restored.countdown.isCurrentTimeoutEnabled)
         now += 20
         let paused = TimerController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })

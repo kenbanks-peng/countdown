@@ -29,6 +29,7 @@ struct PomodoroPersistenceTests {
         }
         timer.save()
         session.now += closedTime
+        let soundsBeforeRestart = session.sounds
 
         let restored = session.makeTimer()
         #expect(restored.mode == .pomodoro)
@@ -44,7 +45,7 @@ struct PomodoroPersistenceTests {
         restored.update()
         #expect(restored.pomodoro.focusRemaining == 1_140)
         #expect(restored.pomodoro.breakRemaining == 420)
-        #expect(session.sounds == 0)
+        #expect(session.sounds == soundsBeforeRestart)
     }
 
     @Test(arguments: [
@@ -312,9 +313,9 @@ struct PomodoroPersistenceTests {
         #expect(restored.countdown.isPaused)
         #expect(restored.countdown.remaining == 1_800)
         #expect(restored.countdown.isAutosetEnabled)
-        #expect(restored.countdown.isWakeupEnabled)
-        #expect(!restored.countdown.isClockFaceEnabled)
-        #expect(!restored.countdown.isClockHandsEnabled)
+        #expect(restored.features.isWakeupEnabled)
+        #expect(!restored.features.isClockFaceEnabled)
+        #expect(!restored.features.isClockHandsEnabled)
         #expect(!restored.countdown.isCurrentTimeoutEnabled)
         session.now += 3_600
         restored.update()

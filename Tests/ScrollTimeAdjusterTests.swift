@@ -297,7 +297,7 @@ struct ScrollTimeAdjusterTests {
         let isCompact: Bool
         lazy var timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
         lazy var adapter = ScrollTimeAdjuster(timer: timer, window: window, isCompact: { [unowned self] in isCompact })

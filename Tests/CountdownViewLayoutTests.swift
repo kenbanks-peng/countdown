@@ -4,20 +4,21 @@ import Testing
 
 @MainActor
 struct CountdownViewLayoutTests {
-    @Test
-    func normalViewRemainsSquareAtIntermediateTransitionSizes() {
+    @Test(arguments: TimerMode.allCases)
+    func normalViewRemainsSquareAtIntermediateTransitionSizes(mode: TimerMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let stateStore = CountdownStateStore(environment: [
             "XDG_STATE_HOME": directory.path
         ])
         let configuration = CountdownConfiguration(alarmNotificationURL: nil)
-        let model = CountdownModel(
+        let timer = TimerController(
             stateStore: stateStore,
             configuration: configuration,
             playSound: { _ in }
         )
-        let hostingView = NSHostingView(rootView: CountdownView(model: model, compact: {}))
+        timer.selectMode(mode)
+        let hostingView = NSHostingView(rootView: TimerView(timer: timer, changePresentation: {}))
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = NSColor.clear.cgColor
 

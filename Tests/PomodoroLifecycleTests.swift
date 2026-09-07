@@ -170,7 +170,7 @@ struct PomodoroLifecycleTests {
         var sounds = 0
         lazy var timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
 

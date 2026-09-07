@@ -12,7 +12,7 @@ struct TimerViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, currentTimeoutEnabled: timeoutEnabled),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, currentTimeoutEnabled: timeoutEnabled, wakeupEnabled: false),
             playSound: { _ in }
         )
         timer.selectMode(.pomodoro)
@@ -63,7 +63,7 @@ struct TimerViewTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path])
-        let configuration = CountdownConfiguration(alarmNotificationURL: nil)
+        let configuration = CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, wakeupEnabled: false)
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
         let timer = TimerController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
@@ -113,7 +113,7 @@ struct TimerViewTests {
         var sounds = 0
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, autosetEnabled: true),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, autosetEnabled: true, wakeupEnabled: false),
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
@@ -187,19 +187,21 @@ struct TimerViewTests {
         #expect(sounds == 0)
     }
 
-    @Test
-    func hostedPomodoroPressStartsPausesResumesAndStartsTheNextPair() throws {
+    @Test(arguments: TimerMode.allCases, [false, true])
+    func hostedPressChangesPresentationWithoutChangingTimerState(mode: TimerMode, isCompact: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var expansions = 0
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, wakeupEnabled: false),
             playSound: { _ in }, now: { now }
         )
-        timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: TimerView(timer: timer, changePresentation: { expansions += 1 }))
+        timer.adjustCountdownDuration(by: 1_800)
+        timer.toggleRunning()
+        timer.selectMode(mode)
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, isCompact: isCompact, changePresentation: { expansions += 1 }))
         _ = try render(hosting)
         let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
         let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
@@ -210,27 +212,27 @@ struct TimerViewTests {
         window.contentView = hosting
         defer { window.close() }
         hosting.layoutSubtreeIfNeeded()
-        #expect(pressPomodoro(hosting))
-        #expect(timer.pomodoro.status == .running)
+        #expect(pressTimer(hosting, labelPrefix: mode == .pomodoro ? "Pomodoro " : "30 minutes remaining"))
+        #expect(expansions == 1)
+        #expect(timer.controlLabel == (mode == .pomodoro ? "Start" : "Resume"))
+        timer.toggleRunning()
+        #expect(timer.controlLabel == "Pause")
         now += 60
-        _ = try render(hosting)
-        #expect(pressPomodoro(hosting))
-        #expect(timer.pomodoro.status == .paused)
-        #expect(timer.pomodoro.focusRemaining == 1_440)
-        now += 1_200
-        _ = try render(hosting)
-        #expect(pressPomodoro(hosting))
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.focusRemaining == 1_440)
-        now += 1_740
         timer.update()
-        #expect(timer.pomodoro.status == .completed)
         _ = try render(hosting)
-        #expect(pressPomodoro(hosting))
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.focusRemaining == 1_500)
-        #expect(timer.pomodoro.breakRemaining == 300)
-        #expect(expansions == 0)
+        #expect(pressTimer(hosting, labelPrefix: mode == .pomodoro ? "Pomodoro " : "29 minutes remaining"))
+        #expect(expansions == 2)
+        #expect(timer.controlLabel == "Pause")
+        timer.toggleRunning()
+        #expect(timer.controlLabel == "Resume")
+        now += 1_200
+        timer.update()
+        _ = try render(hosting)
+        #expect(pressTimer(hosting, labelPrefix: mode == .pomodoro ? "Pomodoro " : "29 minutes remaining"))
+        #expect(expansions == 3)
+        #expect(timer.controlLabel == "Resume")
+        timer.toggleRunning()
+        #expect(timer.controlLabel == "Pause")
     }
 
     @Test
@@ -239,7 +241,7 @@ struct TimerViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockHandsEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, wakeupEnabled: false),
             playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         timer.adjustCountdownDuration(by: 1_200)
@@ -276,7 +278,7 @@ struct TimerViewTests {
         var sounds = 0
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, wakeupEnabled: false),
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
@@ -346,7 +348,7 @@ struct TimerViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, wakeupEnabled: false),
             playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         timer.selectMode(.pomodoro)
@@ -392,7 +394,7 @@ struct TimerViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in },
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, wakeupEnabled: false), playSound: { _ in },
             now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         timer.selectMode(.pomodoro)
@@ -432,7 +434,7 @@ struct TimerViewTests {
         var presentationRequests = 0
         let timer = TimerController(
             stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, autosetEnabled: true, wakeupEnabled: true),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false, autosetEnabled: true, wakeupEnabled: false),
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
@@ -484,7 +486,7 @@ struct TimerViewTests {
         #expect(try sample(ready, angle: 210).greenComponent < 0.2)
         try showNormal()
         #expect(timer.pomodoro.status == .ready)
-        #expect(pressPomodoro(normal))
+        timer.toggleRunning()
         now += 600
         timer.update()
         try showCompact()
@@ -508,7 +510,7 @@ struct TimerViewTests {
         #expect(timer.pomodoro.breakRemaining == 600)
         #expect(try recognizedText(render(normal)) == ["Break"])
         now += 120
-        #expect(pressPomodoro(normal))
+        timer.toggleRunning()
         try showCompact()
         now += 1_200
         timer.update()
@@ -522,7 +524,7 @@ struct TimerViewTests {
         #expect(timer.pomodoro.status == .paused)
         #expect(timer.pomodoro.breakRemaining == 480)
         try showCompact()
-        #expect(pressPomodoro(compact))
+        timer.toggleRunning()
         now += 420
         timer.update()
         _ = try render(compact, side: 32)
@@ -544,7 +546,7 @@ struct TimerViewTests {
         #expect(presentationRequests == 0)
         #expect(sounds == 0)
         #expect(timer.countdown.isPaused)
-        #expect(timer.countdown.wakeupIntervalCount == 0)
+        #expect(timer.features.wakeupIntervalCount == 0)
     }
 
     @Test
@@ -557,7 +559,7 @@ struct TimerViewTests {
             now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         let hosting = NSHostingView(rootView: TimerView(timer: timer, isCompact: true, changePresentation: {}))
-        let original = NSHostingView(rootView: CompactCountdownView(model: timer.countdown, expand: {}))
+        let original = NSHostingView(rootView: CompactCountdownView(model: timer.countdown))
         func expectUnchangedBitmap() throws {
             let actual = try render(hosting, side: 32)
             let expected = try render(original, side: 32)
@@ -576,6 +578,34 @@ struct TimerViewTests {
         #expect(timer.countdown.isPaused)
         #expect(timer.countdown.remaining == 1_200)
         try expectUnchangedBitmap()
+    }
+
+    @Test(arguments: TimerMode.allCases)
+    func sharedClockControlsChangeBothModeDisplays(mode: TimerMode) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let timer = TimerController(
+            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false),
+            playSound: { _ in }, saveEnablement: { _, _ in }
+        )
+        timer.selectMode(mode)
+        let hosting = NSHostingView(rootView: TimerView(timer: timer, changePresentation: {}))
+        func image() throws -> Data? {
+            try render(hosting).representation(using: .png, properties: [:])
+        }
+        let plain = try image()
+        timer.features.setClockFaceEnabled(true)
+        let face = try image()
+        #expect(face != plain)
+        timer.features.setClockFaceEnabled(false)
+        #expect(try image() == plain)
+        timer.features.setClockHandsEnabled(true)
+        let hands = try image()
+        #expect(hands != plain)
+        #expect(hands != face)
+        timer.features.setClockHandsEnabled(false)
+        #expect(try image() == plain)
     }
 
     private func render<V: View>(_ hosting: NSHostingView<V>, side: Double = 188) throws -> NSBitmapImageRep {
@@ -603,24 +633,24 @@ struct TimerViewTests {
         return try #require(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))
     }
 
-    private func pressPomodoro(_ element: Any) -> Bool {
+    private func pressTimer(_ element: Any, labelPrefix: String) -> Bool {
         if let element = element as? NSAccessibilityProtocol {
-            if element.accessibilityLabel()?.hasPrefix("Pomodoro ") == true {
+            if element.accessibilityLabel()?.hasPrefix(labelPrefix) == true {
                 return element.accessibilityPerformPress()
             }
-            return (element.accessibilityChildren() ?? []).contains(where: pressPomodoro)
+            return (element.accessibilityChildren() ?? []).contains { pressTimer($0, labelPrefix: labelPrefix) }
         }
         guard let element = element as? NSObject else { return false }
         let label = element.accessibilityAttributeValue(.description) as? String
             ?? (element.accessibilityAttributeValue(NSAccessibility.Attribute(rawValue: "AXAttributedDescription")) as? NSAttributedString)?.string
         let press = NSSelectorFromString("accessibilityPerformPress")
-        if label?.hasPrefix("Pomodoro ") == true, element.responds(to: press) {
+        if label?.hasPrefix(labelPrefix) == true, element.responds(to: press) {
             // SwiftUI exposes the public AppKit action without declaring
             // NSAccessibilityProtocol conformance. Keep its BOOL return type.
             let action = unsafeBitCast(element.method(for: press), to: (@convention(c) (AnyObject, Selector) -> Bool).self)
             return action(element, press)
         }
-        return (element.accessibilityAttributeValue(.children) as? [Any] ?? []).contains(where: pressPomodoro)
+        return (element.accessibilityAttributeValue(.children) as? [Any] ?? []).contains { pressTimer($0, labelPrefix: labelPrefix) }
     }
 
     private func accessibilityLabels(_ element: Any) -> [String] {
