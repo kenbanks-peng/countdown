@@ -36,6 +36,12 @@ struct CountdownView: View {
         .accessibilityHint("Click to use \(isCompact ? "normal" : "compact") view. Use the right-click menu to \(countdown.controlLabel.lowercased()).")
         .help("Click to change view. Use the right-click menu for timer controls. Scroll to adjust time; hold Option for slower adjustment.")
         .contextMenu {
+            Picker("Display", selection: Binding(get: { features.isClockEnabled }, set: features.setClockEnabled)) {
+                Text("Countdown").tag(false)
+                Text("Clock").tag(true)
+            }
+            .pickerStyle(.inline)
+            Divider()
             Picker("Timer Mode", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
                 ForEach(CountdownMode.allCases, id: \.self) { mode in
                     Text(mode.label).tag(mode)
