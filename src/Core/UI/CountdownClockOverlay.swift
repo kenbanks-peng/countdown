@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CountdownClockOverlay: View {
     @ObservedObject var features: CountdownFeatures
-    @State private var currentTime = Date.now
+    var currentTime: Date
 
     var body: some View {
         ZStack {
@@ -14,11 +14,5 @@ struct CountdownClockOverlay: View {
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .task {
-            while !Task.isCancelled {
-                currentTime = .now
-                try? await Task.sleep(for: .milliseconds(100))
-            }
-        }
     }
 }

@@ -28,13 +28,12 @@ struct ClockHands: View {
     }
 
     private var minuteAngle: Double {
-        Double(time.minute ?? 0) * 6
+        CountdownArcLayout.minuteProportion(at: date) * 360
     }
 
     private var hourAngle: Double {
         let hour = Double((time.hour ?? 0) % 12)
-        let minute = Double(time.minute ?? 0)
-        return (hour + minute / 60) * 30
+        return (hour + CountdownArcLayout.minuteProportion(at: date)) * 30
     }
 
     var body: some View {

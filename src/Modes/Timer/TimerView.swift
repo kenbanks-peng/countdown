@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TimerView: View {
     @ObservedObject var model: TimerModel
+    var clockDate: Date? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -32,7 +33,7 @@ struct TimerView: View {
     @ViewBuilder
     private var countdownProgress: some View {
         ZStack {
-            RadialSector(proportion: model.hourProportion)
+            RadialSector(proportion: arc.proportion, startProportion: arc.startProportion)
                 .fill(indicatorColor)
                 .animation(arcAnimation, value: model.hourProportion)
 
@@ -73,6 +74,10 @@ struct TimerView: View {
                     .allowsHitTesting(false)
             }
         }
+    }
+
+    private var arc: CountdownArcLayout {
+        CountdownArcLayout.timer(remaining: model.remaining, at: clockDate)
     }
 
     private var arcAnimation: Animation? {

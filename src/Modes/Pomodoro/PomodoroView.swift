@@ -4,15 +4,23 @@ struct PomodoroView: View {
     static let circleInset: CGFloat = 6
     let model: PomodoroModel
     var isCompact = false
+    var clockDate: Date? = nil
+
+    private var arcs: (focus: CountdownArcLayout, shortBreak: CountdownArcLayout) {
+        CountdownArcLayout.pomodoro(
+            focusRemaining: model.focusRemaining, breakRemaining: model.breakRemaining,
+            breakDuration: model.breakDuration, at: clockDate
+        )
+    }
 
     var body: some View {
         ZStack {
             Circle().fill(Color.countdownSurface)
-            RadialSector(proportion: model.breakRemaining / 3_600)
+            RadialSector(proportion: arcs.shortBreak.proportion, startProportion: arcs.shortBreak.startProportion)
                 .fill(Color.pomodoroBlue)
             RadialSector(
-                proportion: model.focusRemaining / 3_600,
-                startProportion: model.breakDuration / 3_600
+                proportion: arcs.focus.proportion,
+                startProportion: arcs.focus.startProportion
             )
             .fill(Color.countdownGreen)
             Circle()

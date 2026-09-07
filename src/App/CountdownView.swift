@@ -6,13 +6,22 @@ struct CountdownView: View {
     @ObservedObject var countdown: CountdownController
     var isCompact = false
     let changePresentation: () -> Void
+    @ObservedObject private var features: CountdownFeatures
+    @State private var currentTime = Date.now
+
+    init(countdown: CountdownController, isCompact: Bool = false, changePresentation: @escaping () -> Void) {
+        self.countdown = countdown
+        self.isCompact = isCompact
+        self.changePresentation = changePresentation
+        self.features = countdown.features
+    }
 
     var body: some View {
         Button(action: activate) {
             ZStack {
                 modeContent
                 if !isCompact {
-                    CountdownClockOverlay(features: countdown.features)
+                    CountdownClockOverlay(features: features, currentTime: currentTime)
                         .padding(6)
                 }
             }
@@ -48,6 +57,7 @@ struct CountdownView: View {
         .task {
             while !Task.isCancelled {
                 countdown.update()
+                currentTime = .now
                 expandAtOneMinuteRemaining()
                 try? await Task.sleep(for: .milliseconds(100))
             }
@@ -61,11 +71,15 @@ struct CountdownView: View {
             if isCompact {
                 CompactTimerView(model: countdown.timer)
             } else {
-                TimerView(model: countdown.timer)
+                TimerView(model: countdown.timer, clockDate: clockDate)
             }
         case .pomodoro:
-            PomodoroView(model: countdown.pomodoro, isCompact: isCompact)
+            PomodoroView(model: countdown.pomodoro, isCompact: isCompact, clockDate: clockDate)
         }
+    }
+
+    private var clockDate: Date? {
+        !isCompact && features.isClockFaceEnabled ? currentTime : nil
     }
 
     private var accessibilityLabel: String {
