@@ -4,8 +4,7 @@ import Foundation
 /// App-wide display settings and interval notifications, shared by both modes.
 @MainActor
 final class CountdownFeatures: ObservableObject {
-    @Published private(set) var isClockFaceEnabled: Bool
-    @Published private(set) var isClockHandsEnabled: Bool
+    @Published private(set) var isClockEnabled: Bool
     @Published private(set) var isReminderEnabled: Bool
     @Published private(set) var reminderIntervalCount = 0
 
@@ -27,19 +26,13 @@ final class CountdownFeatures: ObservableObject {
         self.configuration = configuration
         self.playSound = playSound
         self.saveEnablement = saveEnablement
-        isClockFaceEnabled = configuration.clockFaceEnabled
-        isClockHandsEnabled = configuration.clockHandsEnabled
+        isClockEnabled = configuration.clockEnabled
         isReminderEnabled = configuration.reminderEnabled
     }
 
-    func setClockFaceEnabled(_ enabled: Bool) {
-        isClockFaceEnabled = enabled
-        saveEnablement("clock_face_enabled", enabled)
-    }
-
-    func setClockHandsEnabled(_ enabled: Bool) {
-        isClockHandsEnabled = enabled
-        saveEnablement("clock_hands_enabled", enabled)
+    func setClockEnabled(_ enabled: Bool) {
+        isClockEnabled = enabled
+        saveEnablement("clock_enabled", enabled)
     }
 
     func setReminderEnabled(_ enabled: Bool) {

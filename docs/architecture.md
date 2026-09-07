@@ -51,8 +51,8 @@ src/
 - Shared UI colors are in `Core/UI/CountdownColors.swift`. Each mode owns its
   specific appearance rules.
 - `CountdownArcLayout` supplies sector positions for drawing and scroll selection.
-  The Clock Face setting selects clockwise clock-aligned sectors in both window
-  sizes. Compact view omits the clock face and hands, but keeps the same sectors.
+  The Clock setting controls the face and hands together and selects clockwise
+  clock-aligned sectors in both window sizes. Compact view omits the clock face and hands, but keeps the same sectors.
   With this setting off, sectors stay fixed at 12. In clock-aligned mode, Pomodoro
   scroll selection follows the remaining colored sectors. In duration-only mode,
   configured allocations remain scroll targets after their color has depleted.

@@ -41,19 +41,17 @@ struct CountdownCoreTests {
         now += 300
         timer.update()
         #expect(timer.features.reminderIntervalCount == 2)
-        timer.features.setClockFaceEnabled(false)
-        timer.features.setClockHandsEnabled(false)
+        timer.features.setClockEnabled(false)
         let features = timer.features
         timer.selectMode(mode == .timer ? .pomodoro : .timer)
         #expect(timer.features === features)
-        #expect(!timer.features.isClockFaceEnabled)
-        #expect(!timer.features.isClockHandsEnabled)
+        #expect(!timer.features.isClockEnabled)
         #expect(!timer.features.isReminderEnabled)
         now += 600
         timer.update()
         #expect(timer.features.reminderIntervalCount == 2)
         #expect(sounds == 2)
-        #expect(settings == ["clock_face_enabled": false, "clock_hands_enabled": false, "reminder_enabled": false])
+        #expect(settings == ["clock_enabled": false, "reminder_enabled": false])
     }
 
     @Test

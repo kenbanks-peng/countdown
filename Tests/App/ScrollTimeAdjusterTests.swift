@@ -292,7 +292,7 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
         let timer = session.timer
-        timer.features.setClockFaceEnabled(true)
+        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         try session.scroll(angle: 150, delta: 1) // 25 minutes: green, from 20 to 45.
         #expect(timer.pomodoro.focusDuration == 1_560)
@@ -309,7 +309,7 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 55))!
         let timer = session.timer
-        timer.features.setClockFaceEnabled(true)
+        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         try session.scroll(angle: angle, delta: 1)
         let focus = angle < 120 || angle >= 330
@@ -324,7 +324,7 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
         let timer = session.timer
-        timer.features.setClockFaceEnabled(true)
+        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         session.now += 600 // 22:30, 15 minutes of focus remain.
         if paused {
@@ -347,7 +347,7 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
         let timer = session.timer
-        timer.features.setClockFaceEnabled(true)
+        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         session.now += 1_620 // 22:47, three minutes of blue remain.
         try session.scroll(angle: 288, delta: 1)
@@ -366,7 +366,7 @@ struct ScrollTimeAdjusterTests {
         let timer = session.timer
         timer.selectMode(.pomodoro)
         try session.scroll(angle: 150, delta: 7, option: true)
-        timer.features.setClockFaceEnabled(true)
+        timer.features.setClockEnabled(true)
         try session.scroll(angle: 150, delta: 5, option: true)
         #expect(timer.pomodoro.focusDuration == 1_500)
         try session.scroll(angle: 150, delta: 7, option: true)
@@ -382,7 +382,7 @@ struct ScrollTimeAdjusterTests {
         let isCompact: Bool
         lazy var timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockFaceEnabled: false, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now },
             saveEnablement: { _, _ in }
         )

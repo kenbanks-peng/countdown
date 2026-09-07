@@ -1,6 +1,5 @@
 [display]
-clock_face_enabled = true
-clock_hands_enabled = true
+clock_enabled = true
 current_timeout_enabled = true
 autoset_enabled = false
 

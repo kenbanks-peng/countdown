@@ -5,8 +5,7 @@ struct CountdownConfiguration {
     let yellowNotificationURL: URL?
     let redNotificationURL: URL?
     let alarmNotificationURL: URL?
-    let clockFaceEnabled: Bool
-    let clockHandsEnabled: Bool
+    let clockEnabled: Bool
     let currentTimeoutEnabled: Bool
     let autosetEnabled: Bool
     let reminderEnabled: Bool
@@ -18,8 +17,7 @@ struct CountdownConfiguration {
         greenNotificationURL: URL? = nil,
         yellowNotificationURL: URL? = nil,
         redNotificationURL: URL? = nil,
-        clockFaceEnabled: Bool = true,
-        clockHandsEnabled: Bool = true,
+        clockEnabled: Bool = true,
         currentTimeoutEnabled: Bool = true,
         autosetEnabled: Bool = false,
         reminderEnabled: Bool = true,
@@ -30,8 +28,7 @@ struct CountdownConfiguration {
         self.yellowNotificationURL = yellowNotificationURL
         self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
-        self.clockFaceEnabled = clockFaceEnabled
-        self.clockHandsEnabled = clockHandsEnabled
+        self.clockEnabled = clockEnabled
         self.currentTimeoutEnabled = currentTimeoutEnabled
         self.autosetEnabled = autosetEnabled
         self.reminderEnabled = reminderEnabled
@@ -64,8 +61,7 @@ struct CountdownConfiguration {
             greenNotificationURL: configurationFile.soundURL(for: "green_notification", in: contents) ?? alarmNotificationURL,
             yellowNotificationURL: configurationFile.soundURL(for: "yellow_notification", in: contents) ?? alarmNotificationURL,
             redNotificationURL: configurationFile.soundURL(for: "red_notification", in: contents) ?? alarmNotificationURL,
-            clockFaceEnabled: configurationFile.boolValue(for: "clock_face_enabled", in: contents) ?? true,
-            clockHandsEnabled: configurationFile.boolValue(for: "clock_hands_enabled", in: contents) ?? true,
+            clockEnabled: configurationFile.boolValue(for: "clock_enabled", in: contents) ?? true,
             currentTimeoutEnabled: configurationFile.boolValue(for: "current_timeout_enabled", in: contents) ?? true,
             autosetEnabled: configurationFile.boolValue(for: "autoset_enabled", in: contents) ?? false,
             reminderEnabled: configurationFile.boolValue(for: "reminder_enabled", in: contents) ?? true,

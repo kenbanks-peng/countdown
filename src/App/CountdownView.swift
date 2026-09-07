@@ -80,7 +80,7 @@ struct CountdownView: View {
     }
 
     private var clockDate: Date? {
-        features.isClockFaceEnabled ? currentTime : nil
+        features.isClockEnabled ? currentTime : nil
     }
 
     private var accessibilityLabel: String {

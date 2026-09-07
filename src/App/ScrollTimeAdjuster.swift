@@ -14,7 +14,7 @@ final class ScrollTimeAdjuster {
     private var previousTarget: Target?
     private var monitor: Any?
     private var modeCancellable: AnyCancellable?
-    private var clockFaceCancellable: AnyCancellable?
+    private var clockCancellable: AnyCancellable?
     private var optionScrollDelta: CGFloat = 0
     private let preciseScrollThreshold: CGFloat = 12
 
@@ -26,7 +26,7 @@ final class ScrollTimeAdjuster {
             self?.optionScrollDelta = 0
             self?.previousTarget = nil
         }
-        clockFaceCancellable = countdown.features.$isClockFaceEnabled.sink { [weak self] _ in
+        clockCancellable = countdown.features.$isClockEnabled.sink { [weak self] _ in
             self?.optionScrollDelta = 0
             self?.previousTarget = nil
         }
@@ -97,7 +97,7 @@ final class ScrollTimeAdjuster {
         if degrees < 0 { degrees += 360 }
         // Remove floating-point noise at exact shared boundaries, not a visible hit margin.
         degrees = ((degrees * 1_000_000_000).rounded() / 1_000_000_000).truncatingRemainder(dividingBy: 360)
-        let clockEnabled = countdown.features.isClockFaceEnabled
+        let clockEnabled = countdown.features.isClockEnabled
         // Duration-only mode keeps allocated targets after their color has depleted.
         // Clock mode follows the visible sectors, including their moving start and hour wrap.
         let arcs = CountdownArcLayout.pomodoro(

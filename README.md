@@ -18,8 +18,7 @@ Countdown reads its configuration from `$XDG_CONFIG_HOME/countdown/config.toml` 
 
 ```toml
 [display]
-clock_face_enabled = true
-clock_hands_enabled = true
+clock_enabled = true
 current_timeout_enabled = true
 
 [notifications]

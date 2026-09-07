@@ -6,8 +6,8 @@ struct CountdownClockOverlay: View {
 
     var body: some View {
         ZStack {
-            if features.isClockFaceEnabled { ClockFace() }
-            if features.isClockHandsEnabled {
+            if features.isClockEnabled {
+                ClockFace()
                 ClockHands(date: currentTime)
                     .foregroundStyle(.white.opacity(0.42))
             }
