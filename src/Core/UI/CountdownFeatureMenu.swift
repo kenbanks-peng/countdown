@@ -5,6 +5,6 @@ struct CountdownFeatureMenu: View {
 
     var body: some View {
         Toggle("Clock", isOn: Binding(get: { features.isClockEnabled }, set: features.setClockEnabled))
-        Toggle("Reminder", isOn: Binding(get: { features.isReminderEnabled }, set: features.setReminderEnabled))
+        Toggle("Reminders", isOn: Binding(get: { features.isReminderEnabled }, set: features.setReminderEnabled))
     }
 }
