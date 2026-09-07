@@ -10,8 +10,9 @@ struct SharedCountdownTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
-        let configuration = CountdownConfiguration(alarmNotificationURL: nil, reminderEnabled: false)
-        let controller = CountdownController(stateStore: store, configuration: configuration, playSound: { _ in }, now: { now })
+        let configuration = CountdownConfiguration(alarmNotificationURL: nil)
+        let featureState = CountdownFeatureState(reminderEnabled: false)
+        let controller = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in }, now: { now })
         controller.selectMode(mode)
         #expect(controller.canToggleRunning)
         #expect(controller.controlLabel == "Pause")
@@ -24,7 +25,7 @@ struct SharedCountdownTests {
         controller.selectMode(.pomodoro)
         controller.save()
         now += 100
-        let restored = CountdownController(stateStore: store, configuration: configuration, playSound: { _ in }, now: { now })
+        let restored = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in }, now: { now })
         #expect(restored.controlLabel == "Resume")
         #expect(restored.timer.remaining == 600)
         #expect(restored.pomodoro.status == .paused)
@@ -44,7 +45,8 @@ struct SharedCountdownTests {
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(reminderEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.adjustTimerDuration(by: 1_200)

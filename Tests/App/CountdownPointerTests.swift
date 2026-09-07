@@ -26,7 +26,8 @@ struct CountdownPointerTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let countdown = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, reminderEnabled: false),
             playSound: { _ in }
         )
         var changes = 0

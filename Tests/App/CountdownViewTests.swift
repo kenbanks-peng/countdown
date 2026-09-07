@@ -12,7 +12,8 @@ struct CountdownViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, currentTimeoutEnabled: timeoutEnabled, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, currentTimeoutEnabled: timeoutEnabled, reminderEnabled: false),
             playSound: { _ in }
         )
         timer.selectMode(.pomodoro)
@@ -63,10 +64,11 @@ struct CountdownViewTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
-        let configuration = CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false)
+        let configuration = CountdownConfiguration(alarmNotificationURL: nil)
+        let featureState = CountdownFeatureState(clockEnabled: false, reminderEnabled: false)
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
-        let timer = CountdownController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
+        let timer = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in sounds += 1 }, now: { now })
         timer.selectMode(.pomodoro)
         timer.adjustPomodoroDuration(.focus, by: -300)
         timer.adjustPomodoroDuration(.rest, by: 120)
@@ -76,7 +78,7 @@ struct CountdownViewTests {
         timer.save()
         now += 7_200
 
-        let restored = CountdownController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
+        let restored = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in sounds += 1 }, now: { now })
         let hosting = NSHostingView(rootView: CountdownView(countdown: restored, changePresentation: {}))
         let bitmap = try render(hosting)
         // Saved 7-minute rest spans 42°; saved 20-minute focus ends at 162°.
@@ -112,7 +114,8 @@ struct CountdownViewTests {
         var sounds = 0
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, autosetEnabled: true, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, autosetEnabled: true, reminderEnabled: false),
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
@@ -190,7 +193,8 @@ struct CountdownViewTests {
         var expansions = 0
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, reminderEnabled: false),
             playSound: { _ in }, now: { now }
         )
         timer.adjustTimerDuration(by: 1_800)
@@ -236,7 +240,8 @@ struct CountdownViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, reminderEnabled: false),
             playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         timer.adjustTimerDuration(by: 1_200)
@@ -273,7 +278,8 @@ struct CountdownViewTests {
         var sounds = 0
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, reminderEnabled: false),
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
@@ -342,7 +348,8 @@ struct CountdownViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, reminderEnabled: false),
             playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         timer.selectMode(.pomodoro)
@@ -388,7 +395,8 @@ struct CountdownViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, reminderEnabled: false), playSound: { _ in },
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, reminderEnabled: false), playSound: { _ in },
             now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         timer.selectMode(.pomodoro)
@@ -429,7 +437,8 @@ struct CountdownViewTests {
         var presentationRequests = 0
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false, autosetEnabled: true, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false, autosetEnabled: true, reminderEnabled: false),
             playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.selectMode(.pomodoro)
@@ -551,7 +560,8 @@ struct CountdownViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false), playSound: { _ in },
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false), playSound: { _ in },
             now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: true, changePresentation: {}))
@@ -583,7 +593,8 @@ struct CountdownViewTests {
         let now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: true, reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: true, reminderEnabled: false),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.adjustTimerDuration(by: 1_800)
@@ -608,7 +619,8 @@ struct CountdownViewTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, clockEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            featureState: CountdownFeatureState(clockEnabled: false),
             playSound: { _ in }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)

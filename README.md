@@ -17,10 +17,6 @@ See the [source organization](docs/architecture.md).
 Countdown reads its configuration from `$XDG_CONFIG_HOME/countdown/config.toml` or `~/.config/countdown/config.toml`
 
 ```toml
-[display]
-clock_enabled = true
-current_timeout_enabled = true
-
 [pomodoro]
 # Defaults in minutes; saved duration edits take priority.
 focus = 25
@@ -28,9 +24,7 @@ rest = 5
 long-rest = 15
 
 [notifications]
-reminder_enabled = true
 reminder_time = 5
-alarm_enabled = true
 
 # Relative paths are relative to config.toml.
 green_notification = "green_notification.mp3"
@@ -42,6 +36,10 @@ alarm_notification = "alarm_notification.mp3"
 `reminder_time` is the reminder interval in minutes: 5, 10, 15, 20, and so on.
 Invalid values use 5 minutes. The first reminder rounds up to a 5-minute clock
 boundary after the interval; later reminders keep that clock schedule.
+
+Display choices, reminder and alarm enablement, auto-set, and timer state are stored
+under `${XDG_STATE_HOME:-$HOME/.local/state}/countdown/`. Menu choices use
+`features.json`; menu changes do not modify `config.toml`.
 
 ## Dev 
 

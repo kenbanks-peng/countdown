@@ -76,7 +76,8 @@ struct CountdownControllerTests {
         func makeController(autoset: Bool = false) -> CountdownController {
             CountdownController(
                 stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-                configuration: CountdownConfiguration(alarmNotificationURL: nil, autosetEnabled: autoset, reminderEnabled: false),
+                configuration: CountdownConfiguration(alarmNotificationURL: nil),
+                featureState: CountdownFeatureState(autosetEnabled: autoset, reminderEnabled: false),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

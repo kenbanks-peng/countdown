@@ -18,16 +18,17 @@ final class CountdownFeatures: ObservableObject {
 
     init(
         configuration: CountdownConfiguration,
+        state: CountdownFeatureState = CountdownFeatureState(),
         playSound: @escaping @MainActor (URL?) -> Void,
         now: @escaping () -> Date = Date.init,
-        saveEnablement: @escaping (String, Bool) -> Void = { CountdownConfiguration.saveEnablement($0, enabled: $1) }
+        saveEnablement: @escaping (String, Bool) -> Void = { CountdownFeatureStateStore().saveEnablement($0, enabled: $1) }
     ) {
         self.now = now
         self.configuration = configuration
         self.playSound = playSound
         self.saveEnablement = saveEnablement
-        isClockEnabled = configuration.clockEnabled
-        isReminderEnabled = configuration.reminderEnabled
+        isClockEnabled = state.clockEnabled
+        isReminderEnabled = state.reminderEnabled
     }
 
     func setClockEnabled(_ enabled: Bool) {

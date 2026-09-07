@@ -20,6 +20,8 @@ final class TimerModel: ObservableObject {
     private var completionWasReported = false
     private let stateStore: TimerStateStore
     private let configuration: CountdownConfiguration
+    private let featureStateStore: CountdownFeatureStateStore
+    private let isAlarmEnabled: Bool
     private let playSound: @MainActor (URL?) -> Void
     private let now: () -> Date
     private let reportElapsed: (TimeInterval, TimeInterval) -> Void
@@ -28,6 +30,7 @@ final class TimerModel: ObservableObject {
     init(
         stateStore: TimerStateStore = .default,
         configuration: CountdownConfiguration = .default,
+        featureState: CountdownFeatureState? = nil,
         playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
         reportElapsed: @escaping (TimeInterval, TimeInterval) -> Void = { _, _ in },
@@ -39,8 +42,13 @@ final class TimerModel: ObservableObject {
         self.now = now
         self.reportElapsed = reportElapsed
         self.timeoutActionsEnabled = timeoutActionsEnabled
-        isCurrentTimeoutEnabled = configuration.currentTimeoutEnabled
-        isAutosetEnabled = configuration.autosetEnabled
+        featureStateStore = CountdownFeatureStateStore(
+            fileManager: stateStore.fileManager, stateDirectory: stateStore.stateDirectory
+        )
+        let state = featureState ?? featureStateStore.load()
+        isCurrentTimeoutEnabled = state.currentTimeoutEnabled
+        isAutosetEnabled = state.autosetEnabled
+        isAlarmEnabled = state.alarmEnabled
         restore()
         if timeoutActionsEnabled() { autoset() }
     }
@@ -64,12 +72,12 @@ final class TimerModel: ObservableObject {
 
     func setCurrentTimeoutEnabled(_ enabled: Bool) {
         isCurrentTimeoutEnabled = enabled
-        CountdownConfiguration.saveEnablement("current_timeout_enabled", enabled: enabled)
+        featureStateStore.saveEnablement("current_timeout_enabled", enabled: enabled)
     }
 
     func setAutosetEnabled(_ enabled: Bool) {
         isAutosetEnabled = enabled
-        CountdownConfiguration.saveEnablement("autoset_enabled", enabled: enabled)
+        featureStateStore.saveEnablement("autoset_enabled", enabled: enabled)
     }
 
     func autoset() {
@@ -193,7 +201,7 @@ final class TimerModel: ObservableObject {
             if reportEvents && timeoutActionsEnabled() && !completionWasReported {
                 completionWasReported = true
                 completionCount += 1
-                if configuration.alarmEnabled {
+                if isAlarmEnabled {
                     playSound(configuration.alarmNotificationURL)
                 }
             }

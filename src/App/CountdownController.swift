@@ -23,9 +23,10 @@ final class CountdownController: ObservableObject {
     init(
         stateStore: TimerStateStore = .default,
         configuration: CountdownConfiguration = .default,
+        featureState: CountdownFeatureState? = nil,
         playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
-        saveEnablement: @escaping (String, Bool) -> Void = { CountdownConfiguration.saveEnablement($0, enabled: $1) }
+        saveEnablement: ((String, Bool) -> Void)? = nil
     ) {
         self.now = now
         settingsStore = CountdownSettingsStore(
@@ -39,10 +40,17 @@ final class CountdownController: ObservableObject {
         mode = settings.mode
         let policy = TimeoutPolicy(mode: settings.mode)
         timeoutPolicy = policy
-        let features = CountdownFeatures(configuration: configuration, playSound: playSound, now: now, saveEnablement: saveEnablement)
+        let featureStateStore = CountdownFeatureStateStore(
+            fileManager: stateStore.fileManager, stateDirectory: stateStore.stateDirectory
+        )
+        let state = featureState ?? featureStateStore.load()
+        let features = CountdownFeatures(
+            configuration: configuration, state: state, playSound: playSound, now: now,
+            saveEnablement: saveEnablement ?? { featureStateStore.saveEnablement($0, enabled: $1) }
+        )
         self.features = features
         let timer = TimerModel(
-            stateStore: stateStore, configuration: configuration, playSound: playSound, now: now,
+            stateStore: stateStore, configuration: configuration, featureState: state, playSound: playSound, now: now,
             reportElapsed: { previous, remaining in
                 if policy.mode == .timer {
                     features.reportElapsed(previousRemaining: previous, remaining: remaining)
