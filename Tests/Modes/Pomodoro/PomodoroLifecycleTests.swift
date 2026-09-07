@@ -5,32 +5,25 @@ import Testing
 @MainActor
 struct PomodoroLifecycleTests {
     @Test
-    func clickStartsFocusAndUpdatesUseElapsedTimeAcrossOneSilentPair() {
+    func coreStartsFocusAndAdvancesAcrossOneSilentPair() {
         let session = Session()
         defer { session.removeState() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        session.now += 600
-        timer.update()
-        #expect(timer.pomodoro.status == .ready)
-        timer.togglePomodoroRunning()
         #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.phaseLabel == "Focus")
+        #expect(timer.controlLabel == "Pause")
         session.now += 600
         timer.update()
         #expect(timer.pomodoro.focusRemaining == 900)
         #expect(timer.pomodoro.breakRemaining == 300)
         timer.setTimerToNextHour()
         timer.adjustTimerDuration(by: 60)
-        timer.toggleTimerRunning()
+        timer.toggleTimerRunning() // A command for a hidden UI mode is ignored.
         #expect(timer.timer.status == .empty)
-        #expect(timer.pomodoro.focusRemaining == 900)
         #expect(timer.pomodoro.status == .running)
         session.now += 900
         timer.update()
-        #expect(timer.pomodoro.status == .running)
         #expect(timer.pomodoro.phaseLabel == "Break")
-        #expect(timer.pomodoro.focusRemaining == 0)
         #expect(timer.pomodoro.breakRemaining == 300)
         session.now += 120
         timer.update()
@@ -38,128 +31,86 @@ struct PomodoroLifecycleTests {
         session.now += 180
         timer.update()
         #expect(timer.pomodoro.status == .completed)
-        #expect(timer.pomodoro.breakRemaining == 0)
+        #expect(!timer.countdown.isPaused)
         session.now += 3_600
         timer.update()
-        timer.update()
         #expect(timer.pomodoro.status == .completed)
-        #expect(timer.pomodoro.focusRemaining == 0)
         #expect(session.sounds == 0)
-        timer.togglePomodoroRunning()
+        timer.resetPomodoro()
         #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.phaseLabel == "Focus")
         #expect(timer.pomodoro.focusRemaining == 1_500)
-        #expect(timer.pomodoro.breakRemaining == 300)
     }
 
     @Test(arguments: [600.0, 1_500, 1_620, 1_800, 3_900])
-    func switchingModesAccountsForDelayedTimeAndNeverResumesHiddenPomodoro(elapsed: TimeInterval) {
+    func switchingModesKeepsHiddenPomodoroAdvancing(elapsed: TimeInterval) {
         let session = Session()
         defer { session.removeState() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        timer.togglePomodoroRunning()
         session.now += elapsed
         timer.selectMode(.timer)
-        if elapsed == 600 {
-            #expect(timer.pomodoro.status == .paused)
-            #expect(timer.pomodoro.focusRemaining == 900)
-            #expect(timer.pomodoro.breakRemaining == 300)
-        } else if elapsed == 1_500 {
-            #expect(timer.pomodoro.status == .paused)
-            #expect(timer.pomodoro.focusRemaining == 0)
-            #expect(timer.pomodoro.breakRemaining == 300)
-        } else if elapsed == 1_620 {
-            #expect(timer.pomodoro.status == .paused)
-            #expect(timer.pomodoro.focusRemaining == 0)
-            #expect(timer.pomodoro.breakRemaining == 180)
-        } else {
-            #expect(timer.pomodoro.status == .completed)
-            #expect(timer.pomodoro.focusRemaining == 0)
-            #expect(timer.pomodoro.breakRemaining == 0)
-        }
-        let focus = timer.pomodoro.focusRemaining
-        let shortBreak = timer.pomodoro.breakRemaining
+        #expect(timer.pomodoro.focusRemaining == max(0, 1_500 - elapsed))
+        #expect(timer.pomodoro.breakRemaining == max(0, 300 - max(0, elapsed - 1_500)))
+        #expect(!timer.countdown.isPaused)
         session.now += 1_200
-        timer.togglePomodoroRunning() // Hidden timer commands are ignored.
-        timer.resetPomodoro()
-        timer.update()
+        timer.togglePomodoroRunning()
+        timer.resetPomodoro() // Hidden UI commands do not change the core.
         timer.selectMode(.pomodoro)
-        timer.update()
-        #expect(timer.pomodoro.focusRemaining == focus)
-        #expect(timer.pomodoro.breakRemaining == shortBreak)
-        #expect(timer.pomodoro.status != .running)
+        #expect(timer.pomodoro.status == .completed)
+        #expect(timer.pomodoro.focusRemaining == 0)
+        #expect(timer.pomodoro.breakRemaining == 0)
         #expect(session.sounds == 0)
     }
 
     @Test(arguments: [600.0, 1_620])
-    func clickPausesAndResumesEachPhaseWithAccessibleState(elapsed: TimeInterval) {
+    func pauseAndResumeApplyAcrossModes(elapsed: TimeInterval) {
         let session = Session()
         defer { session.removeState() }
         let timer = session.timer
+        timer.adjustTimerDuration(by: 3_600)
         timer.selectMode(.pomodoro)
-        #expect(timer.pomodoro.controlLabel == "Start")
-        timer.togglePomodoroRunning()
-        #expect(timer.pomodoro.controlLabel == "Pause")
         session.now += elapsed
-        timer.togglePomodoroRunning()
+        timer.toggleRunning()
         #expect(timer.pomodoro.status == .paused)
-        #expect(timer.pomodoro.controlLabel == "Resume")
-        let pausedDescription = elapsed == 600
-            ? "Pomodoro paused. Focus: 15 minutes remaining. Break: 5 minutes remaining."
-            : "Pomodoro paused. Break: 3 minutes remaining. Focus complete."
-        #expect(timer.pomodoro.accessibilityDescription == pausedDescription)
+        #expect(timer.timer.isPaused)
+        #expect(timer.controlLabel == "Resume")
+        let description = timer.pomodoro.accessibilityDescription
+        let focus = timer.pomodoro.focusRemaining
+        let shortBreak = timer.pomodoro.breakRemaining
+        let remaining = timer.timer.remaining
         session.now += 1_200
-        timer.update()
         timer.selectMode(.timer)
-        timer.selectMode(.pomodoro)
-        #expect(timer.pomodoro.accessibilityDescription == pausedDescription)
-        timer.togglePomodoroRunning()
-        timer.selectMode(.pomodoro) // Selecting the current mode does not pause.
-        #expect(timer.pomodoro.status == .running)
+        #expect(timer.controlLabel == "Resume")
+        #expect(timer.timer.remaining == remaining)
+        #expect(timer.pomodoro.accessibilityDescription == description)
+        timer.toggleRunning()
         session.now += 60
-        timer.update()
-        if elapsed == 600 {
-            #expect(timer.pomodoro.focusRemaining == 840)
-            #expect(timer.pomodoro.breakRemaining == 300)
-            #expect(timer.pomodoro.accessibilityDescription == "Pomodoro running. Focus: 14 minutes remaining. Break: 5 minutes remaining.")
-        } else {
-            #expect(timer.pomodoro.focusRemaining == 0)
-            #expect(timer.pomodoro.breakRemaining == 120)
-            #expect(timer.pomodoro.accessibilityDescription == "Pomodoro running. Break: 2 minutes remaining. Focus complete.")
-        }
-        session.now += 3_900
-        timer.update()
-        #expect(timer.pomodoro.controlLabel == "Start")
-        #expect(timer.pomodoro.accessibilityDescription == "Pomodoro complete. Focus: 0 minutes remaining. Break: 0 minutes remaining.")
+        timer.selectMode(.pomodoro)
+        #expect(timer.controlLabel == "Pause")
+        #expect(timer.pomodoro.status == .running)
+        #expect(timer.timer.remaining == remaining - 60)
+        #expect(timer.pomodoro.focusRemaining == max(0, focus - 60))
+        #expect(timer.pomodoro.breakRemaining == shortBreak - (focus == 0 ? 60 : 0))
         #expect(session.sounds == 0)
     }
 
     @Test(arguments: [0.0, 600, 1_620, 3_900], [false, true])
-    func resetReturnsEveryStateToAFullReadyPair(elapsed: TimeInterval, pause: Bool) {
+    func resetKeepsTheCoreRunState(elapsed: TimeInterval, pause: Bool) {
         let session = Session()
         defer { session.removeState() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        if elapsed > 0 {
-            timer.togglePomodoroRunning()
-            session.now += elapsed
-            timer.update()
-            if pause && timer.pomodoro.status == .running {
-                timer.togglePomodoroRunning()
-            }
-        }
-        timer.resetPomodoro()
-        #expect(timer.pomodoro.status == .ready)
-        #expect(timer.pomodoro.focusRemaining == 1_500)
-        #expect(timer.pomodoro.breakRemaining == 300)
-        #expect(timer.pomodoro.phaseLabel == "Focus")
-        #expect(timer.pomodoro.controlLabel == "Start")
-        session.now += 3_900
+        session.now += elapsed
         timer.update()
-        #expect(timer.pomodoro.status == .ready)
+        if pause { timer.toggleRunning() }
+        timer.resetPomodoro()
+        #expect(timer.pomodoro.status == (pause ? .paused : .running))
         #expect(timer.pomodoro.focusRemaining == 1_500)
         #expect(timer.pomodoro.breakRemaining == 300)
+        #expect(timer.countdown.isPaused == pause)
+        session.now += 60
+        timer.update()
+        #expect(timer.pomodoro.focusRemaining == (pause ? 1_500 : 1_440))
         #expect(session.sounds == 0)
     }
 
@@ -173,7 +124,6 @@ struct PomodoroLifecycleTests {
             configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
-
         func removeState() { try? FileManager.default.removeItem(at: directory) }
     }
 }

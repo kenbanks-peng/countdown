@@ -19,7 +19,6 @@ struct CountdownCoreTests {
         )
         timer.selectMode(mode)
         if mode == .timer { timer.adjustTimerDuration(by: 1_800) }
-        else { timer.toggleRunning() }
         #expect(timer.controlLabel == "Pause")
         now += 300
         timer.update()
@@ -72,7 +71,6 @@ struct CountdownCoreTests {
             timer.adjustTimerDuration(by: 1_800)
             timer.adjustTimerDuration(by: -600)
         } else {
-            timer.toggleRunning()
             timer.adjustPomodoroDuration(.focus, by: -600)
         }
         #expect(timer.features.wakeupIntervalCount == 0)

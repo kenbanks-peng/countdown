@@ -1,6 +1,8 @@
 import Combine
 import Foundation
 
+/// A core Timer record. CountdownEngine controls its shared run state;
+/// the UI supplies permission for timeout actions.
 @MainActor
 final class TimerModel: ObservableObject {
     enum Status { case empty, prepared, active }
@@ -12,6 +14,8 @@ final class TimerModel: ObservableObject {
     @Published private(set) var isCurrentTimeoutEnabled = true
     @Published private(set) var isAutosetEnabled = false
 
+    // The engine can be paused even when this record is empty.
+    var isPausedByCore = false
     private var endDate: Date?
     private var completionWasReported = false
     private let stateStore: TimerStateStore
@@ -19,23 +23,26 @@ final class TimerModel: ObservableObject {
     private let playSound: @MainActor (URL?) -> Void
     private let now: () -> Date
     private let reportElapsed: (TimeInterval, TimeInterval) -> Void
+    private let timeoutActionsEnabled: () -> Bool
 
     init(
         stateStore: TimerStateStore = .default,
         configuration: CountdownConfiguration = .default,
         playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
-        reportElapsed: @escaping (TimeInterval, TimeInterval) -> Void = { _, _ in }
+        reportElapsed: @escaping (TimeInterval, TimeInterval) -> Void = { _, _ in },
+        timeoutActionsEnabled: @escaping () -> Bool = { true }
     ) {
         self.stateStore = stateStore
         self.configuration = configuration
         self.playSound = playSound
         self.now = now
         self.reportElapsed = reportElapsed
+        self.timeoutActionsEnabled = timeoutActionsEnabled
         isCurrentTimeoutEnabled = configuration.currentTimeoutEnabled
         isAutosetEnabled = configuration.autosetEnabled
         restore()
-        autoset()
+        if timeoutActionsEnabled() { autoset() }
     }
 
     static let maximumDuration: TimeInterval = 60 * 60
@@ -83,8 +90,9 @@ final class TimerModel: ObservableObject {
         remaining = duration
         completionWasReported = false
 
-        if status == .prepared {
+        if status == .prepared || isPausedByCore {
             endDate = nil
+            status = .prepared
         } else {
             endDate = nextHour
             status = .active
@@ -103,8 +111,9 @@ final class TimerModel: ObservableObject {
             return
         }
 
-        if status == .prepared {
+        if status == .prepared || isPausedByCore {
             endDate = nil
+            status = .prepared
         } else {
             endDate = now().addingTimeInterval(remaining)
             status = .active
@@ -136,22 +145,11 @@ final class TimerModel: ObservableObject {
         case .empty:
             duration = adjustedRemaining
             remaining = adjustedRemaining
-            endDate = now().addingTimeInterval(remaining)
-            status = .active
+            endDate = isPausedByCore ? nil : now().addingTimeInterval(remaining)
+            status = isPausedByCore ? .prepared : .active
         }
         completionWasReported = false
         save()
-    }
-
-    func toggleRunning() {
-        switch status {
-        case .active:
-            stop()
-        case .prepared:
-            start()
-        case .empty:
-            break
-        }
     }
 
     func start() {
@@ -192,7 +190,7 @@ final class TimerModel: ObservableObject {
             self.endDate = nil
             status = .empty
             duration = 0
-            if reportCompletion && !completionWasReported {
+            if reportCompletion && timeoutActionsEnabled() && !completionWasReported {
                 completionWasReported = true
                 completionCount += 1
                 if configuration.alarmEnabled {
@@ -200,7 +198,7 @@ final class TimerModel: ObservableObject {
                 }
             }
             stateStore.remove()
-            autoset()
+            if timeoutActionsEnabled() { autoset() }
         }
     }
 

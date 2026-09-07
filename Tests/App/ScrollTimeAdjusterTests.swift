@@ -24,7 +24,7 @@ struct ScrollTimeAdjusterTests {
         timer.setTimerToNextHour()
         timer.toggleTimerRunning()
         #expect(timer.timer.remaining == 60)
-        #expect(timer.timer.isPaused)
+        #expect(timer.timer.status == .active)
         #expect(timer.pomodoro.focusDuration == 1_500)
         #expect(timer.pomodoro.breakDuration == 300)
         timer.selectMode(.timer)
@@ -53,7 +53,7 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.focusDuration == 1_500)
         #expect(timer.pomodoro.breakDuration == 300)
         #expect(timer.timer.status == .empty)
-        #expect(timer.pomodoro.accessibilityDescription == "Pomodoro ready. Focus: 25 minutes allocated. Break: 5 minutes allocated.")
+        #expect(timer.pomodoro.accessibilityDescription == "Pomodoro running. Focus: 25 minutes remaining. Break: 5 minutes remaining.")
     }
 
     @Test(arguments: [0.0, 29.999, 30, 30.001, 179.999, 180, 270, 359.999], [false, true])
@@ -169,7 +169,7 @@ struct ScrollTimeAdjusterTests {
         try session.scroll(angle: minimumAngle, delta: 1)
         #expect(selected() == 120)
         #expect(other() == 300)
-        #expect(timer.pomodoro.status == .ready)
+        #expect(timer.pomodoro.status == .running)
         #expect(timer.timer.status == .empty)
     }
 
@@ -199,7 +199,6 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        timer.togglePomodoroRunning()
         session.now += 600
         if paused {
             timer.togglePomodoroRunning()
@@ -241,7 +240,7 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.status == .completed)
         #expect(timer.pomodoro.focusRemaining == 0)
         #expect(timer.pomodoro.breakRemaining == 0)
-        timer.togglePomodoroRunning()
+        timer.resetPomodoro()
         #expect(timer.pomodoro.focusRemaining == 660)
         #expect(timer.pomodoro.breakRemaining == 240)
         #expect(timer.timer.status == .empty)
@@ -254,7 +253,6 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        timer.togglePomodoroRunning()
         session.now += 1_620
         try session.scroll(angle: 90, delta: -1)
         #expect(timer.pomodoro.focusDuration == 1_440)

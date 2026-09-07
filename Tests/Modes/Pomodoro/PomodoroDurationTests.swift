@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct PomodoroDurationTests {
     @Test
-    func readyEditsClampOnlyTheSelectedPhaseAndResetUsesTheEditedPair() {
+    func durationEditsClampOnlyTheSelectedPhaseAndResetUsesTheEditedPair() {
         let session = Session()
         defer { session.removeState() }
         let timer = session.timer
@@ -23,7 +23,7 @@ struct PomodoroDurationTests {
         #expect(timer.pomodoro.breakDuration == 60)
         #expect(timer.pomodoro.focusDuration == 3_180)
         timer.resetPomodoro()
-        #expect(timer.pomodoro.status == .ready)
+        #expect(timer.pomodoro.status == .running)
         #expect(timer.pomodoro.focusRemaining == 3_180)
         #expect(timer.pomodoro.breakRemaining == 60)
         timer.selectMode(.timer)
@@ -38,7 +38,6 @@ struct PomodoroDurationTests {
         defer { session.removeState() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        timer.togglePomodoroRunning()
         session.now += 600
         if paused {
             timer.togglePomodoroRunning()
@@ -68,7 +67,7 @@ struct PomodoroDurationTests {
         timer.adjustPomodoroDuration(.shortBreak, by: 120)
         #expect(timer.pomodoro.status == .completed)
         #expect(timer.pomodoro.breakRemaining == 0)
-        timer.togglePomodoroRunning()
+        timer.resetPomodoro()
         #expect(timer.pomodoro.focusRemaining == 1_140)
         #expect(timer.pomodoro.breakRemaining == 300)
         #expect(session.sounds == 0)

@@ -1,10 +1,11 @@
 import Foundation
 
-/// Stores the selected Countdown mode and configured Pomodoro durations, not activity.
+/// Stores UI settings and the core pause state, not Pomodoro progress.
 struct CountdownSettings: Codable {
     var mode: CountdownMode = .timer
     var focusDuration: TimeInterval = 25 * 60
     var breakDuration: TimeInterval = 5 * 60
+    var isPaused: Bool?
 }
 
 /// Stores app settings separately from the Timer mode session.

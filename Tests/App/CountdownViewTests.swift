@@ -55,11 +55,11 @@ struct CountdownViewTests {
         window.contentView = hosting
         defer { window.close() }
         hosting.layoutSubtreeIfNeeded()
-        #expect(accessibilityLabels(hosting).contains("Pomodoro ready. Focus: 25 minutes allocated. Break: 5 minutes allocated."))
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Break: 5 minutes remaining."))
     }
 
     @Test
-    func restartedPomodoroRendersSavedAllocationsAsReadyWithAccessibleFocus() throws {
+    func restartedPomodoroRendersSavedAllocationsAndStartsFocus() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
@@ -70,7 +70,6 @@ struct CountdownViewTests {
         timer.selectMode(.pomodoro)
         timer.adjustPomodoroDuration(.focus, by: -300)
         timer.adjustPomodoroDuration(.shortBreak, by: 120)
-        timer.togglePomodoroRunning()
         now += 1_320
         timer.update()
         #expect(timer.pomodoro.phaseLabel == "Break")
@@ -100,7 +99,7 @@ struct CountdownViewTests {
         window.contentView = hosting
         defer { window.close() }
         hosting.layoutSubtreeIfNeeded()
-        #expect(accessibilityLabels(hosting).contains("Pomodoro ready. Focus: 20 minutes allocated. Break: 7 minutes allocated."))
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 20 minutes remaining. Break: 7 minutes remaining."))
         #expect(sounds == 0)
     }
 
@@ -128,7 +127,6 @@ struct CountdownViewTests {
         window.contentView = hosting
         defer { window.close() }
 
-        timer.togglePomodoroRunning()
         now += 600
         timer.update()
         let focus = try render(hosting)
@@ -214,7 +212,7 @@ struct CountdownViewTests {
         hosting.layoutSubtreeIfNeeded()
         #expect(pressTimer(hosting, labelPrefix: mode == .pomodoro ? "Pomodoro " : "30 minutes remaining"))
         #expect(expansions == 1)
-        #expect(timer.controlLabel == (mode == .pomodoro ? "Start" : "Resume"))
+        #expect(timer.controlLabel == "Resume")
         timer.toggleRunning()
         #expect(timer.controlLabel == "Pause")
         now += 60
@@ -301,7 +299,7 @@ struct CountdownViewTests {
         #expect(try sample(largerBreak, angle: 39).greenComponent > 0.6)
         #expect(try sample(largerBreak, angle: 183).greenComponent > 0.6)
         #expect(try sample(largerBreak, angle: 189).greenComponent < 0.2)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro ready. Focus: 25 minutes allocated. Break: 6 minutes allocated."))
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Break: 6 minutes remaining."))
         adapter.handle(try scrollEvent(in: window, at: green, delta: 1))
         let largerFocus = try render(hosting)
         #expect(try sample(largerFocus, angle: 33).blueComponent > 0.8)
@@ -314,7 +312,6 @@ struct CountdownViewTests {
         #expect(try sample(smallerBreak, angle: 183).greenComponent > 0.6)
         #expect(try sample(smallerBreak, angle: 189).greenComponent < 0.2)
 
-        timer.togglePomodoroRunning()
         now += 600
         adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 127, y: 36), delta: -1))
         let running = try render(hosting)
@@ -426,7 +423,7 @@ struct CountdownViewTests {
     }
 
     @Test
-    func presentationReplacementKeepsEditedReadyRunningAndPausedPair() throws {
+    func presentationReplacementKeepsEditedRunningAndPausedPair() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_700_000_000)
@@ -478,15 +475,14 @@ struct CountdownViewTests {
         }
 
         try showCompact()
-        #expect(timer.pomodoro.status == .ready)
-        #expect(accessibilityLabels(compact).contains("Pomodoro ready. Focus: 20 minutes allocated. Break: 10 minutes allocated."))
+        #expect(timer.pomodoro.status == .running)
+        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 20 minutes remaining. Break: 10 minutes remaining."))
         let ready = try render(compact, side: 32)
         #expect(try sample(ready, angle: 30).blueComponent > 0.8)
         #expect(try sample(ready, angle: 90).greenComponent > 0.6)
         #expect(try sample(ready, angle: 210).greenComponent < 0.2)
         try showNormal()
-        #expect(timer.pomodoro.status == .ready)
-        timer.toggleRunning()
+        #expect(timer.pomodoro.status == .running)
         now += 600
         timer.update()
         try showCompact()
@@ -545,7 +541,8 @@ struct CountdownViewTests {
         #expect(timer.pomodoro.status == .completed)
         #expect(presentationRequests == 0)
         #expect(sounds == 0)
-        #expect(timer.timer.isPaused)
+        #expect(timer.timer.status == .active)
+        #expect(!timer.countdown.isPaused)
         #expect(timer.features.wakeupIntervalCount == 0)
     }
 

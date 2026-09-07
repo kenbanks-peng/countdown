@@ -9,7 +9,8 @@ See the [source organization](docs/architecture.md).
 - Option-click the circle to set the timeout to end exactly on the next hour.
 - Scroll up to add time and scroll down to remove time in one-minute steps. Hold Option while you scroll for slower, precise one-minute adjustment. 
 - Right-click the Countdown window and toggle settings or select **Quit Countdown** to quit.
-- In the normal window, select **Pomodoro** from **Timer Mode** for the [25/5-minute allocation preview](docs/pomodoro-usage.md).
+- Select **Timer** or **Pomodoro** from **Timer Mode**. Pomodoro uses a 25-minute focus period and a 5-minute break.
+- Countdown starts automatically. Use **Pause** or **Resume** in the right-click menu. These controls apply to both modes; a mode change does not stop the countdown.
 
 ## Configuration
 

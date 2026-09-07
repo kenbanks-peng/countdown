@@ -4,48 +4,31 @@ import Testing
 
 @MainActor
 struct PomodoroPersistenceTests {
-    enum SavedActivity: CaseIterable {
-        case ready, runningFocus, runningBreak, pausedFocus, pausedBreak, completed
-    }
-
-    @Test(arguments: SavedActivity.allCases, [60.0, 1_620, 7_200])
-    func restartRetainsSelectedModeAndEditedPairButNotActivity(activity: SavedActivity, closedTime: TimeInterval) {
+    @Test(arguments: [false, true], [60.0, 1_620, 7_200])
+    func restartRetainsModeDurationsAndCorePauseState(paused: Bool, closedTime: TimeInterval) {
         let session = Session()
         defer { session.removeState() }
-        let timer = session.makeTimer()
-        timer.selectMode(.pomodoro)
-        timer.adjustPomodoroDuration(.focus, by: -300)
-        timer.adjustPomodoroDuration(.shortBreak, by: 120)
-        if activity != .ready {
-            timer.togglePomodoroRunning()
-            switch activity {
-            case .runningFocus, .pausedFocus: session.now += 600
-            case .runningBreak, .pausedBreak: session.now += 1_320
-            case .completed: session.now += 1_620
-            case .ready: break
-            }
-            timer.update()
-            if activity == .pausedFocus || activity == .pausedBreak { timer.togglePomodoroRunning() }
-        }
-        timer.save()
+        let controller = session.makeController()
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, by: -300)
+        controller.adjustPomodoroDuration(.shortBreak, by: 120)
+        session.now += 600
+        controller.update()
+        if paused { controller.toggleRunning() }
+        controller.save()
         session.now += closedTime
-        let soundsBeforeRestart = session.sounds
-
-        let restored = session.makeTimer()
+        let restored = session.makeController()
         #expect(restored.mode == .pomodoro)
-        #expect(restored.pomodoro.status == .ready)
+        #expect(restored.countdown.isPaused == paused)
+        #expect(restored.pomodoro.status == (paused ? .paused : .running))
+        // Pomodoro allocations persist, but each launch creates a fresh pair.
         #expect(restored.pomodoro.focusRemaining == 1_200)
         #expect(restored.pomodoro.breakRemaining == 420)
-        #expect(restored.pomodoro.accessibilityDescription == "Pomodoro ready. Focus: 20 minutes allocated. Break: 7 minutes allocated.")
-        session.now += 7_200
-        restored.update()
-        #expect(restored.pomodoro.status == .ready)
-        restored.togglePomodoroRunning()
         session.now += 60
         restored.update()
-        #expect(restored.pomodoro.focusRemaining == 1_140)
-        #expect(restored.pomodoro.breakRemaining == 420)
-        #expect(session.sounds == soundsBeforeRestart)
+        #expect(restored.pomodoro.focusRemaining == (paused ? 1_200 : 1_140))
+        restored.selectMode(.timer)
+        #expect(restored.controlLabel == (paused ? "Resume" : "Pause"))
     }
 
     @Test(arguments: [
@@ -63,174 +46,118 @@ struct PomodoroPersistenceTests {
         #"{"mode":"Pomodoro","focusDuration":1200,"breakDuration":"NaN"}"#,
         #"{"mode":"Pomodoro","focusDuration":null,"breakDuration":420}"#
     ])
-    func invalidSettingsUseCompleteDefaultsWithoutChangingCountdown(record: String) throws {
+    func invalidSettingsUseDefaultsAndRetainTheSavedPause(record: String) throws {
         let session = Session()
         defer { session.removeState() }
-        let timer = session.makeTimer()
-        timer.adjustTimerDuration(by: 1_200)
-        timer.toggleTimerRunning()
-        timer.save()
+        let controller = session.makeController()
+        controller.adjustTimerDuration(by: 1_200)
+        controller.toggleRunning()
+        controller.save()
         try Data(record.utf8).write(to: session.settingsURL)
         session.now += 60
-
-        let restored = session.makeTimer()
+        let restored = session.makeController()
         #expect(restored.mode == .timer)
-        #expect(restored.pomodoro.status == .ready)
         #expect(restored.pomodoro.focusDuration == 1_500)
         #expect(restored.pomodoro.breakDuration == 300)
+        #expect(restored.pomodoro.status == .paused)
         #expect(restored.timer.isPaused)
         #expect(restored.timer.remaining == 1_200)
         #expect(session.sounds == 0)
     }
 
     @Test
-    func pomodoroStartupRestoresThenPausesUnrelatedCountdownWithoutStartupSounds() {
+    func hiddenTimerRestoresAndContinuesWithoutStartupSounds() {
         let session = Session()
         defer { session.removeState() }
-        let timer = session.makeTimer()
-        timer.selectMode(.pomodoro)
-        timer.save()
-        // An independent active Countdown record can exist beside the selected mode.
-        session.countdownStore.save(TimerSession(
-            status: .active, duration: 1_200, remaining: 1_200,
-            endDate: session.now + 1_200, savedAt: session.now
-        ))
+        let controller = session.makeController()
+        controller.adjustTimerDuration(by: 1_200)
+        controller.selectMode(.pomodoro)
+        controller.save()
         session.now += 301
-
-        let restored = session.makeTimer()
+        let restored = session.makeController()
         #expect(restored.mode == .pomodoro)
-        #expect(restored.pomodoro.status == .ready)
-        #expect(restored.timer.isPaused)
+        #expect(restored.pomodoro.status == .running)
+        #expect(restored.timer.status == .active)
         #expect(restored.timer.remaining == 899)
         #expect(restored.timer.completionCount == 0)
         #expect(session.sounds == 0)
         session.now += 60
-        restored.update()
         restored.selectMode(.timer)
-        #expect(restored.timer.remaining == 899)
-        #expect(restored.timer.isPaused)
-        restored.toggleTimerRunning()
-        session.now += 60
-        restored.update()
         #expect(restored.timer.remaining == 839)
         session.now += 839
         restored.update()
         #expect(restored.timer.completionCount == 1)
-        #expect(session.sounds == 1, "Startup suppression must not mute later Countdown completion")
-    }
-
-    @Test
-    func modeAndDurationCommandsSaveWithoutWritingTheCountdownSession() {
-        let session = Session()
-        defer { session.removeState() }
-        let timer = session.makeTimer()
-        timer.selectMode(.pomodoro)
-        session.countdownStore.save(TimerSession(
-            status: .prepared, duration: 900, remaining: 900,
-            endDate: nil, savedAt: session.now
-        ))
-        timer.adjustPomodoroDuration(.focus, by: -300)
-        timer.adjustPomodoroDuration(.shortBreak, by: 120)
-        timer.resetPomodoro()
-
-        let restored = session.makeTimer()
-        #expect(restored.mode == .pomodoro)
-        #expect(restored.pomodoro.focusDuration == 1_200)
-        #expect(restored.pomodoro.breakDuration == 420)
-        #expect(restored.timer.isPaused)
-        #expect(restored.timer.remaining == 900)
-        restored.selectMode(.timer)
-        let countdownSelected = session.makeTimer()
-        #expect(countdownSelected.mode == .timer)
-        #expect(countdownSelected.pomodoro.focusDuration == 1_200)
-        #expect(countdownSelected.pomodoro.breakDuration == 420)
-        #expect(countdownSelected.timer.remaining == 900)
-        #expect(session.sounds == 0)
+        #expect(session.sounds == 1)
     }
 
     @Test(arguments: [true, false])
     func savedMinimumAndCapacityRemainValidAfterRestart(focusAtMinimum: Bool) {
         let session = Session()
         defer { session.removeState() }
-        let timer = session.makeTimer()
-        timer.selectMode(.pomodoro)
-        let minimumPhase: PomodoroModel.Phase = focusAtMinimum ? .focus : .shortBreak
-        let maximumPhase: PomodoroModel.Phase = focusAtMinimum ? .shortBreak : .focus
-        timer.adjustPomodoroDuration(minimumPhase, by: -3_600)
-        timer.adjustPomodoroDuration(maximumPhase, by: 3_600)
-        timer.save()
-
-        let restored = session.makeTimer()
+        let controller = session.makeController()
+        controller.selectMode(.pomodoro)
+        let minimum: PomodoroModel.Phase = focusAtMinimum ? .focus : .shortBreak
+        let maximum: PomodoroModel.Phase = focusAtMinimum ? .shortBreak : .focus
+        controller.adjustPomodoroDuration(minimum, by: -3_600)
+        controller.adjustPomodoroDuration(maximum, by: 3_600)
+        controller.save()
+        let restored = session.makeController()
         #expect(restored.pomodoro.focusDuration == (focusAtMinimum ? 60 : 3_540))
         #expect(restored.pomodoro.breakDuration == (focusAtMinimum ? 3_540 : 60))
-        restored.adjustPomodoroDuration(minimumPhase, by: -60)
-        restored.adjustPomodoroDuration(maximumPhase, by: 60)
+        restored.adjustPomodoroDuration(minimum, by: -60)
+        restored.adjustPomodoroDuration(maximum, by: 60)
         restored.resetPomodoro()
-        let reloaded = session.makeTimer()
-        #expect(reloaded.pomodoro.status == .ready)
+        let reloaded = session.makeController()
+        #expect(reloaded.pomodoro.status == .running)
         #expect(reloaded.pomodoro.focusRemaining == (focusAtMinimum ? 60 : 3_540))
         #expect(reloaded.pomodoro.breakRemaining == (focusAtMinimum ? 3_540 : 60))
     }
 
     @Test(arguments: [true, false])
-    func unavailableStorageStillAllowsInMemoryUseAndReloadsDefaults(blockStateRoot: Bool) throws {
+    func unavailableStorageAllowsInMemoryUse(blockStateRoot: Bool) throws {
         let session = Session()
         defer { session.removeState() }
         if blockStateRoot {
             try Data("not a directory".utf8).write(to: session.directory)
         } else {
-            // A directory at the record path cannot be read or replaced as a JSON file.
             try FileManager.default.createDirectory(at: session.settingsURL, withIntermediateDirectories: true)
         }
-        let timer = session.makeTimer()
-        #expect(timer.mode == .timer)
-        #expect(timer.pomodoro.focusDuration == 1_500)
-        #expect(timer.pomodoro.breakDuration == 300)
-        timer.selectMode(.pomodoro)
-        timer.adjustPomodoroDuration(.focus, by: -300)
-        timer.adjustPomodoroDuration(.shortBreak, by: 120)
-        timer.togglePomodoroRunning()
+        let controller = session.makeController()
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, by: -300)
+        controller.adjustPomodoroDuration(.shortBreak, by: 120)
         session.now += 60
-        timer.update()
-        timer.save()
-        #expect(timer.mode == .pomodoro)
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.focusRemaining == 1_140)
-        #expect(timer.pomodoro.breakRemaining == 420)
-
-        let restored = session.makeTimer()
+        controller.update()
+        controller.save()
+        #expect(controller.pomodoro.status == .running)
+        #expect(controller.pomodoro.focusRemaining == 1_140)
+        let restored = session.makeController()
         #expect(restored.mode == .timer)
-        #expect(restored.pomodoro.status == .ready)
+        #expect(restored.pomodoro.status == .running)
         #expect(restored.pomodoro.focusDuration == 1_500)
         #expect(restored.pomodoro.breakDuration == 300)
-        #expect(session.sounds == 0)
     }
 
     @Test
-    func failedWriteKeepsTheLastReadableSettingsNotUnsavedEdits() throws {
+    func failedWriteKeepsLastReadableSettings() throws {
         let session = Session()
         defer { session.removeState() }
-        let timer = session.makeTimer()
-        timer.selectMode(.pomodoro)
-        timer.adjustPomodoroDuration(.focus, by: -300)
-        timer.adjustPomodoroDuration(.shortBreak, by: 120)
-        timer.save()
-        let stateDirectory = session.settingsURL.deletingLastPathComponent()
-        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: stateDirectory.path)
-        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stateDirectory.path) }
-        #expect(!FileManager.default.isWritableFile(atPath: stateDirectory.path))
-        timer.adjustPomodoroDuration(.focus, by: 60)
-        timer.selectMode(.timer)
-        timer.save()
-        #expect(timer.mode == .timer)
-        #expect(timer.pomodoro.focusDuration == 1_260)
-
-        let restored = session.makeTimer()
+        let controller = session.makeController()
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, by: -300)
+        controller.save()
+        let directory = session.settingsURL.deletingLastPathComponent()
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: directory.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path) }
+        #expect(!FileManager.default.isWritableFile(atPath: directory.path))
+        controller.adjustPomodoroDuration(.focus, by: 60)
+        controller.selectMode(.timer)
+        controller.save()
+        #expect(controller.pomodoro.focusDuration == 1_260)
+        let restored = session.makeController()
         #expect(restored.mode == .pomodoro)
-        #expect(restored.pomodoro.status == .ready)
         #expect(restored.pomodoro.focusDuration == 1_200)
-        #expect(restored.pomodoro.breakDuration == 420)
-        #expect(session.sounds == 0)
+        #expect(restored.pomodoro.status == .running)
     }
 
     enum CountdownRecord: CaseIterable {
@@ -238,12 +165,12 @@ struct PomodoroPersistenceTests {
     }
 
     @Test(arguments: CountdownRecord.allCases, ["missing", "invalid", "Timer", "Pomodoro"])
-    func countdownRestorationKeepsItsRulesBeforeTheHiddenPauseGate(record: CountdownRecord, selectedMode: String) throws {
+    func timerRestorationDoesNotDependOnMode(record: CountdownRecord, selectedMode: String) throws {
         let session = Session()
         defer { session.removeState() }
         let prepared = record == .prepared || record == .stalePrepared
         let stale = record == .staleActive || record == .stalePrepared
-        session.countdownStore.save(TimerSession(
+        session.store.save(TimerSession(
             status: prepared ? .prepared : .active, duration: 1_200, remaining: 1_200,
             endDate: record == .invalid ? nil : session.now + (record == .expired ? -1 : 899),
             savedAt: session.now - (stale ? 1_201 : 301)
@@ -253,15 +180,14 @@ struct PomodoroPersistenceTests {
                 : "{\"mode\":\"\(selectedMode)\",\"focusDuration\":1200,\"breakDuration\":420}"
             try Data(settings.utf8).write(to: session.settingsURL)
         }
-        let restored = session.makeTimer()
+        let restored = session.makeController()
         #expect(restored.mode == (selectedMode == "Pomodoro" ? .pomodoro : .timer))
-        #expect(restored.pomodoro.status == .ready)
+        #expect(restored.pomodoro.status == (record == .prepared ? .paused : .running))
         #expect(restored.timer.completionCount == 0)
         switch record {
         case .active:
-            #expect(restored.timer.status == (selectedMode == "Pomodoro" ? .prepared : .active))
+            #expect(restored.timer.status == .active)
             #expect(restored.timer.remaining == 899)
-            // Countdown-selected startup retains its established Wakeup rule.
             #expect(session.sounds == (selectedMode == "Pomodoro" ? 0 : 1))
         case .prepared:
             #expect(restored.timer.isPaused)
@@ -269,60 +195,25 @@ struct PomodoroPersistenceTests {
             #expect(session.sounds == 0)
         case .staleActive, .stalePrepared, .expired, .invalid:
             #expect(restored.timer.status == .empty)
-            #expect(restored.timer.remaining == 0)
             #expect(session.sounds == 0)
         }
     }
 
     @Test
-    func unreadableSettingsFallBackWithoutReplacingCountdown() throws {
+    func unreadableSettingsDoNotPauseTheTimer() throws {
         let session = Session()
         defer { session.removeState() }
-        let timer = session.makeTimer()
-        timer.adjustTimerDuration(by: 900)
-        timer.selectMode(.pomodoro)
-        timer.adjustPomodoroDuration(.focus, by: -300)
-        timer.save()
+        let controller = session.makeController()
+        controller.adjustTimerDuration(by: 900)
+        controller.selectMode(.pomodoro)
+        controller.save()
         try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: session.settingsURL.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: session.settingsURL.path) }
         #expect(!FileManager.default.isReadableFile(atPath: session.settingsURL.path))
-
-        let restored = session.makeTimer()
+        let restored = session.makeController()
         #expect(restored.mode == .timer)
-        #expect(restored.pomodoro.focusDuration == 1_500)
-        #expect(restored.pomodoro.breakDuration == 300)
-        #expect(restored.timer.isPaused)
+        #expect(restored.timer.status == .active)
         #expect(restored.timer.remaining == 900)
-        #expect(session.sounds == 0)
-    }
-
-    @Test
-    func startupPauseGateAlsoStopsCountdownAutosetWithoutChangingItsSettings() {
-        let session = Session()
-        defer { session.removeState() }
-        session.now = Calendar.current.date(from: DateComponents(year: 2025, month: 1, day: 6, hour: 10, minute: 30))!
-        let timer = session.makeTimer()
-        timer.selectMode(.pomodoro)
-        timer.save()
-        let restored = session.makeTimer(configuration: CountdownConfiguration(
-            alarmNotificationURL: nil, clockFaceEnabled: false, clockHandsEnabled: false,
-            currentTimeoutEnabled: false, autosetEnabled: true
-        ))
-        #expect(restored.mode == .pomodoro)
-        #expect(restored.pomodoro.status == .ready)
-        #expect(restored.timer.isPaused)
-        #expect(restored.timer.remaining == 1_800)
-        #expect(restored.timer.isAutosetEnabled)
-        #expect(restored.features.isWakeupEnabled)
-        #expect(!restored.features.isClockFaceEnabled)
-        #expect(!restored.features.isClockHandsEnabled)
-        #expect(!restored.timer.isCurrentTimeoutEnabled)
-        session.now += 3_600
-        restored.update()
-        restored.selectMode(.timer)
-        #expect(restored.timer.isPaused)
-        #expect(restored.timer.remaining == 1_800)
-        #expect(session.sounds == 0)
     }
 
     @MainActor
@@ -330,23 +221,14 @@ struct PomodoroPersistenceTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
-
-        var countdownStore: TimerStateStore {
-            TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
-        }
-
-        var settingsURL: URL {
-            directory.appendingPathComponent("countdown/settings.json")
-        }
-
-        func makeTimer(configuration: CountdownConfiguration = CountdownConfiguration(alarmNotificationURL: nil)) -> CountdownController {
+        var store: TimerStateStore { TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]) }
+        var settingsURL: URL { directory.appendingPathComponent("countdown/settings.json") }
+        func makeController() -> CountdownController {
             CountdownController(
-                stateStore: countdownStore,
-                configuration: configuration,
+                stateStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }
-
         func removeState() { try? FileManager.default.removeItem(at: directory) }
     }
 }

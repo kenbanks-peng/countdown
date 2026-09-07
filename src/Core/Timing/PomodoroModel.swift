@@ -1,6 +1,7 @@
 import Foundation
 
-/// One focus/short-break pair. Elapsed time stops at the end of the pair.
+/// A core focus/short-break record, controlled by CountdownEngine.
+/// Elapsed time stops at the end of the pair, not the shared engine.
 struct PomodoroModel {
     enum Status { case ready, running, paused, completed }
 
@@ -22,14 +23,6 @@ struct PomodoroModel {
     var focusRemaining: TimeInterval { focusCompleted ? 0 : max(0, focusDuration - focusElapsed) }
     var breakRemaining: TimeInterval { status == .completed ? 0 : max(0, breakDuration - breakElapsed) }
     var phaseLabel: String { focusRemaining > 0 ? "Focus" : "Break" }
-
-    var controlLabel: String {
-        switch status {
-        case .ready, .completed: "Start"
-        case .running: "Pause"
-        case .paused: "Resume"
-        }
-    }
 
     var accessibilityDescription: String {
         switch status {
