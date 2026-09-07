@@ -86,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func handlePopupInterval() {
         guard panelMode == .compact else { return }
 
-        exitCompactMode()
+        exitCompactMode(requestKeyboardFocus: false)
         returnToCompactTask?.cancel()
         returnToCompactTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(3))
@@ -197,7 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    private func exitCompactMode() {
+    private func exitCompactMode(requestKeyboardFocus: Bool = true) {
         guard panelMode == .compact,
               !isModeTransitionInProgress,
               let panel,
@@ -217,7 +217,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.savePanelState(frame: fullFrame)
             self.normalFrame = nil
             self.isModeTransitionInProgress = false
-            panel.makeKeyAndOrderFront(nil)
+            if requestKeyboardFocus {
+                panel.makeKeyAndOrderFront(nil)
+            } else {
+                // Automatic reminders must not interrupt typing in another app.
+                panel.orderFront(nil)
+            }
         }
 
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
