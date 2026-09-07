@@ -14,12 +14,15 @@ struct PomodoroConfigurationTests {
         try """
         [unrelated]
         focus = 59
+        cycles = 12
         [pomodoro] # All times are minutes.
         focus = 20 # Shared focus duration.
         rest = 7
         long-rest = 22
+        cycles = 3 # Focus periods before a long rest.
         """.write(to: configURL, atomically: true, encoding: .utf8)
         let configuration = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
+        #expect(configuration.pomodoroCycles == 3)
         #expect(configuration.pomodoroFocusMinutes == 20)
         #expect(configuration.pomodoroRestMinutes == 7)
         #expect(configuration.pomodoroLongRestMinutes == 22)
@@ -28,6 +31,7 @@ struct PomodoroConfigurationTests {
             CountdownController(stateStore: store, configuration: configuration, playSound: { _ in })
         }
         let original = controller(configuration)
+        #expect(original.pomodoro.cycles == 3)
         #expect(original.pomodoro.focusDuration == 1_200)
         #expect(original.pomodoro.restDuration == 420)
         #expect(original.pomodoro.longRestDuration == 1_320)
@@ -41,6 +45,8 @@ struct PomodoroConfigurationTests {
         #expect(restored.pomodoro.restDuration == 480)
         #expect(restored.pomodoro.longRestDuration == 1_380)
         #expect(restored.pomodoro.stage == 1)
+        #expect(restored.pomodoro.cycles == 4)
+        #expect(controller(configuration).pomodoro.cycles == 3)
     }
 
     @Test(arguments: ["0", "-1", "60", "1.5", "\"NaN\"", "99999999999999999999999999"])
@@ -55,6 +61,19 @@ struct PomodoroConfigurationTests {
         #expect(configuration.pomodoroFocusMinutes == 25)
         #expect(configuration.pomodoroRestMinutes == 5)
         #expect(configuration.pomodoroLongRestMinutes == 15)
+    }
+
+    @Test(arguments: ["", "cycles = 0", "cycles = -1", "cycles = 13", "cycles = 1.5",
+                      "cycles = \"4\"", "cycles = 99999999999999999999999999"])
+    func missingOrInvalidCyclesUseFour(line: String) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let configDirectory = directory.appendingPathComponent("countdown")
+        try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
+        try "[pomodoro]\n\(line)\n"
+            .write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
+        let configuration = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
+        #expect(configuration.pomodoroCycles == 4)
     }
 
     @Test

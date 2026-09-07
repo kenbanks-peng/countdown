@@ -1,11 +1,17 @@
 import Foundation
 
-/// Repeating four-stage cycle, controlled by CountdownEngine.
+/// Repeating cycle with a configurable stage count, controlled by CountdownEngine.
 /// Allocations are shared across stages; progress belongs to the current stage.
 struct PomodoroModel {
     enum Status { case ready, running, paused }
     enum Phase { case focus, rest, longRest }
     enum DotState { case pending, current, completed }
+
+    let cycles: Int
+
+    static func validCycles(_ value: Int) -> Int {
+        (1...12).contains(value) ? value : 4
+    }
 
     private(set) var focusDuration: TimeInterval
     private(set) var restDuration: TimeInterval
@@ -19,32 +25,35 @@ struct PomodoroModel {
     private var lastUpdate: Date?
 
     init(focusDuration: TimeInterval = 25 * 60, restDuration: TimeInterval = 5 * 60,
-         longRestDuration: TimeInterval = 15 * 60) {
+         longRestDuration: TimeInterval = 15 * 60, cycles: Int = 4) {
+        self.cycles = Self.validCycles(cycles)
         self.focusDuration = focusDuration
         self.restDuration = restDuration
         self.longRestDuration = longRestDuration
     }
 
-    var restPhase: Phase { stage == 4 ? .longRest : .rest }
-    var activeRestDuration: TimeInterval { stage == 4 ? longRestDuration : restDuration }
+    var restPhase: Phase { stage == cycles ? .longRest : .rest }
+    var activeRestDuration: TimeInterval { stage == cycles ? longRestDuration : restDuration }
     var focusRemaining: TimeInterval { focusCompleted ? 0 : max(0, focusDuration - focusElapsed) }
     var restRemaining: TimeInterval { max(0, activeRestDuration - restElapsed) }
-    var phaseLabel: String { focusRemaining > 0 ? "Focus" : (stage == 4 ? "Long rest" : "Rest") }
+    var phaseLabel: String { focusRemaining > 0 ? "Focus" : (stage == cycles ? "Long rest" : "Rest") }
     var completedFocusPeriods: Int { stage - 1 + (focusCompleted ? 1 : 0) }
-    var cycleDuration: TimeInterval { 4 * focusDuration + 3 * restDuration + longRestDuration }
+    var cycleDuration: TimeInterval {
+        Double(cycles) * focusDuration + Double(cycles - 1) * restDuration + longRestDuration
+    }
 
     var dotStates: [DotState] {
-        (1...4).map { index in
+        (1...cycles).map { index in
             if index <= completedFocusPeriods { return .completed }
             if index == stage { return .current }
             return .pending
         }
     }
 
-    var progressDescription: String { "Focus period \(stage) of 4. \(completedFocusPeriods) completed." }
+    var progressDescription: String { "Focus period \(stage) of \(cycles). \(completedFocusPeriods) completed." }
 
     var accessibilityDescription: String {
-        let rest = stage == 4 ? "Long rest" : "Rest"
+        let rest = stage == cycles ? "Long rest" : "Rest"
         switch status {
         case .ready:
             return "Pomodoro ready. Focus: \(minutes(focusDuration)) allocated. \(rest): \(minutes(activeRestDuration)) allocated."
@@ -126,7 +135,7 @@ struct PomodoroModel {
     private mutating func finishDepletedPhases() {
         if focusRemaining == 0 { focusCompleted = true }
         if focusCompleted && restRemaining == 0 {
-            stage = stage == 4 ? 1 : stage + 1
+            stage = stage == cycles ? 1 : stage + 1
             resetStage()
         }
     }

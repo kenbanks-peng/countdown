@@ -6,6 +6,7 @@ struct CountdownConfiguration {
     let redNotificationURL: URL?
     let alarmNotificationURL: URL?
     let popupTime: Int
+    let pomodoroCycles: Int
     let pomodoroFocusMinutes: Int
     let pomodoroRestMinutes: Int
     let pomodoroLongRestMinutes: Int
@@ -18,8 +19,10 @@ struct CountdownConfiguration {
         popupTime: Int = 5,
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
-        pomodoroLongRestMinutes: Int = 15
+        pomodoroLongRestMinutes: Int = 15,
+        pomodoroCycles: Int = 4
     ) {
+        self.pomodoroCycles = PomodoroModel.validCycles(pomodoroCycles)
         self.greenNotificationURL = greenNotificationURL
         self.yellowNotificationURL = yellowNotificationURL
         self.redNotificationURL = redNotificationURL
@@ -54,7 +57,8 @@ struct CountdownConfiguration {
             popupTime: configurationFile.intValue(for: "popup_time", in: contents) ?? 5,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", in: contents, section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", in: contents, section: "pomodoro") ?? 5,
-            pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", in: contents, section: "pomodoro") ?? 15
+            pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", in: contents, section: "pomodoro") ?? 15,
+            pomodoroCycles: configurationFile.intValue(for: "cycles", in: contents, section: "pomodoro") ?? 4
         )
     }
 

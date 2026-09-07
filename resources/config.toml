@@ -5,6 +5,8 @@
 focus = 25
 rest = 5
 long-rest = 15
+# Focus periods before a long rest. Use 1–12; invalid values use 4.
+cycles = 4
 
 [notifications]
 # Positive multiples of 5 minutes; invalid values use 5.

@@ -62,7 +62,8 @@ final class CountdownController: ObservableObject {
             timer: timer,
             pomodoro: PomodoroModel(
                 focusDuration: settings.focusDuration, restDuration: settings.restDuration,
-                longRestDuration: settings.longRestDuration ?? 900
+                longRestDuration: settings.longRestDuration ?? 900,
+                cycles: configuration.pomodoroCycles
             ),
             isPaused: settings.isPaused ?? timer.isPaused, now: now
         )

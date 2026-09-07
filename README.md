@@ -9,7 +9,7 @@ See the [source organization](docs/architecture.md).
 - Option-click the circle to set the timeout to end exactly on the next hour.
 - Scroll up to add time and scroll down to remove time in one-minute steps. Hold Option while you scroll for slower, precise one-minute adjustment. 
 - Right-click the Countdown window and toggle settings or select **Quit Countdown** to quit.
-- Select **Timer** or **Pomodoro** from **Timer Mode**. Pomodoro repeats four focus periods with short rests, then a long rest. Four dots show focus progress. Use **Durations** in the right-click menu to adjust times.
+- Select **Timer** or **Pomodoro** from **Timer Mode**. Pomodoro repeats focus periods with short rests, then a long rest. The default is four focus periods. Dots show focus progress. Use **Durations** in the right-click menu to adjust times.
 - Countdown starts automatically. Use **Pause** or **Resume** in the right-click menu. These controls apply to both modes; a mode change does not stop the countdown.
 
 ## Configuration
@@ -22,6 +22,8 @@ Countdown reads its configuration from `$XDG_CONFIG_HOME/countdown/config.toml` 
 focus = 25
 rest = 5
 long-rest = 15
+# Focus periods before a long rest (1–12).
+cycles = 4
 
 [notifications]
 popup_time = 5

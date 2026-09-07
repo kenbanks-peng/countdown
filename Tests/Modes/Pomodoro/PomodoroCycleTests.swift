@@ -36,10 +36,41 @@ struct PomodoroCycleTests {
         #expect(model.restRemaining == 300)
     }
 
-    @Test
-    func lateUpdatesMatchSmallUpdatesAndIgnoreDuplicateOrBackwardTime() {
-        var late = PomodoroModel()
-        var stepped = PomodoroModel()
+    @Test(arguments: [1, 3, 4, 12])
+    func configuredCyclesRepeatAfterLongRest(cycles: Int) {
+        var model = PomodoroModel(cycles: cycles)
+        #expect(model.cycleDuration == Double(cycles) * 1_500 + Double(cycles - 1) * 300 + 900)
+        model.toggleRunning(at: start)
+        for stage in 1...cycles {
+            let stageStart = start + Double(stage - 1) * 1_800
+            model.update(at: stageStart)
+            #expect(model.stage == stage)
+            #expect(model.dotStates.count == cycles)
+            #expect(model.dotStates[stage - 1] == .current)
+            #expect(model.restPhase == (stage == cycles ? .longRest : .rest))
+            model.update(at: stageStart + 1_500)
+            #expect(model.restRemaining == (stage == cycles ? 900 : 300))
+            #expect(model.progressDescription == "Focus period \(stage) of \(cycles). \(stage) completed.")
+            #expect(model.dotStates == (1...cycles).map { $0 <= stage ? .completed : .pending })
+        }
+        model.update(at: start + model.cycleDuration)
+        #expect(model.stage == 1)
+        #expect(model.focusRemaining == 1_500)
+        #expect(model.completedFocusPeriods == 0)
+        model.reset()
+        #expect(model.cycles == cycles)
+    }
+
+    @Test(arguments: [0, -1, 13, Int.max])
+    func invalidCyclesUseFour(cycles: Int) {
+        #expect(PomodoroModel(cycles: cycles).cycles == 4)
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, pomodoroCycles: cycles).pomodoroCycles == 4)
+    }
+
+    @Test(arguments: [1, 3, 4, 12])
+    func lateUpdatesMatchSmallUpdatesAndIgnoreDuplicateOrBackwardTime(cycles: Int) {
+        var late = PomodoroModel(cycles: cycles)
+        var stepped = PomodoroModel(cycles: cycles)
         late.toggleRunning(at: start)
         stepped.toggleRunning(at: start)
         for seconds in stride(from: 60, through: 80_040, by: 60) {

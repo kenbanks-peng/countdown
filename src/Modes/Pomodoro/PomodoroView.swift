@@ -27,8 +27,8 @@ struct PomodoroView: View {
                 .stroke(Color.countdownTrack.opacity(0.7), lineWidth: isCompact ? 1 : 3)
                 .padding(isCompact ? 0.5 : 2)
             if !isCompact {
-                HStack(spacing: 6) {
-                    ForEach(0..<4) { index in
+                HStack(spacing: model.cycles > 6 ? 2 : 6) {
+                    ForEach(0..<model.cycles, id: \.self) { index in
                         ZStack {
                             Circle().strokeBorder(.white, lineWidth: 1)
                             if model.dotStates[index] == .completed {
