@@ -6,13 +6,15 @@ struct CountdownView: View {
     @ObservedObject var countdown: CountdownController
     var isCompact = false
     let changePresentation: () -> Void
+    private let allowsClick: () -> Bool
     @ObservedObject private var features: CountdownFeatures
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
         self.changePresentation = changePresentation
+        self.allowsClick = allowsClick
         self.features = countdown.features
         self._currentTime = State(initialValue: countdown.currentTime)
     }
@@ -105,6 +107,7 @@ struct CountdownView: View {
     }
 
     private func activate() {
+        guard allowsClick() else { return }
         if countdown.mode == .timer, !isCompact, NSEvent.modifierFlags.contains(.option) {
             countdown.setTimerToNextHour()
         } else {

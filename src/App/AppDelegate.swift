@@ -7,7 +7,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private enum PanelMode { case normal, compact }
 
-    private var panel: NSPanel?
+    private var panel: CountdownPanel?
     private var countdown: CountdownController?
     private var scrollTimeAdjuster: ScrollTimeAdjuster?
     private var normalFrame: NSRect?
@@ -57,8 +57,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         savePanelState()
     }
 
-    private func makePanel(size: NSSize) -> NSPanel {
-        let panel = NSPanel(
+    private func makePanel(size: NSSize) -> CountdownPanel {
+        let panel = CountdownPanel(
             contentRect: NSRect(origin: NSPoint(x: 100, y: 120), size: size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -98,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func normalContentView(for countdown: CountdownController) -> NSView {
         NSHostingView(rootView: CountdownView(
             countdown: countdown,
+            allowsClick: { [weak self] in self?.panel?.allowsClick ?? true },
             changePresentation: { [weak self] in self?.enterCompactMode() }
         ))
     }
@@ -106,6 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSHostingView(rootView: CountdownView(
             countdown: countdown,
             isCompact: true,
+            allowsClick: { [weak self] in self?.panel?.allowsClick ?? true },
             changePresentation: { [weak self] in self?.exitCompactMode() }
         ))
     }
