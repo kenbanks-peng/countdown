@@ -5,14 +5,16 @@ import SwiftUI
 struct CountdownView: View {
     @ObservedObject var countdown: CountdownController
     var isCompact = false
+    var isPopup = false
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     @ObservedObject private var features: CountdownFeatures
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isPopup: Bool = false, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
+        self.isPopup = isPopup
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
         self.features = countdown.features
@@ -23,7 +25,9 @@ struct CountdownView: View {
         Button(action: activate) {
             ZStack {
                 modeContent
-                if !isCompact {
+                if showsPopupDetails {
+                    popupOverlay
+                } else if !isCompact {
                     CountdownClockOverlay(features: features, currentTime: currentTime)
                         .padding(6)
                 }
@@ -86,6 +90,23 @@ struct CountdownView: View {
         }
     }
 
+    private var showsPopupDetails: Bool { isPopup && !isCompact }
+
+    private var popupOverlay: CountdownPopupOverlay {
+        if countdown.mode == .timer {
+            return CountdownPopupOverlay(
+                remaining: countdown.timer.remaining, phase: "Timer", isPaused: countdown.countdown.isPaused
+            )
+        }
+        let model = countdown.pomodoro
+        return CountdownPopupOverlay(
+            remaining: model.focusRemaining > 0 ? model.focusRemaining : model.restRemaining,
+            phase: model.phaseLabel,
+            session: "Session \(model.stage) of \(model.cycles)",
+            isPaused: countdown.countdown.isPaused
+        )
+    }
+
     @ViewBuilder
     private var modeContent: some View {
         switch countdown.mode {
@@ -93,10 +114,10 @@ struct CountdownView: View {
             if isCompact {
                 CompactTimerView(model: countdown.timer, clockDate: clockDate)
             } else {
-                TimerView(model: countdown.timer, clockDate: clockDate)
+                TimerView(model: countdown.timer, clockDate: clockDate, showsLabels: !showsPopupDetails)
             }
         case .pomodoro:
-            PomodoroView(model: countdown.pomodoro, isCompact: isCompact, clockDate: clockDate)
+            PomodoroView(model: countdown.pomodoro, isCompact: isCompact, clockDate: clockDate, showsSessionDots: !showsPopupDetails)
         }
     }
 

@@ -4,8 +4,8 @@ import Testing
 
 @MainActor
 struct CountdownViewLayoutTests {
-    @Test(arguments: CountdownMode.allCases)
-    func normalViewRemainsSquareAtIntermediateTransitionSizes(mode: CountdownMode) {
+    @Test(arguments: CountdownMode.allCases, [false, true])
+    func normalViewRemainsSquareAtIntermediateTransitionSizes(mode: CountdownMode, isPopup: Bool) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let stateStore = TimerStateStore(environment: [
@@ -18,7 +18,7 @@ struct CountdownViewLayoutTests {
             playSound: { _ in }
         )
         timer.selectMode(mode)
-        let hostingView = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: {}))
+        let hostingView = NSHostingView(rootView: CountdownView(countdown: timer, isPopup: isPopup, changePresentation: {}))
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = NSColor.clear.cgColor
 

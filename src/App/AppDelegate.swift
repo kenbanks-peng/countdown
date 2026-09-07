@@ -86,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func handlePopupInterval() {
         guard panelMode == .compact else { return }
 
-        exitCompactMode(requestKeyboardFocus: false)
+        exitCompactMode(requestKeyboardFocus: false, isPopup: true)
         returnToCompactTask?.cancel()
         returnToCompactTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(3))
@@ -95,9 +95,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    private func normalContentView(for countdown: CountdownController) -> NSView {
+    private func normalContentView(for countdown: CountdownController, isPopup: Bool = false) -> NSView {
         NSHostingView(rootView: CountdownView(
             countdown: countdown,
+            isPopup: isPopup,
             allowsClick: { [weak self] in self?.panel?.allowsClick ?? true },
             changePresentation: { [weak self] in self?.enterCompactMode() }
         ))
@@ -197,7 +198,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    private func exitCompactMode(requestKeyboardFocus: Bool = true) {
+    private func exitCompactMode(requestKeyboardFocus: Bool = true, isPopup: Bool = false) {
         guard panelMode == .compact,
               !isModeTransitionInProgress,
               let panel,
@@ -226,7 +227,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            panel.contentView = normalContentView(for: countdown)
+            panel.contentView = normalContentView(for: countdown, isPopup: isPopup)
             panel.setFrame(fullFrame, display: true)
             finishTransition()
             return
@@ -236,7 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // face and hands fade in with the circle instead of popping in after it
         // lands. Keeping the panel square and compact-sized while it travels
         // still prevents the growing circle from being clipped into a square.
-        let incoming = crossFadeTo(normalContentView(for: countdown), in: panel)
+        let incoming = crossFadeTo(normalContentView(for: countdown, isPopup: isPopup), in: panel)
 
         let slideWaypoint = transitionWaypoint(from: panel.frame, to: fullFrame)
         animate(panel, to: slideWaypoint, duration: slideDuration, timingFunction: .easeIn) { [weak self] in

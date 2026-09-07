@@ -5,6 +5,7 @@ struct PomodoroView: View {
     let model: PomodoroModel
     var isCompact = false
     var clockDate: Date? = nil
+    var showsSessionDots = true
 
     private var arcs: (focus: CountdownArcLayout, rest: CountdownArcLayout) {
         CountdownArcLayout.pomodoro(
@@ -26,7 +27,7 @@ struct PomodoroView: View {
             Circle()
                 .stroke(Color.countdownTrack.opacity(0.7), lineWidth: isCompact ? 1 : 3)
                 .padding(isCompact ? 0.5 : 2)
-            if !isCompact {
+            if !isCompact && showsSessionDots {
                 HStack(spacing: model.cycles > 6 ? 2 : 6) {
                     ForEach(0..<model.cycles, id: \.self) { index in
                         ZStack {

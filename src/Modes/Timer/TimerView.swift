@@ -4,6 +4,7 @@ import SwiftUI
 struct TimerView: View {
     @ObservedObject var model: TimerModel
     var clockDate: Date? = nil
+    var showsLabels = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -22,7 +23,7 @@ struct TimerView: View {
                 .padding(2)
                 .animation(arcAnimation, value: isHovering)
 
-            countdownLabel
+            if showsLabels { countdownLabel }
         }
         .contentShape(Circle())
         .onHover { isHovering = $0 }
@@ -37,7 +38,7 @@ struct TimerView: View {
                 .fill(indicatorColor)
                 .animation(arcAnimation, value: model.hourProportion)
 
-            if model.isCurrentTimeoutEnabled || model.isPaused {
+            if showsLabels && (model.isCurrentTimeoutEnabled || model.isPaused) {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .frame(width: 50, height: model.isPaused ? 46 : 34)
                     .offset(y: 32)
