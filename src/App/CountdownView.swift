@@ -30,6 +30,7 @@ struct CountdownView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(countdown.mode == .pomodoro ? countdown.pomodoro.progressDescription : "")
         .accessibilityHint("Click to use \(isCompact ? "normal" : "compact") view. Use the right-click menu to \(countdown.controlLabel.lowercased()).")
         .help("Click to change view. Use the right-click menu for timer controls. Scroll to adjust time; hold Option for slower adjustment.")
         .contextMenu {
@@ -48,6 +49,11 @@ struct CountdownView: View {
             if countdown.mode == .timer {
                 TimerContextMenu(model: countdown.timer, setToNextHour: countdown.setTimerToNextHour)
             } else {
+                Menu("Durations") {
+                    durationMenu("Focus", phase: .focus, duration: countdown.pomodoro.focusDuration)
+                    durationMenu("Rest", phase: .rest, duration: countdown.pomodoro.restDuration)
+                    durationMenu("Long rest", phase: .longRest, duration: countdown.pomodoro.longRestDuration)
+                }
                 Button("Reset", action: countdown.resetPomodoro)
             }
             Divider()
@@ -62,6 +68,13 @@ struct CountdownView: View {
                 expandAtOneMinuteRemaining()
                 try? await Task.sleep(for: .milliseconds(100))
             }
+        }
+    }
+
+    private func durationMenu(_ label: String, phase: PomodoroModel.Phase, duration: TimeInterval) -> some View {
+        Menu("\(label): \(Int(duration / 60)) min") {
+            Button("Increase by 1 minute") { countdown.adjustPomodoroDuration(phase, by: 60) }
+            Button("Decrease by 1 minute") { countdown.adjustPomodoroDuration(phase, by: -60) }
         }
     }
 

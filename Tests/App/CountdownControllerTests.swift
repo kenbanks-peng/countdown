@@ -14,7 +14,7 @@ struct CountdownControllerTests {
         controller.selectMode(.pomodoro)
         #expect(controller.timer.remaining == 1_125)
         #expect(controller.pomodoro.focusRemaining == 1_425)
-        #expect(controller.pomodoro.breakDuration == 300)
+        #expect(controller.pomodoro.restDuration == 300)
         session.now += 600
         controller.selectMode(.timer)
         #expect(controller.timer.remaining == 525)

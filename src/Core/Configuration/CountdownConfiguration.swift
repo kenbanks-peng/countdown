@@ -11,6 +11,9 @@ struct CountdownConfiguration {
     let reminderEnabled: Bool
     let reminderTime: Int
     let alarmEnabled: Bool
+    let pomodoroFocusMinutes: Int
+    let pomodoroRestMinutes: Int
+    let pomodoroLongRestMinutes: Int
 
     init(
         alarmNotificationURL: URL?,
@@ -22,7 +25,10 @@ struct CountdownConfiguration {
         autosetEnabled: Bool = false,
         reminderEnabled: Bool = true,
         reminderTime: Int = 5,
-        alarmEnabled: Bool = true
+        alarmEnabled: Bool = true,
+        pomodoroFocusMinutes: Int = 25,
+        pomodoroRestMinutes: Int = 5,
+        pomodoroLongRestMinutes: Int = 15
     ) {
         self.greenNotificationURL = greenNotificationURL
         self.yellowNotificationURL = yellowNotificationURL
@@ -34,6 +40,13 @@ struct CountdownConfiguration {
         self.reminderEnabled = reminderEnabled
         self.reminderTime = reminderTime > 0 && reminderTime.isMultiple(of: 5) ? reminderTime : 5
         self.alarmEnabled = alarmEnabled
+        let focus = (1...59).contains(pomodoroFocusMinutes) ? pomodoroFocusMinutes : 25
+        let rest = (1...59).contains(pomodoroRestMinutes) ? pomodoroRestMinutes : 5
+        let longRest = (1...59).contains(pomodoroLongRestMinutes) ? pomodoroLongRestMinutes : 15
+        let valid = focus + max(rest, longRest) <= 60
+        self.pomodoroFocusMinutes = valid ? focus : 25
+        self.pomodoroRestMinutes = valid ? rest : 5
+        self.pomodoroLongRestMinutes = valid ? longRest : 15
     }
 
     static let `default` = load()
@@ -46,7 +59,7 @@ struct CountdownConfiguration {
         configurationFile.write(lines)
     }
 
-    private static func load(
+    static func load(
         fileManager: FileManager = .default,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> CountdownConfiguration {
@@ -66,7 +79,10 @@ struct CountdownConfiguration {
             autosetEnabled: configurationFile.boolValue(for: "autoset_enabled", in: contents) ?? false,
             reminderEnabled: configurationFile.boolValue(for: "reminder_enabled", in: contents) ?? true,
             reminderTime: configurationFile.intValue(for: "reminder_time", in: contents) ?? 5,
-            alarmEnabled: configurationFile.boolValue(for: "alarm_enabled", in: contents) ?? true
+            alarmEnabled: configurationFile.boolValue(for: "alarm_enabled", in: contents) ?? true,
+            pomodoroFocusMinutes: configurationFile.intValue(for: "focus", in: contents, section: "pomodoro") ?? 25,
+            pomodoroRestMinutes: configurationFile.intValue(for: "rest", in: contents, section: "pomodoro") ?? 5,
+            pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", in: contents, section: "pomodoro") ?? 15
         )
     }
 
@@ -155,9 +171,9 @@ private struct CountdownConfigurationFile {
         }
     }
 
-    func intValue(for key: String, in contents: String) -> Int? {
-        guard let value = value(for: key, in: contents) else { return nil }
-        return Int(value)
+    func intValue(for key: String, in contents: String, section: String? = nil) -> Int? {
+        guard let value = value(for: key, in: contents, section: section) else { return nil }
+        return Int(value.split(separator: "#", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) ?? "")
     }
 
     private func stringValue(for key: String, in contents: String) -> String? {
@@ -167,9 +183,16 @@ private struct CountdownConfigurationFile {
         return String(value.dropFirst().dropLast())
     }
 
-    private func value(for key: String, in contents: String) -> String? {
+    private func value(for key: String, in contents: String, section: String? = nil) -> String? {
+        var currentSection = ""
         for line in contents.split(whereSeparator: \.isNewline) {
             let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            let header = trimmedLine.split(separator: "#", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) ?? ""
+            if header.hasPrefix("["), header.hasSuffix("]") {
+                currentSection = String(header.dropFirst().dropLast())
+                continue
+            }
+            if let section, section != currentSection { continue }
             guard !trimmedLine.hasPrefix("#"),
                   let equalsIndex = trimmedLine.firstIndex(of: "=")
             else { continue }

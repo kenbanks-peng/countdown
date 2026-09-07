@@ -30,15 +30,15 @@ struct CountdownArcLayout {
     }
 
     static func pomodoro(
-        focusRemaining: TimeInterval, breakRemaining: TimeInterval,
-        breakDuration: TimeInterval, at date: Date?
-    ) -> (focus: Self, shortBreak: Self) {
+        focusRemaining: TimeInterval, restRemaining: TimeInterval,
+        restDuration: TimeInterval, at date: Date?
+    ) -> (focus: Self, rest: Self) {
         let start = date.map { minuteProportion(at: $0) } ?? 0
         return (
-            focus: Self(startProportion: date == nil ? breakDuration / 3_600 : start,
+            focus: Self(startProportion: date == nil ? restDuration / 3_600 : start,
                         proportion: max(0, focusRemaining / 3_600)),
-            shortBreak: Self(startProportion: date == nil ? 0 : start + focusRemaining / 3_600,
-                             proportion: max(0, breakRemaining / 3_600))
+            rest: Self(startProportion: date == nil ? 0 : start + focusRemaining / 3_600,
+                             proportion: max(0, restRemaining / 3_600))
         )
     }
 }

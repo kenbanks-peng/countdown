@@ -23,15 +23,17 @@ struct CountdownPersistenceTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = CountdownSettingsStore(fileManager: .default, stateDirectory: directory)
-        store.save(CountdownSettings(mode: mode, focusDuration: 1_200, breakDuration: 420))
+        store.save(CountdownSettings(mode: mode, focusDuration: 1_200, restDuration: 420, longRestDuration: 900))
 
         let restored = store.load()
         #expect(restored.mode == mode)
         #expect(restored.focusDuration == 1_200)
-        #expect(restored.breakDuration == 420)
+        #expect(restored.restDuration == 420)
+        #expect(restored.longRestDuration == 900)
         let data = try Data(contentsOf: directory.appendingPathComponent("settings.json"))
         let record = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(record["mode"] as? String == (mode == .timer ? "Timer" : "Pomodoro"))
+        #expect(Set(record.keys) == ["mode", "focusDuration", "restDuration", "longRestDuration"])
         #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("session.json").path))
     }
 }

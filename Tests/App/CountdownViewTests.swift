@@ -7,7 +7,7 @@ import Vision
 @MainActor
 struct CountdownViewTests {
     @Test(arguments: [true, false])
-    func defaultPomodoroRendersFixedScaleSectorsAndOnlyFocusText(timeoutEnabled: Bool) throws {
+    func defaultPomodoroRendersFixedScaleSectorsWithoutPhaseText(timeoutEnabled: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
@@ -45,7 +45,7 @@ struct CountdownViewTests {
         request.recognitionLevel = .accurate
         try VNImageRequestHandler(cgImage: #require(bitmap.cgImage)).perform([request])
         let text = request.results?.compactMap { $0.topCandidates(1).first?.string } ?? []
-        #expect(text == ["Focus"])
+        #expect(text.isEmpty)
         let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
         let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
         NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
@@ -55,7 +55,7 @@ struct CountdownViewTests {
         window.contentView = hosting
         defer { window.close() }
         hosting.layoutSubtreeIfNeeded()
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Break: 5 minutes remaining."))
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Rest: 5 minutes remaining."))
     }
 
     @Test
@@ -69,17 +69,17 @@ struct CountdownViewTests {
         let timer = CountdownController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
         timer.selectMode(.pomodoro)
         timer.adjustPomodoroDuration(.focus, by: -300)
-        timer.adjustPomodoroDuration(.shortBreak, by: 120)
+        timer.adjustPomodoroDuration(.rest, by: 120)
         now += 1_320
         timer.update()
-        #expect(timer.pomodoro.phaseLabel == "Break")
+        #expect(timer.pomodoro.phaseLabel == "Rest")
         timer.save()
         now += 7_200
 
         let restored = CountdownController(stateStore: store, configuration: configuration, playSound: { _ in sounds += 1 }, now: { now })
         let hosting = NSHostingView(rootView: CountdownView(countdown: restored, changePresentation: {}))
         let bitmap = try render(hosting)
-        // Saved 7-minute break spans 42°; saved 20-minute focus ends at 162°.
+        // Saved 7-minute rest spans 42°; saved 20-minute focus ends at 162°.
         for angle in [3.0, 39] {
             #expect(try sample(bitmap, angle: angle).blueComponent > 0.8)
         }
@@ -89,7 +89,7 @@ struct CountdownViewTests {
         for angle in [165.0, 270, 357] {
             #expect(try sample(bitmap, angle: angle).greenComponent < 0.2)
         }
-        #expect(try recognizedText(bitmap) == ["Focus"])
+        #expect(try recognizedText(bitmap).isEmpty)
         let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
         let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
         NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
@@ -99,7 +99,7 @@ struct CountdownViewTests {
         window.contentView = hosting
         defer { window.close() }
         hosting.layoutSubtreeIfNeeded()
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 20 minutes remaining. Break: 7 minutes remaining."))
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 20 minutes remaining. Rest: 7 minutes remaining."))
         #expect(sounds == 0)
     }
 
@@ -139,48 +139,45 @@ struct CountdownViewTests {
         for angle in [123.0, 177, 183, 270, 357] {
             #expect(try sample(focus, angle: angle).greenComponent < 0.2)
         }
-        #expect(try recognizedText(focus) == ["Focus"])
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 15 minutes remaining. Break: 5 minutes remaining."))
+        #expect(try recognizedText(focus).isEmpty)
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 15 minutes remaining. Rest: 5 minutes remaining."))
 
         now += 900
         timer.update()
         let transition = try render(hosting)
         #expect(try sample(transition, angle: 27).blueComponent > 0.8)
         #expect(try sample(transition, angle: 33).greenComponent < 0.2)
-        #expect(try recognizedText(transition) == ["Break"])
+        #expect(try recognizedText(transition).isEmpty)
 
         now += 120
         timer.update()
-        let shortBreak = try render(hosting)
+        let rest = try render(hosting)
         for angle in [3.0, 15] {
-            #expect(try sample(shortBreak, angle: angle).blueComponent > 0.8)
+            #expect(try sample(rest, angle: angle).blueComponent > 0.8)
         }
         for angle in [21.0, 27, 33, 90, 177, 270] {
-            #expect(try sample(shortBreak, angle: angle).blueComponent < 0.2)
+            #expect(try sample(rest, angle: angle).blueComponent < 0.2)
         }
-        #expect(try recognizedText(shortBreak) == ["Break"])
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Break: 3 minutes remaining. Focus complete."))
+        #expect(try recognizedText(rest).isEmpty)
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Rest: 3 minutes remaining. Focus complete."))
         timer.togglePomodoroRunning()
         _ = try render(hosting)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Break: 3 minutes remaining. Focus complete."))
+        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Rest: 3 minutes remaining. Focus complete."))
         timer.togglePomodoroRunning()
         now += 120
         timer.update() // Final minute must not request a presentation change.
         now += 60
         timer.update()
         timer.update()
-        let completed = try render(hosting)
-        // Window color management can change RGB values. All depleted sectors
-        // must match the unallocated background and remain dark.
-        let background = try sample(completed, angle: 270)
-        for angle in [3.0, 15, 27, 33, 90, 177] {
-            let color = try sample(completed, angle: angle)
-            #expect(color.redComponent < 0.2 && color.greenComponent < 0.2 && color.blueComponent < 0.2)
-            #expect(abs(color.redComponent - background.redComponent) < 0.01)
-            #expect(abs(color.greenComponent - background.greenComponent) < 0.01)
-            #expect(abs(color.blueComponent - background.blueComponent) < 0.01)
+        let nextStage = try render(hosting)
+        #expect(timer.pomodoro.stage == 2)
+        for angle in [3.0, 15, 27] {
+            #expect(try sample(nextStage, angle: angle).blueComponent > 0.8)
         }
-        #expect(accessibilityLabels(hosting).contains("Pomodoro complete. Focus: 0 minutes remaining. Break: 0 minutes remaining."))
+        for angle in [33.0, 90, 177] {
+            #expect(try sample(nextStage, angle: angle).greenComponent > 0.6)
+        }
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Rest: 5 minutes remaining."))
         #expect(expansions == 0)
         #expect(sounds == 0)
     }
@@ -294,23 +291,23 @@ struct CountdownViewTests {
         let blue = NSPoint(x: 110, y: 158)
         let green = NSPoint(x: 160, y: 94)
         adapter.handle(try scrollEvent(in: window, at: blue, delta: 1))
-        let largerBreak = try render(hosting)
-        #expect(try sample(largerBreak, angle: 33).blueComponent > 0.8)
-        #expect(try sample(largerBreak, angle: 39).greenComponent > 0.6)
-        #expect(try sample(largerBreak, angle: 183).greenComponent > 0.6)
-        #expect(try sample(largerBreak, angle: 189).greenComponent < 0.2)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Break: 6 minutes remaining."))
+        let largerRest = try render(hosting)
+        #expect(try sample(largerRest, angle: 33).blueComponent > 0.8)
+        #expect(try sample(largerRest, angle: 39).greenComponent > 0.6)
+        #expect(try sample(largerRest, angle: 183).greenComponent > 0.6)
+        #expect(try sample(largerRest, angle: 189).greenComponent < 0.2)
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Rest: 6 minutes remaining."))
         adapter.handle(try scrollEvent(in: window, at: green, delta: 1))
         let largerFocus = try render(hosting)
         #expect(try sample(largerFocus, angle: 33).blueComponent > 0.8)
         #expect(try sample(largerFocus, angle: 189).greenComponent > 0.6)
         #expect(try sample(largerFocus, angle: 195).greenComponent < 0.2)
         adapter.handle(try scrollEvent(in: window, at: blue, delta: -1))
-        let smallerBreak = try render(hosting)
-        #expect(try sample(smallerBreak, angle: 27).blueComponent > 0.8)
-        #expect(try sample(smallerBreak, angle: 33).greenComponent > 0.6)
-        #expect(try sample(smallerBreak, angle: 183).greenComponent > 0.6)
-        #expect(try sample(smallerBreak, angle: 189).greenComponent < 0.2)
+        let smallerRest = try render(hosting)
+        #expect(try sample(smallerRest, angle: 27).blueComponent > 0.8)
+        #expect(try sample(smallerRest, angle: 33).greenComponent > 0.6)
+        #expect(try sample(smallerRest, angle: 183).greenComponent > 0.6)
+        #expect(try sample(smallerRest, angle: 189).greenComponent < 0.2)
 
         now += 600
         adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 127, y: 36), delta: -1))
@@ -318,8 +315,8 @@ struct CountdownViewTests {
         #expect(try sample(running, angle: 27).blueComponent > 0.8)
         #expect(try sample(running, angle: 117).greenComponent > 0.6)
         #expect(try sample(running, angle: 123).greenComponent < 0.2)
-        #expect(try recognizedText(running) == ["Focus"])
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 15 minutes remaining. Break: 5 minutes remaining."))
+        #expect(try recognizedText(running).isEmpty)
+        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 15 minutes remaining. Rest: 5 minutes remaining."))
         timer.togglePomodoroRunning()
         now += 1_200
         adapter.handle(try scrollEvent(in: window, at: blue, delta: 1))
@@ -328,13 +325,13 @@ struct CountdownViewTests {
         #expect(try sample(paused, angle: 39).greenComponent > 0.6)
         #expect(try sample(paused, angle: 123).greenComponent > 0.6)
         #expect(try sample(paused, angle: 129).greenComponent < 0.2)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Focus: 15 minutes remaining. Break: 6 minutes remaining."))
+        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Focus: 15 minutes remaining. Rest: 6 minutes remaining."))
         adapter.handle(try scrollEvent(in: window, at: green, delta: -180, option: true))
-        let shortBreak = try render(hosting)
-        #expect(try sample(shortBreak, angle: 33).blueComponent > 0.8)
-        #expect(try sample(shortBreak, angle: 39).greenComponent < 0.2)
-        #expect(try recognizedText(shortBreak) == ["Break"])
-        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Break: 6 minutes remaining. Focus complete."))
+        let rest = try render(hosting)
+        #expect(try sample(rest, angle: 33).blueComponent > 0.8)
+        #expect(try sample(rest, angle: 39).greenComponent < 0.2)
+        #expect(try recognizedText(rest).isEmpty)
+        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Rest: 6 minutes remaining. Focus complete."))
         #expect(sounds == 0)
         #expect(timer.timer.status == .empty)
     }
@@ -407,7 +404,7 @@ struct CountdownViewTests {
         let blue = NSPoint(x: side / 2 + radius * sin(.pi / 12), y: side / 2 + radius * cos(.pi / 12))
         let green = NSPoint(x: side / 2 + radius, y: side / 2)
         adapter.handle(try scrollEvent(in: window, at: blue, delta: 30))
-        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.restDuration == 360)
         #expect(timer.pomodoro.focusDuration == 1_500)
         adapter.handle(try scrollEvent(in: window, at: green, delta: 7, option: true))
         #expect(timer.pomodoro.focusDuration == 1_500)
@@ -418,7 +415,8 @@ struct CountdownViewTests {
         #expect(try sample(edited, angle: 48).greenComponent > 0.6)
         #expect(try sample(edited, angle: 180).greenComponent > 0.6)
         #expect(try sample(edited, angle: 210).greenComponent < 0.2)
-        #expect(try recognizedText(edited) == (isCompact ? [] : ["Focus"]))
+        // OCR can read the four rings as punctuation; there must be no phase label.
+        #expect(try recognizedText(edited).allSatisfy { $0 != "Focus" && $0 != "Rest" })
         #expect(timer.timer.status == .empty)
     }
 
@@ -452,7 +450,7 @@ struct CountdownViewTests {
         adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 110, y: 158), delta: 60, option: true))
         adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 160, y: 94), delta: -60, option: true))
         #expect(timer.pomodoro.focusDuration == 1_200)
-        #expect(timer.pomodoro.breakDuration == 600)
+        #expect(timer.pomodoro.restDuration == 600)
 
         func showCompact() throws {
             isCompact = true
@@ -462,7 +460,7 @@ struct CountdownViewTests {
             #expect(try recognizedText(bitmap).isEmpty)
             #expect(timer.mode == .pomodoro)
             #expect(timer.pomodoro.focusDuration == 1_200)
-            #expect(timer.pomodoro.breakDuration == 600)
+            #expect(timer.pomodoro.restDuration == 600)
         }
         func showNormal() throws {
             isCompact = false
@@ -471,12 +469,12 @@ struct CountdownViewTests {
             _ = try render(normal)
             #expect(timer.mode == .pomodoro)
             #expect(timer.pomodoro.focusDuration == 1_200)
-            #expect(timer.pomodoro.breakDuration == 600)
+            #expect(timer.pomodoro.restDuration == 600)
         }
 
         try showCompact()
         #expect(timer.pomodoro.status == .running)
-        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 20 minutes remaining. Break: 10 minutes remaining."))
+        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 20 minutes remaining. Rest: 10 minutes remaining."))
         let ready = try render(compact, side: 32)
         #expect(try sample(ready, angle: 30).blueComponent > 0.8)
         #expect(try sample(ready, angle: 90).greenComponent > 0.6)
@@ -488,8 +486,8 @@ struct CountdownViewTests {
         try showCompact()
         #expect(timer.pomodoro.status == .running)
         #expect(timer.pomodoro.focusRemaining == 600)
-        #expect(timer.pomodoro.breakRemaining == 600)
-        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 10 minutes remaining. Break: 10 minutes remaining."))
+        #expect(timer.pomodoro.restRemaining == 600)
+        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 10 minutes remaining. Rest: 10 minutes remaining."))
         let focus = try render(compact, side: 32)
         #expect(try sample(focus, angle: 30).blueComponent > 0.8)
         #expect(try sample(focus, angle: 90).greenComponent > 0.6)
@@ -503,42 +501,43 @@ struct CountdownViewTests {
         timer.update()
         #expect(timer.pomodoro.status == .running)
         #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.breakRemaining == 600)
-        #expect(try recognizedText(render(normal)) == ["Break"])
+        #expect(timer.pomodoro.restRemaining == 600)
+        #expect(try recognizedText(render(normal)).isEmpty)
         now += 120
         timer.toggleRunning()
         try showCompact()
         now += 1_200
         timer.update()
         #expect(timer.pomodoro.status == .paused)
-        #expect(timer.pomodoro.breakRemaining == 480)
-        #expect(accessibilityLabels(compact).contains("Pomodoro paused. Break: 8 minutes remaining. Focus complete."))
+        #expect(timer.pomodoro.restRemaining == 480)
+        #expect(accessibilityLabels(compact).contains("Pomodoro paused. Rest: 8 minutes remaining. Focus complete."))
         let paused = try render(compact, side: 32)
         #expect(try sample(paused, angle: 30).blueComponent > 0.8)
         #expect(try sample(paused, angle: 90).greenComponent < 0.2)
         try showNormal()
         #expect(timer.pomodoro.status == .paused)
-        #expect(timer.pomodoro.breakRemaining == 480)
+        #expect(timer.pomodoro.restRemaining == 480)
         try showCompact()
         timer.toggleRunning()
         now += 420
         timer.update()
         _ = try render(compact, side: 32)
         #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.breakRemaining == 60)
+        #expect(timer.pomodoro.restRemaining == 60)
         #expect(presentationRequests == 0)
         now += 60
         timer.update()
         timer.update()
-        let completed = try render(compact, side: 32)
-        #expect(timer.pomodoro.status == .completed)
-        #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.breakRemaining == 0)
-        #expect(try sample(completed, angle: 30).blueComponent < 0.2)
-        #expect(try sample(completed, angle: 90).greenComponent < 0.2)
-        #expect(accessibilityLabels(compact).contains("Pomodoro complete. Focus: 0 minutes remaining. Break: 0 minutes remaining."))
+        let nextStage = try render(compact, side: 32)
+        #expect(timer.pomodoro.status == .running)
+        #expect(timer.pomodoro.stage == 2)
+        #expect(timer.pomodoro.focusRemaining == 1_200)
+        #expect(timer.pomodoro.restRemaining == 600)
+        #expect(try sample(nextStage, angle: 30).blueComponent > 0.8)
+        #expect(try sample(nextStage, angle: 90).greenComponent > 0.6)
+        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 20 minutes remaining. Rest: 10 minutes remaining."))
         try showNormal()
-        #expect(timer.pomodoro.status == .completed)
+        #expect(timer.pomodoro.status == .running)
         #expect(presentationRequests == 0)
         #expect(sounds == 0)
         #expect(timer.timer.status == .active)
@@ -623,6 +622,40 @@ struct CountdownViewTests {
         #expect(clock != plain)
         timer.features.setClockEnabled(false)
         #expect(try image() == plain)
+    }
+
+    @Test(arguments: [0.0, 1_500, 1_800, 3_600, 5_400, 6_900, 7_800])
+    func fourDotsRenderCompletedCurrentAndPendingFocus(elapsed: TimeInterval) throws {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        var model = PomodoroModel()
+        model.toggleRunning(at: start)
+        model.update(at: start + elapsed)
+        let bitmap = try render(NSHostingView(rootView: PomodoroView(model: model)))
+        let scale = Double(bitmap.pixelsWide) / 188
+        var areas: [PomodoroModel.DotState: [Int]] = [:]
+        for index in 0..<4 {
+            let centerX = 73.0 + Double(index) * 14
+            var whitePixels = 0
+            for y in Int(122 * scale)..<Int(130 * scale) {
+                for x in Int((centerX - 4) * scale)..<Int((centerX + 4) * scale) {
+                    let color = try #require(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))
+                    if min(color.redComponent, color.greenComponent, color.blueComponent) > 0.8 {
+                        whitePixels += 1
+                    }
+                }
+            }
+            #expect(whitePixels > 0, "Dot \(index + 1) must be visible")
+            areas[model.dotStates[index], default: []].append(whitePixels)
+        }
+        if let completed = areas[.completed]?.min(), let current = areas[.current]?.max() {
+            #expect(completed > current)
+        }
+        if let current = areas[.current]?.min(), let pending = areas[.pending]?.max() {
+            #expect(current > pending)
+        }
+        if let completed = areas[.completed]?.min(), let pending = areas[.pending]?.max() {
+            #expect(completed > pending)
+        }
     }
 
     private func render<V: View>(_ hosting: NSHostingView<V>, side: Double = 188) throws -> NSBitmapImageRep {

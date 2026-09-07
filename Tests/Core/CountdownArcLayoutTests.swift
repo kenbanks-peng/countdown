@@ -26,30 +26,30 @@ struct CountdownArcLayoutTests {
         #expect(timer.startProportion == 0)
         #expect(close(timer.proportion, 10.0 / 60))
         let pair = CountdownArcLayout.pomodoro(
-            focusRemaining: 1_200, breakRemaining: 300, breakDuration: 300, at: nil
+            focusRemaining: 1_200, restRemaining: 300, restDuration: 300, at: nil
         )
         #expect(close(pair.focus.startProportion, 5.0 / 60))
-        #expect(pair.shortBreak.startProportion == 0)
+        #expect(pair.rest.startProportion == 0)
     }
 
-    @Test func focusPrecedesBreakAndBothEndTimesStayFixed() {
+    @Test func focusPrecedesRestAndBothEndTimesStayFixed() {
         let initial = CountdownArcLayout.pomodoro(
-            focusRemaining: 1_500, breakRemaining: 300, breakDuration: 300, at: date(minute: 20)
+            focusRemaining: 1_500, restRemaining: 300, restDuration: 300, at: date(minute: 20)
         )
         let later = CountdownArcLayout.pomodoro(
-            focusRemaining: 1_200, breakRemaining: 300, breakDuration: 300, at: date(minute: 25)
+            focusRemaining: 1_200, restRemaining: 300, restDuration: 300, at: date(minute: 25)
         )
         #expect(close(initial.focus.startProportion, 20.0 / 60))
-        #expect(close(initial.shortBreak.startProportion, 45.0 / 60))
-        #expect(close(later.focus.startProportion + later.focus.proportion, initial.shortBreak.startProportion))
-        #expect(close(later.shortBreak.startProportion, initial.shortBreak.startProportion))
-        #expect(close(later.shortBreak.startProportion + later.shortBreak.proportion, 50.0 / 60))
-        let inBreak = CountdownArcLayout.pomodoro(
-            focusRemaining: 0, breakRemaining: 180, breakDuration: 300, at: date(minute: 47)
+        #expect(close(initial.rest.startProportion, 45.0 / 60))
+        #expect(close(later.focus.startProportion + later.focus.proportion, initial.rest.startProportion))
+        #expect(close(later.rest.startProportion, initial.rest.startProportion))
+        #expect(close(later.rest.startProportion + later.rest.proportion, 50.0 / 60))
+        let inRest = CountdownArcLayout.pomodoro(
+            focusRemaining: 0, restRemaining: 180, restDuration: 300, at: date(minute: 47)
         )
-        #expect(inBreak.focus.proportion == 0)
-        #expect(close(inBreak.shortBreak.startProportion, 47.0 / 60))
-        #expect(close(inBreak.shortBreak.startProportion + inBreak.shortBreak.proportion, 50.0 / 60))
+        #expect(inRest.focus.proportion == 0)
+        #expect(close(inRest.rest.startProportion, 47.0 / 60))
+        #expect(close(inRest.rest.startProportion + inRest.rest.proportion, 50.0 / 60))
     }
 
     @Test func pausedDurationFollowsClockAndAdjustmentMovesEnd() {

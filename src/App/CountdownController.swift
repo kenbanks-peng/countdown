@@ -31,7 +31,11 @@ final class CountdownController: ObservableObject {
         settingsStore = CountdownSettingsStore(
             fileManager: stateStore.fileManager, stateDirectory: stateStore.stateDirectory
         )
-        let settings = settingsStore.load()
+        let settings = settingsStore.load(defaults: CountdownSettings(
+            focusDuration: TimeInterval(configuration.pomodoroFocusMinutes * 60),
+            restDuration: TimeInterval(configuration.pomodoroRestMinutes * 60),
+            longRestDuration: TimeInterval(configuration.pomodoroLongRestMinutes * 60)
+        ))
         mode = settings.mode
         let policy = TimeoutPolicy(mode: settings.mode)
         timeoutPolicy = policy
@@ -48,7 +52,10 @@ final class CountdownController: ObservableObject {
         )
         countdown = CountdownEngine(
             timer: timer,
-            pomodoro: PomodoroModel(focusDuration: settings.focusDuration, breakDuration: settings.breakDuration),
+            pomodoro: PomodoroModel(
+                focusDuration: settings.focusDuration, restDuration: settings.restDuration,
+                longRestDuration: settings.longRestDuration ?? 900
+            ),
             isPaused: settings.isPaused ?? timer.isPaused, now: now
         )
         countdownChanges = countdown.objectWillChange.sink { [weak self] in
@@ -111,10 +118,11 @@ final class CountdownController: ObservableObject {
     }
 
     func update() {
-        let previous = pomodoro.focusRemaining + pomodoro.breakRemaining
+        let previousElapsed = pomodoro.elapsedTime
         countdown.update()
         if mode == .pomodoro {
-            features.reportElapsed(previousRemaining: previous, remaining: pomodoro.focusRemaining + pomodoro.breakRemaining)
+            let remaining = pomodoro.focusRemaining + pomodoro.restRemaining
+            features.reportElapsed(previousRemaining: remaining + pomodoro.elapsedTime - previousElapsed, remaining: remaining)
         } else if timer.remaining == 0 {
             features.reportElapsed(previousRemaining: 0, remaining: 0)
         }
@@ -128,8 +136,8 @@ final class CountdownController: ObservableObject {
 
     private func saveSettings() {
         settingsStore.save(CountdownSettings(
-            mode: mode, focusDuration: pomodoro.focusDuration, breakDuration: pomodoro.breakDuration,
-            isPaused: countdown.isPaused
+            mode: mode, focusDuration: pomodoro.focusDuration, restDuration: pomodoro.restDuration,
+            isPaused: countdown.isPaused, longRestDuration: pomodoro.longRestDuration
         ))
     }
 }

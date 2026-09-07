@@ -11,7 +11,8 @@ struct PomodoroPersistenceTests {
         let controller = session.makeController()
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, by: -300)
-        controller.adjustPomodoroDuration(.shortBreak, by: 120)
+        controller.adjustPomodoroDuration(.rest, by: 120)
+        controller.adjustPomodoroDuration(.longRest, by: 300)
         session.now += 600
         controller.update()
         if paused { controller.toggleRunning() }
@@ -21,9 +22,11 @@ struct PomodoroPersistenceTests {
         #expect(restored.mode == .pomodoro)
         #expect(restored.countdown.isPaused == paused)
         #expect(restored.pomodoro.status == (paused ? .paused : .running))
-        // Pomodoro allocations persist, but each launch creates a fresh pair.
+        // Pomodoro allocations persist, but each launch creates a fresh cycle.
+        #expect(restored.pomodoro.stage == 1)
+        #expect(restored.pomodoro.longRestDuration == 1_200)
         #expect(restored.pomodoro.focusRemaining == 1_200)
-        #expect(restored.pomodoro.breakRemaining == 420)
+        #expect(restored.pomodoro.restRemaining == 420)
         session.now += 60
         restored.update()
         #expect(restored.pomodoro.focusRemaining == (paused ? 1_200 : 1_140))
@@ -33,18 +36,18 @@ struct PomodoroPersistenceTests {
 
     @Test(arguments: [
         "not JSON", "{}",
-        #"{"mode":"Other","focusDuration":1200,"breakDuration":420}"#,
+        #"{"mode":"Other","focusDuration":1200,"restDuration":420}"#,
         #"{"mode":"Pomodoro","focusDuration":1200}"#,
-        #"{"mode":"Pomodoro","breakDuration":420}"#,
-        #"{"focusDuration":1200,"breakDuration":420}"#,
-        #"{"mode":"Pomodoro","focusDuration":0,"breakDuration":420}"#,
-        #"{"mode":"Pomodoro","focusDuration":1200,"breakDuration":59}"#,
-        #"{"mode":"Pomodoro","focusDuration":-60,"breakDuration":420}"#,
-        #"{"mode":"Pomodoro","focusDuration":1200,"breakDuration":-60}"#,
-        #"{"mode":"Pomodoro","focusDuration":3300,"breakDuration":301}"#,
-        #"{"mode":"Pomodoro","focusDuration":1e309,"breakDuration":420}"#,
-        #"{"mode":"Pomodoro","focusDuration":1200,"breakDuration":"NaN"}"#,
-        #"{"mode":"Pomodoro","focusDuration":null,"breakDuration":420}"#
+        #"{"mode":"Pomodoro","restDuration":420}"#,
+        #"{"focusDuration":1200,"restDuration":420}"#,
+        #"{"mode":"Pomodoro","focusDuration":0,"restDuration":420}"#,
+        #"{"mode":"Pomodoro","focusDuration":1200,"restDuration":59}"#,
+        #"{"mode":"Pomodoro","focusDuration":-60,"restDuration":420}"#,
+        #"{"mode":"Pomodoro","focusDuration":1200,"restDuration":-60}"#,
+        #"{"mode":"Pomodoro","focusDuration":3300,"restDuration":301}"#,
+        #"{"mode":"Pomodoro","focusDuration":1e309,"restDuration":420}"#,
+        #"{"mode":"Pomodoro","focusDuration":1200,"restDuration":"NaN"}"#,
+        #"{"mode":"Pomodoro","focusDuration":null,"restDuration":420}"#
     ])
     func invalidSettingsUseDefaultsAndRetainTheSavedPause(record: String) throws {
         let session = Session()
@@ -58,7 +61,7 @@ struct PomodoroPersistenceTests {
         let restored = session.makeController()
         #expect(restored.mode == .timer)
         #expect(restored.pomodoro.focusDuration == 1_500)
-        #expect(restored.pomodoro.breakDuration == 300)
+        #expect(restored.pomodoro.restDuration == 300)
         #expect(restored.pomodoro.status == .paused)
         #expect(restored.timer.isPaused)
         #expect(restored.timer.remaining == 1_200)
@@ -96,21 +99,21 @@ struct PomodoroPersistenceTests {
         defer { session.removeState() }
         let controller = session.makeController()
         controller.selectMode(.pomodoro)
-        let minimum: PomodoroModel.Phase = focusAtMinimum ? .focus : .shortBreak
-        let maximum: PomodoroModel.Phase = focusAtMinimum ? .shortBreak : .focus
+        let minimum: PomodoroModel.Phase = focusAtMinimum ? .focus : .rest
+        let maximum: PomodoroModel.Phase = focusAtMinimum ? .rest : .focus
         controller.adjustPomodoroDuration(minimum, by: -3_600)
         controller.adjustPomodoroDuration(maximum, by: 3_600)
         controller.save()
         let restored = session.makeController()
-        #expect(restored.pomodoro.focusDuration == (focusAtMinimum ? 60 : 3_540))
-        #expect(restored.pomodoro.breakDuration == (focusAtMinimum ? 3_540 : 60))
+        #expect(restored.pomodoro.focusDuration == (focusAtMinimum ? 60 : 2_700))
+        #expect(restored.pomodoro.restDuration == (focusAtMinimum ? 3_540 : 60))
         restored.adjustPomodoroDuration(minimum, by: -60)
         restored.adjustPomodoroDuration(maximum, by: 60)
         restored.resetPomodoro()
         let reloaded = session.makeController()
         #expect(reloaded.pomodoro.status == .running)
-        #expect(reloaded.pomodoro.focusRemaining == (focusAtMinimum ? 60 : 3_540))
-        #expect(reloaded.pomodoro.breakRemaining == (focusAtMinimum ? 3_540 : 60))
+        #expect(reloaded.pomodoro.focusRemaining == (focusAtMinimum ? 60 : 2_700))
+        #expect(reloaded.pomodoro.restRemaining == (focusAtMinimum ? 3_540 : 60))
     }
 
     @Test(arguments: [true, false])
@@ -125,7 +128,7 @@ struct PomodoroPersistenceTests {
         let controller = session.makeController()
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, by: -300)
-        controller.adjustPomodoroDuration(.shortBreak, by: 120)
+        controller.adjustPomodoroDuration(.rest, by: 120)
         session.now += 60
         controller.update()
         controller.save()
@@ -135,7 +138,7 @@ struct PomodoroPersistenceTests {
         #expect(restored.mode == .timer)
         #expect(restored.pomodoro.status == .running)
         #expect(restored.pomodoro.focusDuration == 1_500)
-        #expect(restored.pomodoro.breakDuration == 300)
+        #expect(restored.pomodoro.restDuration == 300)
     }
 
     @Test
@@ -177,7 +180,7 @@ struct PomodoroPersistenceTests {
         ))
         if selectedMode != "missing" {
             let settings = selectedMode == "invalid" ? "{}"
-                : "{\"mode\":\"\(selectedMode)\",\"focusDuration\":1200,\"breakDuration\":420}"
+                : "{\"mode\":\"\(selectedMode)\",\"focusDuration\":1200,\"restDuration\":420}"
             try Data(settings.utf8).write(to: session.settingsURL)
         }
         let restored = session.makeController()

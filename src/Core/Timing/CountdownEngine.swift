@@ -50,7 +50,7 @@ final class CountdownEngine: ObservableObject {
         pomodoro.adjustDuration(phase, by: amount, at: now())
     }
 
-    /// Reset the pair without changing the shared run state.
+    /// Reset the cycle without changing the shared run state.
     func resetPomodoro() {
         pomodoro.reset()
         pomodoro.toggleRunning(at: now())

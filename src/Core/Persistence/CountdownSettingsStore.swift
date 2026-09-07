@@ -4,8 +4,9 @@ import Foundation
 struct CountdownSettings: Codable {
     var mode: CountdownMode = .timer
     var focusDuration: TimeInterval = 25 * 60
-    var breakDuration: TimeInterval = 5 * 60
+    var restDuration: TimeInterval = 5 * 60
     var isPaused: Bool?
+    var longRestDuration: TimeInterval?
 }
 
 /// Stores app settings separately from the Timer mode session.
@@ -13,13 +14,17 @@ struct CountdownSettingsStore {
     let fileManager: FileManager
     let stateDirectory: URL
 
-    func load() -> CountdownSettings {
+    func load(defaults: CountdownSettings = CountdownSettings()) -> CountdownSettings {
         guard let data = try? Data(contentsOf: settingsURL),
-              let settings = try? JSONDecoder().decode(CountdownSettings.self, from: data),
-              settings.focusDuration.isFinite, settings.breakDuration.isFinite,
-              settings.focusDuration >= 60, settings.breakDuration >= 60,
-              settings.focusDuration + settings.breakDuration <= 3_600
-        else { return CountdownSettings() }
+              var settings = try? JSONDecoder().decode(CountdownSettings.self, from: data),
+              settings.focusDuration.isFinite, settings.restDuration.isFinite,
+              settings.focusDuration >= 60, settings.restDuration >= 60,
+              settings.focusDuration + settings.restDuration <= 3_600
+        else { return defaults }
+        let longRest = settings.longRestDuration ?? defaults.longRestDuration ?? 900
+        guard longRest.isFinite, longRest >= 60,
+              settings.focusDuration + longRest <= 3_600 else { return defaults }
+        settings.longRestDuration = longRest
         return settings
     }
 

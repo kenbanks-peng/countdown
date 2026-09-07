@@ -161,6 +161,6 @@ struct CountdownCoreTests {
         now += 10_000
         timer.update()
         timer.update()
-        #expect(timer.features.reminderIntervalCount == 2)
+        #expect(timer.features.reminderIntervalCount == (mode == .pomodoro ? 3 : 2))
     }
 }

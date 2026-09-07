@@ -26,7 +26,7 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.timer.remaining == 60)
         #expect(timer.timer.status == .active)
         #expect(timer.pomodoro.focusDuration == 1_500)
-        #expect(timer.pomodoro.breakDuration == 300)
+        #expect(timer.pomodoro.restDuration == 300)
         timer.selectMode(.timer)
         adapter.handle(try scroll(delta: 5, option: true))
         #expect(timer.timer.remaining == 60)
@@ -43,17 +43,17 @@ struct ScrollTimeAdjusterTests {
         let timer = session.timer
         timer.selectMode(.pomodoro)
         try session.scroll(angle: 15, delta: 30)
-        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.restDuration == 360)
         #expect(timer.pomodoro.focusDuration == 1_500)
         try session.scroll(angle: 33, delta: -1) // Now blue, after the boundary moved to 36°.
-        #expect(timer.pomodoro.breakDuration == 300)
+        #expect(timer.pomodoro.restDuration == 300)
         try session.scroll(angle: 90, delta: 30)
         #expect(timer.pomodoro.focusDuration == 1_560)
         try session.scroll(angle: 90, delta: -30)
         #expect(timer.pomodoro.focusDuration == 1_500)
-        #expect(timer.pomodoro.breakDuration == 300)
+        #expect(timer.pomodoro.restDuration == 300)
         #expect(timer.timer.status == .empty)
-        #expect(timer.pomodoro.accessibilityDescription == "Pomodoro running. Focus: 25 minutes remaining. Break: 5 minutes remaining.")
+        #expect(timer.pomodoro.accessibilityDescription == "Pomodoro running. Focus: 25 minutes remaining. Rest: 5 minutes remaining.")
     }
 
     @Test(arguments: [0.0, 29.999, 30, 30.001, 179.999, 180, 270, 359.999], [false, true])
@@ -63,13 +63,13 @@ struct ScrollTimeAdjusterTests {
         session.timer.selectMode(.pomodoro)
         try session.scroll(angle: angle, delta: 1)
         if angle < 30 {
-            #expect(session.timer.pomodoro.breakDuration == 360)
+            #expect(session.timer.pomodoro.restDuration == 360)
             #expect(session.timer.pomodoro.focusDuration == 1_500)
         } else if angle < 180 {
-            #expect(session.timer.pomodoro.breakDuration == 300)
+            #expect(session.timer.pomodoro.restDuration == 300)
             #expect(session.timer.pomodoro.focusDuration == 1_560)
         } else {
-            #expect(session.timer.pomodoro.breakDuration == 300)
+            #expect(session.timer.pomodoro.restDuration == 300)
             #expect(session.timer.pomodoro.focusDuration == 1_500)
         }
     }
@@ -80,7 +80,7 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.timer.selectMode(.pomodoro)
         try session.scroll(angle: angle, radius: radius, delta: -1)
-        #expect(session.timer.pomodoro.breakDuration == (radius == 88 ? 240 : 300))
+        #expect(session.timer.pomodoro.restDuration == (radius == 88 ? 240 : 300))
         #expect(session.timer.pomodoro.focusDuration == 1_500)
     }
 
@@ -90,7 +90,7 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.timer.selectMode(.pomodoro)
         try session.scroll(angle: angle, radius: radius, delta: -1)
-        #expect(session.timer.pomodoro.breakDuration == (radius == 16 ? 240 : 300))
+        #expect(session.timer.pomodoro.restDuration == (radius == 16 ? 240 : 300))
         #expect(session.timer.pomodoro.focusDuration == 1_500)
     }
 
@@ -107,13 +107,13 @@ struct ScrollTimeAdjusterTests {
         try session.scroll(angle: 90, delta: 31, option: true)
         #expect(timer.pomodoro.focusDuration == 1_680) // Two steps, remainder 7.
         try session.scroll(angle: 15, delta: 5, option: true)
-        #expect(timer.pomodoro.breakDuration == 300) // Focus remainder cannot enter break.
+        #expect(timer.pomodoro.restDuration == 300) // Focus remainder cannot enter rest.
         try session.scroll(angle: 15, delta: 7, option: true)
-        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.restDuration == 360)
         try session.scroll(angle: 15, delta: -31, option: true)
-        #expect(timer.pomodoro.breakDuration == 240)
+        #expect(timer.pomodoro.restDuration == 240)
         try session.scroll(angle: 15, delta: -5, option: true)
-        #expect(timer.pomodoro.breakDuration == 180)
+        #expect(timer.pomodoro.restDuration == 180)
         try session.scroll(angle: 90, delta: 7, option: true)
         try session.scroll(angle: 270, delta: 0, option: true)
         try session.scroll(angle: 90, delta: 5, option: true)
@@ -134,20 +134,21 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.focusDuration == 1_740)
         try session.scroll(angle: 90, delta: 5, option: true)
         #expect(timer.pomodoro.focusDuration == 1_800)
-        #expect(timer.pomodoro.breakDuration == 180)
+        #expect(timer.pomodoro.restDuration == 180)
     }
 
-    @Test(arguments: [PomodoroModel.Phase.focus, .shortBreak], [false, true])
+    @Test(arguments: [PomodoroModel.Phase.focus, .rest], [false, true])
     func scrollClampsBothPhasesBelowAtAndAboveCapacityWithoutChangingTheOther(phase: PomodoroModel.Phase, isCompact: Bool) throws {
         let session = Session(isCompact: isCompact)
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        if phase == .shortBreak { timer.adjustPomodoroDuration(.focus, by: -1_200) }
+        timer.adjustPomodoroDuration(.longRest, by: -600)
+        if phase == .rest { timer.adjustPomodoroDuration(.focus, by: -1_200) }
         timer.adjustPomodoroDuration(phase, by: phase == .focus ? 1_740 : 2_940)
         let angle = phase == .focus ? 90.0 : 0
-        let selected = { phase == .focus ? timer.pomodoro.focusDuration : timer.pomodoro.breakDuration }
-        let other = { phase == .focus ? timer.pomodoro.breakDuration : timer.pomodoro.focusDuration }
+        let selected = { phase == .focus ? timer.pomodoro.focusDuration : timer.pomodoro.restDuration }
+        let other = { phase == .focus ? timer.pomodoro.restDuration : timer.pomodoro.focusDuration }
         #expect(selected() == 3_240)
         #expect(other() == 300)
         try session.scroll(angle: angle, delta: 1)
@@ -174,20 +175,21 @@ struct ScrollTimeAdjusterTests {
     }
 
     @Test
-    func fullCircleTopSeamTargetsBreakAndEditsRecomputeTheNextOptionTarget() throws {
+    func fullCircleTopSeamTargetsRestAndEditsRecomputeTheNextOptionTarget() throws {
         let session = Session()
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
+        timer.adjustPomodoroDuration(.longRest, by: -600)
         timer.adjustPomodoroDuration(.focus, by: 1_800)
         try session.scroll(angle: 0, delta: -1)
-        #expect(timer.pomodoro.breakDuration == 240)
+        #expect(timer.pomodoro.restDuration == 240)
         #expect(timer.pomodoro.focusDuration == 3_300)
         timer.adjustPomodoroDuration(.focus, by: -1_800)
-        timer.adjustPomodoroDuration(.shortBreak, by: 60)
+        timer.adjustPomodoroDuration(.rest, by: 60)
         try session.scroll(angle: 27, delta: -19, option: true)
-        #expect(timer.pomodoro.breakDuration == 240)
-        try session.scroll(angle: 27, delta: -5, option: true) // Now focus; discard break's -7.
+        #expect(timer.pomodoro.restDuration == 240)
+        try session.scroll(angle: 27, delta: -5, option: true) // Now focus; discard rest's -7.
         #expect(timer.pomodoro.focusDuration == 1_500)
         try session.scroll(angle: 27, delta: -7, option: true)
         #expect(timer.pomodoro.focusDuration == 1_440)
@@ -211,17 +213,17 @@ struct ScrollTimeAdjusterTests {
         #expect(timer.pomodoro.focusDuration == 1_800)
         #expect(timer.pomodoro.focusRemaining == 1_200)
         try session.scroll(angle: 15, delta: 1)
-        #expect(timer.pomodoro.breakDuration == 360)
-        #expect(timer.pomodoro.breakRemaining == 360)
+        #expect(timer.pomodoro.restDuration == 360)
+        #expect(timer.pomodoro.restRemaining == 360)
         #expect(timer.pomodoro.focusRemaining == 1_200)
         #expect(timer.pomodoro.status == (paused ? .paused : .running))
         try session.scroll(angle: 90, delta: -252, option: true)
         #expect(timer.pomodoro.focusDuration == 540)
         #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.breakRemaining == 360)
+        #expect(timer.pomodoro.restRemaining == 360)
         #expect(timer.pomodoro.accessibilityDescription == (paused
-            ? "Pomodoro paused. Break: 6 minutes remaining. Focus complete."
-            : "Pomodoro running. Break: 6 minutes remaining. Focus complete."))
+            ? "Pomodoro paused. Rest: 6 minutes remaining. Focus complete."
+            : "Pomodoro running. Rest: 6 minutes remaining. Focus complete."))
         try session.scroll(angle: 60, delta: 1) // Completed focus config changes for the next pair only.
         #expect(timer.pomodoro.focusDuration == 600)
         #expect(timer.pomodoro.focusRemaining == 0)
@@ -232,19 +234,42 @@ struct ScrollTimeAdjusterTests {
             session.now += 1_200
         }
         try session.scroll(angle: 27, delta: -36, option: true)
-        #expect(timer.pomodoro.status == .completed)
-        #expect(timer.pomodoro.breakDuration == 180)
-        #expect(timer.pomodoro.breakRemaining == 0)
+        #expect(timer.pomodoro.status == (paused ? .paused : .running))
+        #expect(timer.pomodoro.stage == 2)
+        #expect(timer.pomodoro.restDuration == 180)
+        #expect(timer.pomodoro.restRemaining == 180)
         try session.scroll(angle: 15, delta: 1)
         try session.scroll(angle: 60, delta: 1)
-        #expect(timer.pomodoro.status == .completed)
-        #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.breakRemaining == 0)
+        #expect(timer.pomodoro.status == (paused ? .paused : .running))
+        #expect(timer.pomodoro.focusRemaining == 660)
+        #expect(timer.pomodoro.restRemaining == 240)
         timer.resetPomodoro()
         #expect(timer.pomodoro.focusRemaining == 660)
-        #expect(timer.pomodoro.breakRemaining == 240)
+        #expect(timer.pomodoro.restRemaining == 240)
         #expect(timer.timer.status == .empty)
         #expect(session.sounds == 0)
+    }
+
+    @Test(arguments: [false, true])
+    func fourthStageScrollEditsLongRestWithoutChangingShortRest(isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
+        defer { session.close() }
+        let timer = session.timer
+        timer.selectMode(.pomodoro)
+        session.now += 7_200
+        try session.scroll(angle: 45, delta: 1)
+        #expect(timer.pomodoro.stage == 4)
+        #expect(timer.pomodoro.longRestDuration == 960)
+        #expect(timer.pomodoro.restRemaining == 660)
+        #expect(timer.pomodoro.restDuration == 300)
+        session.now += 660
+        timer.update()
+        #expect(timer.pomodoro.stage == 1)
+        #expect(timer.pomodoro.restRemaining == 300)
+        session.now += 5_400
+        timer.update()
+        #expect(timer.pomodoro.stage == 4)
+        #expect(timer.pomodoro.restRemaining == 960)
     }
 
     @Test
@@ -257,16 +282,18 @@ struct ScrollTimeAdjusterTests {
         try session.scroll(angle: 90, delta: -1)
         #expect(timer.pomodoro.focusDuration == 1_440)
         #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.breakRemaining == 180)
-        #expect(timer.pomodoro.phaseLabel == "Break")
-        try session.scroll(angle: 27, delta: 1) // Depleted break is still a break target.
-        #expect(timer.pomodoro.breakDuration == 360)
-        #expect(timer.pomodoro.breakRemaining == 240)
+        #expect(timer.pomodoro.restRemaining == 180)
+        #expect(timer.pomodoro.phaseLabel == "Rest")
+        try session.scroll(angle: 27, delta: 1) // Depleted rest is still a rest target.
+        #expect(timer.pomodoro.restDuration == 360)
+        #expect(timer.pomodoro.restRemaining == 240)
         session.now += 3_900
         try session.scroll(angle: 90, delta: 1)
-        #expect(timer.pomodoro.status == .completed)
-        #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.breakRemaining == 0)
+        #expect(timer.pomodoro.status == .running)
+        #expect(timer.pomodoro.stage == 4)
+        #expect(timer.pomodoro.focusRemaining == 1_440)
+        #expect(timer.pomodoro.restRemaining == 900)
+        #expect(timer.pomodoro.restDuration == 360)
         #expect(session.sounds == 0)
     }
 
@@ -276,18 +303,18 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        timer.adjustPomodoroDuration(.shortBreak, by: 1_560) // 31-minute break ends at 186°.
+        timer.adjustPomodoroDuration(.rest, by: 1_560) // 31-minute rest ends at 186°.
         try session.scroll(angle: 186, delta: -1)
-        #expect(timer.pomodoro.breakDuration == 1_860)
+        #expect(timer.pomodoro.restDuration == 1_860)
         #expect(timer.pomodoro.focusDuration == 1_440)
-        timer.adjustPomodoroDuration(.shortBreak, by: -1_440) // 7 + 24 = 31 minutes.
+        timer.adjustPomodoroDuration(.rest, by: -1_440) // 7 + 24 = 31 minutes.
         try session.scroll(angle: 186, delta: -1) // End of allocation is background.
-        #expect(timer.pomodoro.breakDuration == 420)
+        #expect(timer.pomodoro.restDuration == 420)
         #expect(timer.pomodoro.focusDuration == 1_440)
     }
 
     @Test(arguments: [false, true])
-    func clockFaceScrollTargetsTheVisibleFocusAndBreak(isCompact: Bool) throws {
+    func clockFaceScrollTargetsTheVisibleFocusAndRest(isCompact: Bool) throws {
         let session = Session(isCompact: isCompact)
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
@@ -297,9 +324,9 @@ struct ScrollTimeAdjusterTests {
         try session.scroll(angle: 150, delta: 1) // 25 minutes: green, from 20 to 45.
         #expect(timer.pomodoro.focusDuration == 1_560)
         try session.scroll(angle: 282, delta: 1) // 47 minutes: blue, now from 46 to 51.
-        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.restDuration == 360)
         try session.scroll(angle: 15, delta: 1) // Old blue position is now background.
-        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.restDuration == 360)
         #expect(timer.pomodoro.focusDuration == 1_560)
     }
 
@@ -313,9 +340,9 @@ struct ScrollTimeAdjusterTests {
         timer.selectMode(.pomodoro)
         try session.scroll(angle: angle, delta: 1)
         let focus = angle < 120 || angle >= 330
-        let shortBreak = angle >= 120 && angle < 150
+        let rest = angle >= 120 && angle < 150
         #expect(timer.pomodoro.focusDuration == (focus ? 1_560 : 1_500))
-        #expect(timer.pomodoro.breakDuration == (shortBreak ? 360 : 300))
+        #expect(timer.pomodoro.restDuration == (rest ? 360 : 300))
     }
 
     @Test(arguments: [false, true], [false, true])
@@ -333,16 +360,16 @@ struct ScrollTimeAdjusterTests {
         }
         // No explicit update before the event: hit testing must settle stale progress.
         try session.scroll(angle: paused ? 342 : 282, delta: 1) // 57 or 47 minutes: blue.
-        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.restDuration == 360)
         #expect(timer.pomodoro.focusDuration == 1_500)
         try session.scroll(angle: 150, delta: 1) // Depleted green must not take the event.
         #expect(timer.pomodoro.focusDuration == 1_500)
-        #expect(timer.pomodoro.breakDuration == 360)
+        #expect(timer.pomodoro.restDuration == 360)
         #expect(timer.pomodoro.focusRemaining == 900)
     }
 
     @Test(arguments: [false, true])
-    func clockFaceBreakPhaseDoesNotTargetCompletedFocus(isCompact: Bool) throws {
+    func clockFaceRestPhaseDoesNotTargetCompletedFocus(isCompact: Bool) throws {
         let session = Session(isCompact: isCompact)
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
@@ -352,8 +379,8 @@ struct ScrollTimeAdjusterTests {
         session.now += 1_620 // 22:47, three minutes of blue remain.
         try session.scroll(angle: 288, delta: 1)
         #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.breakDuration == 360)
-        #expect(timer.pomodoro.breakRemaining == 240)
+        #expect(timer.pomodoro.restDuration == 360)
+        #expect(timer.pomodoro.restRemaining == 240)
         try session.scroll(angle: 240, delta: 1)
         #expect(timer.pomodoro.focusDuration == 1_500)
     }

@@ -102,11 +102,11 @@ final class ScrollTimeAdjuster {
         // Clock mode follows the visible sectors, including their moving start and hour wrap.
         let arcs = CountdownArcLayout.pomodoro(
             focusRemaining: clockEnabled ? model.focusRemaining : model.focusDuration,
-            breakRemaining: clockEnabled ? model.breakRemaining : model.breakDuration,
-            breakDuration: model.breakDuration,
+            restRemaining: clockEnabled ? model.restRemaining : model.activeRestDuration,
+            restDuration: model.activeRestDuration,
             at: clockEnabled ? countdown.currentTime : nil
         )
-        if arcs.shortBreak.contains(degrees / 360) { return .pomodoro(.shortBreak) }
+        if arcs.rest.contains(degrees / 360) { return .pomodoro(model.restPhase) }
         if arcs.focus.contains(degrees / 360) { return .pomodoro(.focus) }
         return nil
     }

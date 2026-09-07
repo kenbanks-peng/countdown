@@ -3,6 +3,14 @@ clock_enabled = true
 current_timeout_enabled = true
 autoset_enabled = false
 
+[pomodoro]
+# Defaults in minutes. Saved duration edits take priority.
+# Each value must be 1–59; focus + either rest must not exceed 60.
+# Invalid values use defaults; an invalid total resets all three defaults.
+focus = 25
+rest = 5
+long-rest = 15
+
 [notifications]
 reminder_enabled = true
 # Positive multiples of 5 minutes; invalid values use 5.
