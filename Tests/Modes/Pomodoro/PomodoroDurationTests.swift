@@ -26,7 +26,7 @@ struct PomodoroDurationTests {
         #expect(timer.pomodoro.status == .ready)
         #expect(timer.pomodoro.focusRemaining == 3_180)
         #expect(timer.pomodoro.breakRemaining == 60)
-        timer.selectMode(.countdown)
+        timer.selectMode(.timer)
         timer.adjustPomodoroDuration(.focus, by: -60)
         #expect(timer.pomodoro.focusDuration == 3_180)
         #expect(session.sounds == 0)
@@ -79,8 +79,8 @@ struct PomodoroDurationTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
-        lazy var timer = TimerController(
-            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+        lazy var timer = CountdownController(
+            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )

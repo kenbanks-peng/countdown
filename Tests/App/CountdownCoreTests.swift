@@ -3,22 +3,22 @@ import Testing
 @testable import Countdown
 
 @MainActor
-struct TimerCoreTests {
-    @Test(arguments: TimerMode.allCases)
-    func sharedControlsAndWakeupFollowTheActiveMode(mode: TimerMode) {
+struct CountdownCoreTests {
+    @Test(arguments: CountdownMode.allCases)
+    func sharedControlsAndWakeupFollowTheActiveMode(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
         var settings: [String: Bool] = [:]
-        let timer = TimerController(
-            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+        let timer = CountdownController(
+            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupTime: 5),
             playSound: { _ in sounds += 1 }, now: { now },
             saveEnablement: { settings[$0] = $1 }
         )
         timer.selectMode(mode)
-        if mode == .countdown { timer.adjustCountdownDuration(by: 1_800) }
+        if mode == .timer { timer.adjustTimerDuration(by: 1_800) }
         else { timer.toggleRunning() }
         #expect(timer.controlLabel == "Pause")
         now += 300
@@ -45,7 +45,7 @@ struct TimerCoreTests {
         timer.features.setClockFaceEnabled(false)
         timer.features.setClockHandsEnabled(false)
         let features = timer.features
-        timer.selectMode(mode == .countdown ? .pomodoro : .countdown)
+        timer.selectMode(mode == .timer ? .pomodoro : .timer)
         #expect(timer.features === features)
         #expect(!timer.features.isClockFaceEnabled)
         #expect(!timer.features.isClockHandsEnabled)
@@ -57,20 +57,20 @@ struct TimerCoreTests {
         #expect(settings == ["clock_face_enabled": false, "clock_hands_enabled": false, "wakeup_enabled": false])
     }
 
-    @Test(arguments: TimerMode.allCases)
-    func durationEditsDoNotCauseWakeupAndCompletionDoesNotRepeatIt(mode: TimerMode) {
+    @Test(arguments: CountdownMode.allCases)
+    func durationEditsDoNotCauseWakeupAndCompletionDoesNotRepeatIt(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_700_000_000)
-        let timer = TimerController(
-            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+        let timer = CountdownController(
+            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupTime: 2),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
-        if mode == .countdown {
-            timer.adjustCountdownDuration(by: 1_800)
-            timer.adjustCountdownDuration(by: -600)
+        if mode == .timer {
+            timer.adjustTimerDuration(by: 1_800)
+            timer.adjustTimerDuration(by: -600)
         } else {
             timer.toggleRunning()
             timer.adjustPomodoroDuration(.focus, by: -600)

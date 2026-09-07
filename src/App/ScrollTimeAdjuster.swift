@@ -4,11 +4,11 @@ import Combine
 @MainActor
 final class ScrollTimeAdjuster {
     private enum Target: Equatable {
-        case countdown
+        case timer
         case pomodoro(PomodoroModel.Phase)
     }
 
-    private weak var timer: TimerController?
+    private weak var countdown: CountdownController?
     private weak var window: NSWindow?
     private let isCompact: () -> Bool
     private var previousTarget: Target?
@@ -17,11 +17,11 @@ final class ScrollTimeAdjuster {
     private var optionScrollDelta: CGFloat = 0
     private let preciseScrollThreshold: CGFloat = 12
 
-    init(timer: TimerController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false }) {
-        self.timer = timer
+    init(countdown: CountdownController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false }) {
+        self.countdown = countdown
         self.window = window
         self.isCompact = isCompact
-        modeCancellable = timer.$mode.sink { [weak self] _ in
+        modeCancellable = countdown.$mode.sink { [weak self] _ in
             self?.optionScrollDelta = 0
             self?.previousTarget = nil
         }
@@ -40,9 +40,9 @@ final class ScrollTimeAdjuster {
     }
 
     func handle(_ event: NSEvent) {
-        guard let timer else { return }
-        let target: Target? = timer.mode == .countdown
-            ? .countdown : pomodoroTarget(for: event, model: timer.pomodoro)
+        guard let countdown else { return }
+        let target: Target? = countdown.mode == .timer
+            ? .timer : pomodoroTarget(for: event, model: countdown.pomodoro)
         if target != previousTarget {
             optionScrollDelta = 0
             previousTarget = target
@@ -53,7 +53,7 @@ final class ScrollTimeAdjuster {
 
         guard event.modifierFlags.contains(.option) else {
             optionScrollDelta = 0
-            adjust(target, by: delta > 0 ? 60 : -60, timer: timer)
+            adjust(target, by: delta > 0 ? 60 : -60, countdown: countdown)
             return
         }
 
@@ -62,13 +62,13 @@ final class ScrollTimeAdjuster {
 
         let minutes = Int(optionScrollDelta / preciseScrollThreshold)
         optionScrollDelta -= CGFloat(minutes) * preciseScrollThreshold
-        adjust(target, by: TimeInterval(minutes * 60), timer: timer)
+        adjust(target, by: TimeInterval(minutes * 60), countdown: countdown)
     }
 
-    private func adjust(_ target: Target, by amount: TimeInterval, timer: TimerController) {
+    private func adjust(_ target: Target, by amount: TimeInterval, countdown: CountdownController) {
         switch target {
-        case .countdown: timer.adjustCountdownDuration(by: amount)
-        case .pomodoro(let phase): timer.adjustPomodoroDuration(phase, by: amount)
+        case .timer: countdown.adjustTimerDuration(by: amount)
+        case .pomodoro(let phase): countdown.adjustPomodoroDuration(phase, by: amount)
         }
     }
 

@@ -8,7 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private enum PanelMode { case normal, compact }
 
     private var panel: NSPanel?
-    private var timer: TimerController?
+    private var countdown: CountdownController?
     private var scrollTimeAdjuster: ScrollTimeAdjuster?
     private var normalFrame: NSRect?
     private var panelMode: PanelMode = .normal
@@ -31,29 +31,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        let timer = TimerController()
+        let countdown = CountdownController()
         panelMode = UserDefaults.standard.bool(forKey: panelModeKey) ? .compact : .normal
         let initialSize = panelMode == .compact ? compactSize : normalSize
         let panel = makePanel(size: initialSize)
         panel.contentView = panelMode == .compact
-            ? compactContentView(for: timer)
-            : normalContentView(for: timer)
+            ? compactContentView(for: countdown)
+            : normalContentView(for: countdown)
         panel.delegate = self
         restoreOrPosition(panel, for: panelMode, size: initialSize)
         normalFrame = restoredFrame(forKey: normalFrameKey, size: normalSize)
         panel.makeKeyAndOrderFront(nil)
 
         self.panel = panel
-        self.timer = timer
-        observeWakeupIntervals(from: timer.features)
-        scrollTimeAdjuster = ScrollTimeAdjuster(timer: timer, window: panel, isCompact: { [weak self] in
+        self.countdown = countdown
+        observeWakeupIntervals(from: countdown.features)
+        scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, isCompact: { [weak self] in
             self?.panelMode == .compact
         })
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         returnToCompactTask?.cancel()
-        timer?.save()
+        countdown?.save()
         savePanelState()
     }
 
@@ -75,7 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @MainActor
-    private func observeWakeupIntervals(from model: TimerFeatures) {
+    private func observeWakeupIntervals(from model: CountdownFeatures) {
         intervalAlertCancellable = model.$wakeupIntervalCount
             .dropFirst()
             .sink { [weak self] _ in
@@ -95,16 +95,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    private func normalContentView(for timer: TimerController) -> NSView {
-        NSHostingView(rootView: TimerView(
-            timer: timer,
+    private func normalContentView(for countdown: CountdownController) -> NSView {
+        NSHostingView(rootView: CountdownView(
+            countdown: countdown,
             changePresentation: { [weak self] in self?.enterCompactMode() }
         ))
     }
 
-    private func compactContentView(for timer: TimerController) -> NSView {
-        NSHostingView(rootView: TimerView(
-            timer: timer,
+    private func compactContentView(for countdown: CountdownController) -> NSView {
+        NSHostingView(rootView: CountdownView(
+            countdown: countdown,
             isCompact: true,
             changePresentation: { [weak self] in self?.exitCompactMode() }
         ))
@@ -154,7 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard panelMode == .normal,
               !isModeTransitionInProgress,
               let panel,
-              let timer else { return }
+              let countdown else { return }
 
         isModeTransitionInProgress = true
         normalFrame = panel.frame
@@ -166,7 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             ?? NSRect(origin: panel.frame.origin, size: compactSize)
 
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            panel.contentView = compactContentView(for: timer)
+            panel.contentView = compactContentView(for: countdown)
             panel.setFrame(compactFrame, display: true)
             savePanelState(frame: compactFrame)
             isModeTransitionInProgress = false
@@ -176,7 +176,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Cross-fade the content while the panel shrinks and travels, so the
         // clock face and hands fade out with the circle instead of vanishing
         // the moment the transition starts.
-        let incoming = crossFadeTo(compactContentView(for: timer), in: panel)
+        let incoming = crossFadeTo(compactContentView(for: countdown), in: panel)
 
         let slideWaypoint = transitionWaypoint(from: compactFrame, to: panel.frame)
         animate(panel, to: slideWaypoint, duration: resizeDuration, timingFunction: .easeIn) { [weak self] in
@@ -199,7 +199,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard panelMode == .compact,
               !isModeTransitionInProgress,
               let panel,
-              let timer else { return }
+              let countdown else { return }
 
         isModeTransitionInProgress = true
         savePanelState()
@@ -219,7 +219,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            panel.contentView = normalContentView(for: timer)
+            panel.contentView = normalContentView(for: countdown)
             panel.setFrame(fullFrame, display: true)
             finishTransition()
             return
@@ -229,7 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // face and hands fade in with the circle instead of popping in after it
         // lands. Keeping the panel square and compact-sized while it travels
         // still prevents the growing circle from being clipped into a square.
-        let incoming = crossFadeTo(normalContentView(for: timer), in: panel)
+        let incoming = crossFadeTo(normalContentView(for: countdown), in: panel)
 
         let slideWaypoint = transitionWaypoint(from: panel.frame, to: fullFrame)
         animate(panel, to: slideWaypoint, duration: slideDuration, timingFunction: .easeIn) { [weak self] in

@@ -1,28 +1,28 @@
 import Foundation
 
-/// Only timer selection and configured allocations cross a Pomodoro restart.
-struct TimerSettings: Codable {
-    var mode: TimerMode = .countdown
+/// Stores the selected Countdown mode and configured Pomodoro durations, not activity.
+struct CountdownSettings: Codable {
+    var mode: CountdownMode = .timer
     var focusDuration: TimeInterval = 25 * 60
     var breakDuration: TimeInterval = 5 * 60
 }
 
-/// Uses its own file, never the Countdown session record.
-struct TimerSettingsStore {
+/// Stores app settings separately from the Timer mode session.
+struct CountdownSettingsStore {
     let fileManager: FileManager
     let stateDirectory: URL
 
-    func load() -> TimerSettings {
+    func load() -> CountdownSettings {
         guard let data = try? Data(contentsOf: settingsURL),
-              let settings = try? JSONDecoder().decode(TimerSettings.self, from: data),
+              let settings = try? JSONDecoder().decode(CountdownSettings.self, from: data),
               settings.focusDuration.isFinite, settings.breakDuration.isFinite,
               settings.focusDuration >= 60, settings.breakDuration >= 60,
               settings.focusDuration + settings.breakDuration <= 3_600
-        else { return TimerSettings() }
+        else { return CountdownSettings() }
         return settings
     }
 
-    func save(_ settings: TimerSettings) {
+    func save(_ settings: CountdownSettings) {
         do {
             try fileManager.createDirectory(at: stateDirectory, withIntermediateDirectories: true)
             let data = try JSONEncoder().encode(settings)
@@ -33,6 +33,6 @@ struct TimerSettingsStore {
     }
 
     private var settingsURL: URL {
-        stateDirectory.appendingPathComponent("timer-settings.json", isDirectory: false)
+        stateDirectory.appendingPathComponent("settings.json", isDirectory: false)
     }
 }

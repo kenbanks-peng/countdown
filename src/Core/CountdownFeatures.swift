@@ -3,7 +3,7 @@ import Foundation
 
 /// App-wide display settings and interval notifications, shared by both modes.
 @MainActor
-final class TimerFeatures: ObservableObject {
+final class CountdownFeatures: ObservableObject {
     @Published private(set) var isClockFaceEnabled: Bool
     @Published private(set) var isClockHandsEnabled: Bool
     @Published private(set) var isWakeupEnabled: Bool

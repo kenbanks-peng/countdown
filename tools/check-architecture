@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Check source ownership in the single Countdown SwiftPM target.
+
+This is a source-level check, not a Swift dependency graph. It checks references
+between top-level type names. The Swift build checks types and call sites.
+"""
+
+from pathlib import Path
+import re
+import sys
+
+ROOT = Path(__file__).resolve().parents[1] / "src"
+LAYERS = ("App", "Core", "Modes/Timer", "Modes/Pomodoro")
+DECLARATION = re.compile(
+    r"^(?:(?:private|final|public|internal)\s+)*(?:class|struct|enum|protocol)\s+(\w+)",
+    re.MULTILINE,
+)
+
+
+def main():
+    sources = {
+        layer: {path: path.read_text() for path in (ROOT / layer).rglob("*.swift")}
+        for layer in LAYERS
+    }
+    names = {
+        layer: {name for text in files.values() for name in DECLARATION.findall(text)}
+        for layer, files in sources.items()
+    }
+    forbidden_layers = {
+        "Core": ("App", "Modes/Timer", "Modes/Pomodoro"),
+        "Modes/Timer": ("App", "Modes/Pomodoro"),
+        "Modes/Pomodoro": ("App", "Modes/Timer"),
+    }
+    errors = []
+    for layer in LAYERS:
+        if not sources[layer]:
+            errors.append(f"{layer}: missing Swift sources")
+    for layer, forbidden in forbidden_layers.items():
+        forbidden_names = set().union(*(names[other] for other in forbidden))
+        for path, text in sources[layer].items():
+            references = set(re.findall(r"\b\w+\b", text)) & forbidden_names
+            if references:
+                errors.append(f"{path.relative_to(ROOT)}: forbidden references: {', '.join(sorted(references))}")
+    for path in ROOT.rglob("*.swift"):
+        if not any(path in files for files in sources.values()):
+            errors.append(f"{path.relative_to(ROOT)}: source has no layer")
+    if errors:
+        print("\n".join(errors))
+        return 1
+    print("Architecture check passed: Core is independent; modes do not reference App or each other.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

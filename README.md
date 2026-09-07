@@ -1,6 +1,7 @@
 # Countdown
 
-Native macOS Countdown application.
+Native macOS app with a shared Countdown core and two UI modes: Timer and Pomodoro.
+See the [source organization](docs/architecture.md).
 
 ## Usage
 

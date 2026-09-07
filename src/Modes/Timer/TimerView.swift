@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-struct CountdownView: View {
-    @ObservedObject var model: CountdownModel
+struct TimerView: View {
+    @ObservedObject var model: TimerModel
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -80,35 +80,11 @@ struct CountdownView: View {
     }
 
     private var indicatorColor: Color {
-        CountdownAppearance.indicatorColor(for: model.remaining)
+        TimerAppearance.indicatorColor(for: model.remaining)
     }
 
     private var accessibilityLabel: String {
         model.status == .empty ? "Empty Countdown" : "\(model.remainingMinutes) minutes remaining"
     }
 
-}
-
-struct CountdownContextMenu: View {
-    @ObservedObject var model: CountdownModel
-    let timer: TimerController
-
-    var body: some View {
-        Toggle("Timeout", isOn: enablementBinding(\.isCurrentTimeoutEnabled, model.setCurrentTimeoutEnabled))
-        Toggle("Autoset", isOn: enablementBinding(\.isAutosetEnabled, model.setAutosetEnabled))
-
-        Divider()
-
-        Button("Set Timeout to Next Hour") {
-            timer.setCountdownToNextHour()
-        }
-
-    }
-
-    private func enablementBinding(
-        _ keyPath: KeyPath<CountdownModel, Bool>,
-        _ setEnabled: @escaping (Bool) -> Void
-    ) -> Binding<Bool> {
-        Binding(get: { model[keyPath: keyPath] }, set: setEnabled)
-    }
 }

@@ -11,7 +11,7 @@ let package = Package(
         .executableTarget(
             name: "Countdown",
             path: "src",
-            resources: [.process("Resources")]
+            resources: [.process("Core/Resources")]
         ),
         .testTarget(
             name: "CountdownTests",

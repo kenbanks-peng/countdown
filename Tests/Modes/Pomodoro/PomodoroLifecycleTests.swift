@@ -20,10 +20,10 @@ struct PomodoroLifecycleTests {
         timer.update()
         #expect(timer.pomodoro.focusRemaining == 900)
         #expect(timer.pomodoro.breakRemaining == 300)
-        timer.setCountdownToNextHour()
-        timer.adjustCountdownDuration(by: 60)
-        timer.toggleCountdownRunning()
-        #expect(timer.countdown.status == .empty)
+        timer.setTimerToNextHour()
+        timer.adjustTimerDuration(by: 60)
+        timer.toggleTimerRunning()
+        #expect(timer.timer.status == .empty)
         #expect(timer.pomodoro.focusRemaining == 900)
         #expect(timer.pomodoro.status == .running)
         session.now += 900
@@ -60,7 +60,7 @@ struct PomodoroLifecycleTests {
         timer.selectMode(.pomodoro)
         timer.togglePomodoroRunning()
         session.now += elapsed
-        timer.selectMode(.countdown)
+        timer.selectMode(.timer)
         if elapsed == 600 {
             #expect(timer.pomodoro.status == .paused)
             #expect(timer.pomodoro.focusRemaining == 900)
@@ -111,7 +111,7 @@ struct PomodoroLifecycleTests {
         #expect(timer.pomodoro.accessibilityDescription == pausedDescription)
         session.now += 1_200
         timer.update()
-        timer.selectMode(.countdown)
+        timer.selectMode(.timer)
         timer.selectMode(.pomodoro)
         #expect(timer.pomodoro.accessibilityDescription == pausedDescription)
         timer.togglePomodoroRunning()
@@ -168,8 +168,8 @@ struct PomodoroLifecycleTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
-        lazy var timer = TimerController(
-            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+        lazy var timer = CountdownController(
+            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )

@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct CompactCountdownView: View {
-    @ObservedObject var model: CountdownModel
+struct CompactTimerView: View {
+    @ObservedObject var model: TimerModel
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -38,7 +38,7 @@ struct CompactCountdownView: View {
     }
 
     private var indicatorColor: Color {
-        CountdownAppearance.indicatorColor(for: model.remaining)
+        TimerAppearance.indicatorColor(for: model.remaining)
     }
 
     private var accessibilityLabel: String {

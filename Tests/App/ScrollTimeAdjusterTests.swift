@@ -8,32 +8,32 @@ struct ScrollTimeAdjusterTests {
     func modeChangesBlockCountdownScrollAndClearOptionRemainder() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let timer = TimerController(
-            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+        let timer = CountdownController(
+            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
             playSound: { _ in },
             now: { Date(timeIntervalSince1970: 1_700_000_000) }
         )
-        let adapter = ScrollTimeAdjuster(timer: timer)
+        let adapter = ScrollTimeAdjuster(countdown: timer)
         adapter.handle(try scroll(delta: 30))
-        #expect(timer.countdown.remaining == 60)
+        #expect(timer.timer.remaining == 60)
         adapter.handle(try scroll(delta: 7, option: true))
         timer.selectMode(.pomodoro)
         adapter.handle(try scroll(delta: 30))
         adapter.handle(try scroll(delta: 24, option: true))
-        timer.setCountdownToNextHour()
-        timer.toggleCountdownRunning()
-        #expect(timer.countdown.remaining == 60)
-        #expect(timer.countdown.isPaused)
+        timer.setTimerToNextHour()
+        timer.toggleTimerRunning()
+        #expect(timer.timer.remaining == 60)
+        #expect(timer.timer.isPaused)
         #expect(timer.pomodoro.focusDuration == 1_500)
         #expect(timer.pomodoro.breakDuration == 300)
-        timer.selectMode(.countdown)
+        timer.selectMode(.timer)
         adapter.handle(try scroll(delta: 5, option: true))
-        #expect(timer.countdown.remaining == 60)
+        #expect(timer.timer.remaining == 60)
         adapter.handle(try scroll(delta: 7, option: true))
-        #expect(timer.countdown.remaining == 120)
+        #expect(timer.timer.remaining == 120)
         adapter.handle(try scroll(delta: -30))
-        #expect(timer.countdown.remaining == 60)
+        #expect(timer.timer.remaining == 60)
     }
 
     @Test
@@ -52,7 +52,7 @@ struct ScrollTimeAdjusterTests {
         try session.scroll(angle: 90, delta: -30)
         #expect(timer.pomodoro.focusDuration == 1_500)
         #expect(timer.pomodoro.breakDuration == 300)
-        #expect(timer.countdown.status == .empty)
+        #expect(timer.timer.status == .empty)
         #expect(timer.pomodoro.accessibilityDescription == "Pomodoro ready. Focus: 25 minutes allocated. Break: 5 minutes allocated.")
     }
 
@@ -121,14 +121,14 @@ struct ScrollTimeAdjusterTests {
         try session.scroll(angle: 90, delta: 1)
         try session.scroll(angle: 90, delta: 7, option: true)
         #expect(timer.pomodoro.focusDuration == 1_740)
-        timer.selectMode(.countdown)
+        timer.selectMode(.timer)
         try session.scroll(angle: 90, delta: 5, option: true)
-        #expect(timer.countdown.remaining == 0)
+        #expect(timer.timer.remaining == 0)
         timer.selectMode(.pomodoro)
         try session.scroll(angle: 90, delta: 5, option: true)
         #expect(timer.pomodoro.focusDuration == 1_740)
         // Even an away-and-back mode change with no event clears the remainder.
-        timer.selectMode(.countdown)
+        timer.selectMode(.timer)
         timer.selectMode(.pomodoro)
         try session.scroll(angle: 90, delta: 7, option: true)
         #expect(timer.pomodoro.focusDuration == 1_740)
@@ -170,7 +170,7 @@ struct ScrollTimeAdjusterTests {
         #expect(selected() == 120)
         #expect(other() == 300)
         #expect(timer.pomodoro.status == .ready)
-        #expect(timer.countdown.status == .empty)
+        #expect(timer.timer.status == .empty)
     }
 
     @Test
@@ -244,7 +244,7 @@ struct ScrollTimeAdjusterTests {
         timer.togglePomodoroRunning()
         #expect(timer.pomodoro.focusRemaining == 660)
         #expect(timer.pomodoro.breakRemaining == 240)
-        #expect(timer.countdown.status == .empty)
+        #expect(timer.timer.status == .empty)
         #expect(session.sounds == 0)
     }
 
@@ -295,12 +295,12 @@ struct ScrollTimeAdjusterTests {
         var sounds = 0
         let window: NSWindow
         let isCompact: Bool
-        lazy var timer = TimerController(
-            stateStore: CountdownStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+        lazy var timer = CountdownController(
+            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil, wakeupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
-        lazy var adapter = ScrollTimeAdjuster(timer: timer, window: window, isCompact: { [unowned self] in isCompact })
+        lazy var adapter = ScrollTimeAdjuster(countdown: timer, window: window, isCompact: { [unowned self] in isCompact })
 
         init(isCompact: Bool = false) {
             self.isCompact = isCompact

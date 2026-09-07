@@ -1,6 +1,6 @@
 import Foundation
 
-struct CountdownSession: Codable {
+struct TimerSession: Codable {
     enum Status: String, Codable { case active, prepared }
 
     let status: Status
@@ -10,37 +10,27 @@ struct CountdownSession: Codable {
     let savedAt: Date
 }
 
-/// Stores the countdown session independently from the countdown lifecycle.
-struct CountdownStateStore {
-    static let `default` = CountdownStateStore()
+/// Stores only the Timer mode session.
+struct TimerStateStore {
+    static let `default` = TimerStateStore()
 
-    private let fileManager: FileManager
-    private let stateDirectory: URL
+    let fileManager: FileManager
+    let stateDirectory: URL
 
     init(
         fileManager: FileManager = .default,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) {
         self.fileManager = fileManager
-        if let stateHome = environment["XDG_STATE_HOME"], !stateHome.isEmpty {
-            stateDirectory = URL(fileURLWithPath: stateHome, isDirectory: true)
-                .appendingPathComponent("countdown", isDirectory: true)
-        } else {
-            stateDirectory = fileManager.homeDirectoryForCurrentUser
-                .appendingPathComponent(".local/state/countdown", isDirectory: true)
-        }
+        stateDirectory = CountdownStateDirectory.resolve(fileManager: fileManager, environment: environment)
     }
 
-    var timerSettingsStore: TimerSettingsStore {
-        TimerSettingsStore(fileManager: fileManager, stateDirectory: stateDirectory)
-    }
-
-    func load() -> CountdownSession? {
+    func load() -> TimerSession? {
         guard let data = try? Data(contentsOf: sessionURL) else { return nil }
-        return try? JSONDecoder().decode(CountdownSession.self, from: data)
+        return try? JSONDecoder().decode(TimerSession.self, from: data)
     }
 
-    func save(_ session: CountdownSession) {
+    func save(_ session: TimerSession) {
         do {
             try fileManager.createDirectory(at: stateDirectory, withIntermediateDirectories: true)
             let data = try JSONEncoder().encode(session)

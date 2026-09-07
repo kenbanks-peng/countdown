@@ -26,7 +26,7 @@ set -eu
 bin_dir="$BINDIR"
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/countdown"
 executable="$bin_dir/countdown"
-resource_directory="src/Resources"
+resource_directory="src/Core/Resources"
 installed_bundle="$bin_dir/Countdown_Countdown.bundle"
 label="com.kenbanks.countdown"
 agent_dir="$HOME/Library/LaunchAgents"

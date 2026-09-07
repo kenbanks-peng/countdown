@@ -12,16 +12,16 @@ struct CircleTransitionCheck {
     static func main() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let stateStore = CountdownStateStore(environment: [
+        let stateStore = TimerStateStore(environment: [
             "XDG_STATE_HOME": directory.path
         ])
         let configuration = CountdownConfiguration(alarmNotificationURL: nil)
-        let timer = TimerController(
+        let timer = CountdownController(
             stateStore: stateStore,
             configuration: configuration,
             playSound: { _ in }
         )
-        let hostingView = NSHostingView(rootView: TimerView(timer: timer, changePresentation: {}))
+        let hostingView = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: {}))
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = NSColor.clear.cgColor
         var failures: [String] = []

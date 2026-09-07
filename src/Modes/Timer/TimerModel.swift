@@ -1,8 +1,8 @@
-import AppKit
+import Combine
 import Foundation
 
 @MainActor
-final class CountdownModel: ObservableObject {
+final class TimerModel: ObservableObject {
     enum Status { case empty, prepared, active }
 
     @Published private(set) var status: Status = .empty
@@ -14,16 +14,16 @@ final class CountdownModel: ObservableObject {
 
     private var endDate: Date?
     private var completionWasReported = false
-    private let stateStore: CountdownStateStore
+    private let stateStore: TimerStateStore
     private let configuration: CountdownConfiguration
     private let playSound: @MainActor (URL?) -> Void
     private let now: () -> Date
     private let reportElapsed: (TimeInterval, TimeInterval) -> Void
 
     init(
-        stateStore: CountdownStateStore = .default,
+        stateStore: TimerStateStore = .default,
         configuration: CountdownConfiguration = .default,
-        playSound: @escaping @MainActor (URL?) -> Void = CountdownModel.playSound,
+        playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
         reportElapsed: @escaping (TimeInterval, TimeInterval) -> Void = { _, _ in }
     ) {
@@ -222,16 +222,6 @@ final class CountdownModel: ObservableObject {
         case .empty:
             stateStore.remove()
         }
-    }
-
-    static func playSound(at soundURL: URL?) {
-        guard let soundURL,
-              let sound = NSSound(contentsOf: soundURL, byReference: true)
-        else {
-            NSSound.beep()
-            return
-        }
-        sound.play()
     }
 
     private func restore() {
