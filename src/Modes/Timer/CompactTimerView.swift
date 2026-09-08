@@ -35,7 +35,7 @@ struct CompactTimerView: View {
     }
 
     private var arc: CountdownArcLayout {
-        CountdownArcLayout.timer(remaining: model.remaining, at: clockDate)
+        CountdownArcLayout.timer(remaining: model.remaining, at: clockDate, endDate: model.endDate, pausedAt: model.pausedAt)
     }
 
     private var arcAnimation: Animation? {

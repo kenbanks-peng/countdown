@@ -77,7 +77,7 @@ struct CountdownControllerTests {
             CountdownController(
                 stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
                 configuration: CountdownConfiguration(alarmNotificationURL: nil),
-                featureState: CountdownFeatureState(autosetEnabled: autoset, popupEnabled: false),
+                featureState: CountdownFeatureState(clockEnabled: false, autosetEnabled: autoset, popupEnabled: false),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

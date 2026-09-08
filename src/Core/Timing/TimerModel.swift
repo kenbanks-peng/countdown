@@ -16,7 +16,9 @@ final class TimerModel: ObservableObject {
 
     // The engine can be paused even when this record is empty.
     var isPausedByCore = false
-    private var endDate: Date?
+    private(set) var endDate: Date?
+    private(set) var pausedAt: Date?
+    private(set) var isClockEnabled = false
     private var completionWasReported = false
     private let stateStore: TimerStateStore
     private let configuration: CountdownConfiguration
@@ -49,6 +51,7 @@ final class TimerModel: ObservableObject {
         isCurrentTimeoutEnabled = state.currentTimeoutEnabled
         isAutosetEnabled = state.autosetEnabled
         isAlarmEnabled = state.alarmEnabled
+        isClockEnabled = state.clockEnabled
         restore()
         if timeoutActionsEnabled() { autoset() }
     }
@@ -99,7 +102,8 @@ final class TimerModel: ObservableObject {
         completionWasReported = false
 
         if status == .prepared || isPausedByCore {
-            endDate = nil
+            pausedAt = isClockEnabled ? currentTime : nil
+            endDate = isClockEnabled ? nextHour : nil
             status = .prepared
         } else {
             endDate = nextHour
@@ -110,6 +114,13 @@ final class TimerModel: ObservableObject {
 
     func setDuration(from proportion: Double) {
         let clampedProportion = min(1, max(0, proportion))
+        if isClockEnabled {
+            let date = now()
+            let target = ClockBoundary.nearest(date + clampedProportion * Self.maximumDuration,
+                                               minimum: date + 300, maximum: date + Self.maximumDuration)
+            if clampedProportion == 0 { clear() } else { setClockEndpoint(target, at: date) }
+            return
+        }
         duration = (clampedProportion * Self.maximumDuration).rounded()
         remaining = duration
         completionWasReported = false
@@ -134,6 +145,15 @@ final class TimerModel: ObservableObject {
 
         let date = date ?? now()
         update(at: date)
+        if isClockEnabled {
+            let reference = pausedAt ?? date
+            let end = endDate ?? reference
+            let target = ClockBoundary.nearest(end + amount, minimum: reference + 300,
+                                               maximum: reference + Self.maximumDuration)
+            if status == .empty && amount < 0 { return }
+            setClockEndpoint(target, at: reference)
+            return
+        }
         let adjustedRemaining = min(Self.maximumDuration, max(0, remaining + amount))
         guard adjustedRemaining != remaining else { return }
 
@@ -161,9 +181,48 @@ final class TimerModel: ObservableObject {
         save()
     }
 
+    func setClockEnabled(_ enabled: Bool) {
+        update()
+        guard enabled != isClockEnabled else { return }
+        isClockEnabled = enabled
+        if status == .prepared {
+            pausedAt = enabled ? now() : nil
+            endDate = enabled ? now() + remaining : nil
+        }
+        save()
+    }
+
+    func adjustClockEndpoint(steps: Int, at date: Date) {
+        guard steps != 0, status != .empty || steps > 0 else { return }
+        update(at: date)
+        let reference = pausedAt ?? date
+        let end = endDate ?? reference
+        let target = ClockBoundary.move(end, steps: steps, minimum: reference + 300,
+                                        maximum: reference + Self.maximumDuration)
+        setClockEndpoint(target, at: reference)
+    }
+
+    private func setClockEndpoint(_ end: Date, at date: Date) {
+        endDate = end
+        remaining = max(0, end.timeIntervalSince(date))
+        duration = remaining
+        completionWasReported = false
+        status = isPausedByCore || status == .prepared ? .prepared : .active
+        pausedAt = status == .prepared ? date : nil
+        save()
+    }
+
     func start() {
         guard status == .prepared, remaining > 0 else { return }
-        endDate = now().addingTimeInterval(remaining)
+        let date = now()
+        if isClockEnabled {
+            endDate = ClockBoundary.nearest(date + remaining, minimum: date + 1, maximum: date + Self.maximumDuration)
+            remaining = max(0, endDate!.timeIntervalSince(date))
+            duration = remaining
+        } else {
+            endDate = date.addingTimeInterval(remaining)
+        }
+        pausedAt = nil
         status = .active
         completionWasReported = false
         save()
@@ -173,7 +232,8 @@ final class TimerModel: ObservableObject {
         guard status == .active else { return }
         update()
         guard status == .active else { return }
-        endDate = nil
+        pausedAt = isClockEnabled ? now() : nil
+        if !isClockEnabled { endDate = nil }
         status = .prepared
         duration = remaining
         save()
@@ -184,6 +244,7 @@ final class TimerModel: ObservableObject {
         duration = 0
         remaining = 0
         endDate = nil
+        pausedAt = nil
         completionWasReported = false
         stateStore.remove()
     }
@@ -225,7 +286,8 @@ final class TimerModel: ObservableObject {
             }
             stateStore.save(.init(status: .active, duration: duration, remaining: remaining, endDate: endDate, savedAt: now()))
         case .prepared:
-            stateStore.save(.init(status: .prepared, duration: duration, remaining: remaining, endDate: nil, savedAt: now()))
+            stateStore.save(.init(status: .prepared, duration: duration, remaining: remaining,
+                                  endDate: endDate, savedAt: now(), pausedAt: pausedAt))
         case .empty:
             stateStore.remove()
         }
@@ -233,7 +295,7 @@ final class TimerModel: ObservableObject {
 
     private func restore() {
         guard let saved = stateStore.load(), saved.duration > 0, saved.remaining > 0 else { return }
-        guard now().timeIntervalSince(saved.savedAt) <= saved.duration else {
+        guard (isClockEnabled && saved.status == .prepared) || now().timeIntervalSince(saved.savedAt) <= saved.duration else {
             stateStore.remove()
             return
         }
@@ -251,6 +313,10 @@ final class TimerModel: ObservableObject {
             update(reportEvents: false)
         case .prepared:
             status = .prepared
+            if isClockEnabled {
+                pausedAt = saved.pausedAt ?? now()
+                endDate = saved.endDate ?? now() + remaining
+            }
         }
     }
 }

@@ -54,9 +54,9 @@ struct CountdownAdjustmentTests {
         #expect(controller.timer.remaining == maximum)
     }
 
-    @Test(arguments: [false, true], [PomodoroModel.Phase.focus, .rest, .longRest])
-    func pomodoroSelectedEndUsesTheDisplayedStart(clock: Bool, phase: PomodoroModel.Phase) {
-        let session = Session(clock: clock)
+    @Test(arguments: [PomodoroModel.Phase.focus, .rest, .longRest])
+    func durationPomodoroSelectedEndUsesTheDisplayedStart(phase: PomodoroModel.Phase) {
+        let session = Session(clock: false)
         defer { session.close() }
         let controller = session.controller
         controller.selectMode(.pomodoro)
@@ -82,9 +82,9 @@ struct CountdownAdjustmentTests {
         }
     }
 
-    @Test(arguments: [false, true], [false, true])
-    func alternatingEditsKeepBothEndsOnMarks(clock: Bool, longRest: Bool) {
-        let session = Session(clock: clock)
+    @Test(arguments: [false, true])
+    func durationAlternatingEditsKeepBothEndsOnMarks(longRest: Bool) {
+        let session = Session(clock: false)
         defer { session.close() }
         let controller = session.controller
         controller.selectMode(.pomodoro)
@@ -121,25 +121,25 @@ struct CountdownAdjustmentTests {
         #expect(controller.countdown.isPaused == paused)
     }
 
-    @Test(arguments: [false, true])
-    func shrinkingElapsedRestAlignsTheNextStage(clock: Bool) {
-        let session = Session(clock: clock)
+    @Test
+    func durationShrinkingElapsedRestAlignsTheNextStage() {
+        let session = Session(clock: false)
         defer { session.close() }
         let controller = session.controller
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.rest, by: 300)
         session.now += 1_913.25
         controller.adjustPomodoroDuration(.rest, steps: -100)
-        #expect(controller.pomodoro.stage == (clock ? 1 : 2))
+        #expect(controller.pomodoro.stage == 2)
         if controller.pomodoro.focusRemaining > 0 {
             expectMark(pomodoroEnd(controller, phase: .focus))
         }
         expectMark(pomodoroEnd(controller, phase: .rest))
     }
 
-    @Test(arguments: [false, true], [0.0, 73.25, 1_713.25, 7_113.25])
-    func pomodoroLimitsKeepVisibleEndsAligned(clock: Bool, elapsed: Double) {
-        let session = Session(clock: clock)
+    @Test(arguments: [0.0, 73.25, 1_713.25, 7_113.25])
+    func durationPomodoroLimitsKeepVisibleEndsAligned(elapsed: Double) {
+        let session = Session(clock: false)
         defer { session.close() }
         let controller = session.controller
         controller.selectMode(.pomodoro)
@@ -204,7 +204,8 @@ struct CountdownAdjustmentTests {
     private func timerEnd(_ controller: CountdownController) -> Double {
         let arcs = CountdownArcLayout.timer(
             remaining: controller.timer.remaining,
-            at: controller.features.isClockEnabled ? controller.currentTime : nil
+            at: controller.features.isClockEnabled ? controller.currentTime : nil,
+            endDate: controller.timer.endDate, pausedAt: controller.timer.pausedAt
         )
         return (arcs.startProportion + arcs.proportion) * 3_600
     }
@@ -214,7 +215,8 @@ struct CountdownAdjustmentTests {
         let arcs = CountdownArcLayout.pomodoro(
             focusRemaining: model.focusRemaining, restRemaining: model.restRemaining,
             restDuration: model.activeRestDuration,
-            at: controller.features.isClockEnabled ? controller.currentTime : nil
+            at: controller.features.isClockEnabled ? controller.currentTime : nil,
+            schedule: model.clockSchedule, restPhase: model.restPhase
         )
         let arc = phase == .focus ? arcs.focus : arcs.rest
         return (arc.startProportion + arc.proportion) * 3_600

@@ -230,13 +230,14 @@ struct ScrollTimeAdjusterTests {
         let timer = session.timer
         timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
-        try session.scroll(angle: 150, delta: 1) // Focus from :20 to :45 becomes :20 to :50.
-        #expect(timer.pomodoro.focusDuration == 1_800)
-        try session.scroll(angle: 312, delta: 1) // Rest from :50 to :55 becomes :50 to :00.
+        try session.scroll(angle: 150, delta: -1) // Focus ends at :40; rest still ends at :50.
+        #expect(timer.pomodoro.focusDuration == 1_200)
         #expect(timer.pomodoro.restDuration == 600)
+        try session.scroll(angle: 282, delta: 1) // Rest ends at :55; focus still ends at :40.
+        #expect(timer.pomodoro.restDuration == 900)
         try session.scroll(angle: 15, delta: 1) // Background, not the duration-only rest target.
-        #expect(timer.pomodoro.restDuration == 600)
-        #expect(timer.pomodoro.focusDuration == 1_800)
+        #expect(timer.pomodoro.restDuration == 900)
+        #expect(timer.pomodoro.focusDuration == 1_200)
     }
 
     @Test(arguments: [0.0, 119.999, 120, 149.999, 150, 329.999, 330, 359.999], [false, true])
@@ -247,11 +248,11 @@ struct ScrollTimeAdjusterTests {
         let timer = session.timer
         timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
-        try session.scroll(angle: angle, delta: 1)
         let focus = angle < 120 || angle >= 330
         let rest = angle >= 120 && angle < 150
-        #expect(timer.pomodoro.focusDuration == (focus ? 1_800 : 1_500))
-        #expect(timer.pomodoro.restDuration == (rest ? 600 : 300))
+        try session.scroll(angle: angle, delta: focus ? -1 : 1)
+        #expect(timer.pomodoro.focusDuration == (focus ? 1_200 : 1_500))
+        #expect(timer.pomodoro.restDuration == (rest || focus ? 600 : 300))
     }
 
     @Test(arguments: [false, true], [false, true])
@@ -266,7 +267,7 @@ struct ScrollTimeAdjusterTests {
             timer.toggleRunning()
             session.now += 600
         }
-        try session.scroll(angle: paused ? 342 : 282, delta: 1)
+        try session.scroll(angle: 282, delta: 1) // Paused sectors retain their fixed endpoints.
         #expect(timer.pomodoro.restDuration == 600)
         #expect(timer.pomodoro.focusDuration == 1_500)
         try session.scroll(angle: 150, delta: 1) // Completed focus area is not a target.

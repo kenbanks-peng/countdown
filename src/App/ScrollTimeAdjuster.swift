@@ -104,7 +104,8 @@ final class ScrollTimeAdjuster {
             focusRemaining: clockEnabled ? model.focusRemaining : model.focusDuration,
             restRemaining: clockEnabled ? model.restRemaining : model.activeRestDuration,
             restDuration: model.activeRestDuration,
-            at: clockEnabled ? countdown.currentTime : nil
+            at: clockEnabled ? countdown.currentTime : nil,
+            schedule: model.clockSchedule, restPhase: model.restPhase
         )
         if arcs.rest.contains(degrees / 360) { return .pomodoro(model.restPhase) }
         if arcs.focus.contains(degrees / 360) { return .pomodoro(.focus) }

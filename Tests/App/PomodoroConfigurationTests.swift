@@ -28,7 +28,8 @@ struct PomodoroConfigurationTests {
         #expect(configuration.pomodoroLongRestMinutes == 22)
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
         func controller(_ configuration: CountdownConfiguration) -> CountdownController {
-            CountdownController(stateStore: store, configuration: configuration, playSound: { _ in })
+            CountdownController(stateStore: store, configuration: configuration,
+                                featureState: CountdownFeatureState(clockEnabled: false), playSound: { _ in })
         }
         let original = controller(configuration)
         #expect(original.pomodoro.cycles == 3)

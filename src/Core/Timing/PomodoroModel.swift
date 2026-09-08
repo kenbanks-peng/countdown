@@ -23,6 +23,7 @@ struct PomodoroModel {
     private var focusElapsed: TimeInterval = 0
     private var restElapsed: TimeInterval = 0
     private var lastUpdate: Date?
+    private(set) var clockSchedule: PomodoroClockSchedule?
 
     init(focusDuration: TimeInterval = 25 * 60, restDuration: TimeInterval = 5 * 60,
          longRestDuration: TimeInterval = 15 * 60, cycles: Int = 4) {
@@ -34,8 +35,20 @@ struct PomodoroModel {
 
     var restPhase: Phase { stage == cycles ? .longRest : .rest }
     var activeRestDuration: TimeInterval { stage == cycles ? longRestDuration : restDuration }
-    var focusRemaining: TimeInterval { focusCompleted ? 0 : max(0, focusDuration - focusElapsed) }
-    var restRemaining: TimeInterval { max(0, activeRestDuration - restElapsed) }
+    var focusRemaining: TimeInterval {
+        if let schedule = clockSchedule {
+            return schedule.focusCompleted ? 0 : max(0, schedule.focusEnd.timeIntervalSince(schedule.pausedAt ?? schedule.sampledAt))
+        }
+        return focusCompleted ? 0 : max(0, focusDuration - focusElapsed)
+    }
+    var restRemaining: TimeInterval {
+        if let schedule = clockSchedule {
+            let date = schedule.pausedAt ?? schedule.sampledAt
+            let start = schedule.focusCompleted ? date : max(date, schedule.focusEnd)
+            return max(0, schedule.end(for: restPhase).timeIntervalSince(start))
+        }
+        return max(0, activeRestDuration - restElapsed)
+    }
     var phaseLabel: String { focusRemaining > 0 ? "Focus" : (stage == cycles ? "Long rest" : "Rest") }
     var completedFocusPeriods: Int { stage - 1 + (focusCompleted ? 1 : 0) }
     var cycleDuration: TimeInterval {
@@ -71,9 +84,65 @@ struct PomodoroModel {
         return "\(count) \(count == 1 ? "minute" : "minutes")"
     }
 
+    mutating func setClockEnabled(_ enabled: Bool, at now: Date) {
+        update(at: now)
+        if enabled && clockSchedule == nil {
+            let spentFocus = focusCompleted ? focusDuration : min(focusDuration, focusElapsed)
+            let start = now.addingTimeInterval(-spentFocus - restElapsed)
+            clockSchedule = PomodoroClockSchedule(
+                stageStart: start, focusEnd: start + focusDuration,
+                restEnd: start + focusDuration + restDuration,
+                longRestEnd: start + focusDuration + longRestDuration,
+                sampledAt: now, pausedAt: status == .running ? nil : now,
+                stage: stage, focusCompleted: focusCompleted
+            )
+        } else if !enabled {
+            clockSchedule = nil
+        }
+    }
+
+    mutating func restoreClockSchedule(_ schedule: PomodoroClockSchedule, at now: Date) {
+        guard schedule.isValid(cycles: cycles) else { return }
+        clockSchedule = schedule
+        status = schedule.pausedAt == nil ? .running : .paused
+        lastUpdate = schedule.sampledAt
+        update(at: now)
+        syncClockProgress()
+    }
+
+    mutating func adjustClockEndpoint(_ phase: Phase, steps: Int, at now: Date) {
+        update(at: now)
+        clockSchedule?.edit(phase, steps: steps)
+        advanceClock(at: now)
+        syncClockProgress()
+    }
+
+    private mutating func advanceClock(at now: Date) {
+        let count = cycles
+        clockSchedule?.advance(at: now, cycles: count)
+    }
+
+    private mutating func syncClockProgress() {
+        guard let schedule = clockSchedule else { return }
+        stage = schedule.stage
+        focusDuration = schedule.focusDuration
+        restDuration = schedule.restDuration
+        longRestDuration = schedule.longRestDuration
+        focusCompleted = schedule.focusCompleted
+        let date = schedule.pausedAt ?? schedule.sampledAt
+        focusElapsed = min(focusDuration, max(0, date.timeIntervalSince(schedule.stageStart)))
+        restElapsed = activeRestDuration - restRemaining
+    }
+
     mutating func adjustDuration(_ phase: Phase, by amount: TimeInterval, at now: Date) {
         guard amount.isFinite else { return }
         update(at: now)
+        if clockSchedule != nil {
+            clockSchedule?.edit(phase, amount: amount)
+            advanceClock(at: now)
+            syncClockProgress()
+            return
+        }
         switch phase {
         case .focus:
             focusDuration = min(3_600 - max(restDuration, longRestDuration), max(60, focusDuration + amount))
@@ -89,14 +158,18 @@ struct PomodoroModel {
     mutating func toggleRunning(at now: Date) {
         switch status {
         case .ready, .paused:
+            clockSchedule?.resume(at: now)
             status = .running
             lastUpdate = now
+            advanceClock(at: now)
+            syncClockProgress()
         case .running:
             pause(at: now)
         }
     }
 
     mutating func reset() {
+        clockSchedule = nil
         status = .ready
         stage = 1
         elapsedTime = 0
@@ -108,6 +181,7 @@ struct PomodoroModel {
         update(at: now)
         guard status == .running else { return }
         status = .paused
+        clockSchedule?.pausedAt = now
         lastUpdate = nil
     }
 
@@ -116,6 +190,11 @@ struct PomodoroModel {
         var elapsed = max(0, now.timeIntervalSince(lastUpdate))
         self.lastUpdate = max(lastUpdate, now)
         elapsedTime += elapsed
+        if clockSchedule != nil {
+            advanceClock(at: now)
+            syncClockProgress()
+            return
+        }
         while elapsed > 0 {
             // Skip whole cycles after sleep without an unbounded loop.
             if stage == 1 && focusElapsed == 0 && restElapsed == 0 && !focusCompleted {

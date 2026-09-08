@@ -10,7 +10,8 @@ struct PomodoroView: View {
     private var arcs: (focus: CountdownArcLayout, rest: CountdownArcLayout) {
         CountdownArcLayout.pomodoro(
             focusRemaining: model.focusRemaining, restRemaining: model.restRemaining,
-            restDuration: model.activeRestDuration, at: clockDate
+            restDuration: model.activeRestDuration, at: clockDate,
+            schedule: model.clockSchedule, restPhase: model.restPhase
         )
     }
 

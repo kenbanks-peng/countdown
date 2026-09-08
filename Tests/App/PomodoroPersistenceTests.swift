@@ -229,6 +229,7 @@ struct PomodoroPersistenceTests {
         func makeController() -> CountdownController {
             CountdownController(
                 stateStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil),
+                featureState: CountdownFeatureState(clockEnabled: false),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

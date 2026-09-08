@@ -58,15 +58,24 @@ final class CountdownController: ObservableObject {
             },
             timeoutActionsEnabled: { policy.mode == .timer }
         )
+        var pomodoro = PomodoroModel(
+            focusDuration: settings.focusDuration, restDuration: settings.restDuration,
+            longRestDuration: settings.longRestDuration ?? 900, cycles: configuration.pomodoroCycles
+        )
+        if state.clockEnabled, let schedule = settings.pomodoroClockSchedule {
+            pomodoro.restoreClockSchedule(schedule, at: now())
+        }
         countdown = CountdownEngine(
-            timer: timer,
-            pomodoro: PomodoroModel(
-                focusDuration: settings.focusDuration, restDuration: settings.restDuration,
-                longRestDuration: settings.longRestDuration ?? 900,
-                cycles: configuration.pomodoroCycles
-            ),
+            timer: timer, pomodoro: pomodoro,
             isPaused: settings.isPaused ?? timer.isPaused, now: now
         )
+        countdown.setClockEnabled(state.clockEnabled)
+        features.clockEnablementChanged = { [weak self] enabled in
+            guard let self else { return }
+            self.update()
+            self.countdown.setClockEnabled(enabled)
+            self.saveSettings()
+        }
         countdownChanges = countdown.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
         }
@@ -101,10 +110,13 @@ final class CountdownController: ObservableObject {
         guard mode == .timer, steps != 0 else { return }
         let date = currentTime
         update(at: date)
-        let start = features.isClockEnabled ? CountdownArcLayout.minuteProportion(at: date) * 3_600 : 0
+        if features.isClockEnabled {
+            timer.adjustClockEndpoint(steps: steps, at: date)
+            return
+        }
         let delta = CountdownAdjustment.delta(
-            steps: steps, end: start + timer.remaining,
-            minimum: start + 300, maximum: start + TimerModel.maximumDuration
+            steps: steps, end: timer.remaining,
+            minimum: 300, maximum: TimerModel.maximumDuration
         )
         timer.adjustDuration(by: delta, at: date)
     }
@@ -131,16 +143,21 @@ final class CountdownController: ObservableObject {
         guard mode == .pomodoro, steps != 0 else { return }
         let date = currentTime
         update(at: date)
+        if features.isClockEnabled {
+            countdown.adjustPomodoroEndpoint(phase, steps: steps, at: date)
+            saveSettings()
+            return
+        }
         let originalStage = pomodoro.stage
-        let originalEnd = pomodoroAdjustmentRange(phase, at: date).end
-        let leading: PomodoroModel.Phase = features.isClockEnabled ? .focus : pomodoro.restPhase
-        let trailing: PomodoroModel.Phase = features.isClockEnabled ? pomodoro.restPhase : .focus
+        let originalEnd = pomodoroAdjustmentRange(phase).end
+        let leading = pomodoro.restPhase
+        let trailing: PomodoroModel.Phase = .focus
         let editsVisiblePair = phase == .focus || phase == pomodoro.restPhase
 
         if editsVisiblePair && phase == trailing {
             alignPomodoroEnd(leading, at: date)
         }
-        let range = pomodoroAdjustmentRange(phase, at: date)
+        let range = pomodoroAdjustmentRange(phase)
         let delta = CountdownAdjustment.delta(
             steps: steps, end: range.end, minimum: range.minimum, maximum: range.maximum,
             from: originalEnd
@@ -149,8 +166,8 @@ final class CountdownController: ObservableObject {
         if editsVisiblePair {
             if pomodoro.stage != originalStage {
                 // A decrease can finish rest. Align the new pair, not the completed stage.
-                alignPomodoroEnd(features.isClockEnabled ? .focus : pomodoro.restPhase, at: date)
-                alignPomodoroEnd(features.isClockEnabled ? pomodoro.restPhase : .focus, at: date)
+                alignPomodoroEnd(pomodoro.restPhase, at: date)
+                alignPomodoroEnd(.focus, at: date)
             } else {
                 // Moving the leading boundary must not leave the following end between marks.
                 alignPomodoroEnd(trailing, at: date)
@@ -161,7 +178,7 @@ final class CountdownController: ObservableObject {
 
     private func alignPomodoroEnd(_ phase: PomodoroModel.Phase, at date: Date) {
         if phase == .focus && pomodoro.focusRemaining == 0 { return }
-        let range = pomodoroAdjustmentRange(phase, at: date)
+        let range = pomodoroAdjustmentRange(phase)
         let delta = CountdownAdjustment.nearestDelta(
             end: range.end, minimum: range.minimum, maximum: range.maximum
         )
@@ -169,11 +186,9 @@ final class CountdownController: ObservableObject {
     }
 
     private func pomodoroAdjustmentRange(
-        _ phase: PomodoroModel.Phase, at date: Date
+        _ phase: PomodoroModel.Phase
     ) -> (end: TimeInterval, minimum: TimeInterval, maximum: TimeInterval) {
         let model = pomodoro
-        let clock = features.isClockEnabled
-        let start = clock ? CountdownArcLayout.minuteProportion(at: date) * 3_600 : 0
         let duration: TimeInterval
         let end: TimeInterval
         let maximum: TimeInterval
@@ -182,12 +197,12 @@ final class CountdownController: ObservableObject {
             duration = model.focusDuration
             // Completed focus can still be edited for the next stage from the menu.
             let remaining = model.focusRemaining > 0 ? model.focusRemaining : duration
-            end = clock ? start + remaining : model.activeRestDuration + remaining
+            end = model.activeRestDuration + remaining
             maximum = 3_600 - max(model.restDuration, model.longRestDuration)
         case .rest, .longRest:
             duration = phase == .rest ? model.restDuration : model.longRestDuration
             let remaining = phase == model.restPhase ? model.restRemaining : duration
-            end = clock ? start + model.focusRemaining + remaining : remaining
+            end = remaining
             maximum = 3_600 - model.focusDuration
         }
         return (end: end, minimum: end + 300 - duration, maximum: end + maximum - duration)
@@ -224,7 +239,8 @@ final class CountdownController: ObservableObject {
     private func saveSettings() {
         settingsStore.save(CountdownSettings(
             mode: mode, focusDuration: pomodoro.focusDuration, restDuration: pomodoro.restDuration,
-            isPaused: countdown.isPaused, longRestDuration: pomodoro.longRestDuration
+            isPaused: countdown.isPaused, longRestDuration: pomodoro.longRestDuration,
+            pomodoroClockSchedule: pomodoro.clockSchedule
         ))
     }
 }

@@ -621,7 +621,7 @@ struct CountdownViewTests {
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
             featureState: CountdownFeatureState(clockEnabled: false),
-            playSound: { _ in }, saveEnablement: { _, _ in }
+            playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: {}))
@@ -674,7 +674,8 @@ struct CountdownViewTests {
     func popupShowsCurrentPhaseTimeAndSession(elapsed: TimeInterval, clockEnabled: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        // Start on a clock mark so both displays have the same phase times.
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
@@ -719,12 +720,12 @@ struct CountdownViewTests {
         )
         timer.adjustTimerDuration(by: 600)
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isPopup: true, changePresentation: {}))
-        #expect(try recognizedText(render(hosting)).contains("10:00"))
+        #expect(try recognizedText(render(hosting)).contains(clockEnabled ? "11:40" : "10:00"))
         now += 78
         timer.update()
         let text = try recognizedText(render(hosting)).joined(separator: " ")
         #expect(text.contains("Timer"))
-        #expect(text.contains("8:42"))
+        #expect(text.contains(clockEnabled ? "10:22" : "8:42"))
         #expect(!text.contains("Session"))
         timer.toggleRunning()
         #expect(try recognizedText(render(hosting)).contains("Paused"))

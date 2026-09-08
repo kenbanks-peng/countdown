@@ -1,12 +1,13 @@
 import Foundation
 
-/// Stores UI settings and the core pause state, not Pomodoro progress.
+/// Duration mode stores allocations. Clock mode also stores its fixed schedule.
 struct CountdownSettings: Codable {
     var mode: CountdownMode = .timer
     var focusDuration: TimeInterval = 25 * 60
     var restDuration: TimeInterval = 5 * 60
     var isPaused: Bool?
     var longRestDuration: TimeInterval?
+    var pomodoroClockSchedule: PomodoroClockSchedule?
 }
 
 /// Stores app settings separately from the Timer mode session.

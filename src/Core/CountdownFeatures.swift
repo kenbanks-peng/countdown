@@ -13,6 +13,7 @@ final class CountdownFeatures: ObservableObject {
     private let saveEnablement: (String, Bool) -> Void
     private let now: () -> Date
     private var nextPopup: Date?
+    var clockEnablementChanged: ((Bool) -> Void)?
 
     private var popupInterval: TimeInterval { TimeInterval(configuration.popupTime) * 60 }
 
@@ -32,6 +33,8 @@ final class CountdownFeatures: ObservableObject {
     }
 
     func setClockEnabled(_ enabled: Bool) {
+        guard enabled != isClockEnabled else { return }
+        clockEnablementChanged?(enabled)
         isClockEnabled = enabled
         saveEnablement("clock_enabled", enabled)
     }

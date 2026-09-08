@@ -16,7 +16,7 @@ final class CountdownEngine: ObservableObject {
         self.isPaused = isPaused
         self.now = now
         timer.isPausedByCore = isPaused
-        self.pomodoro.toggleRunning(at: now())
+        if self.pomodoro.status == .ready { self.pomodoro.toggleRunning(at: now()) }
         if isPaused {
             timer.stop()
             self.pomodoro.pause(at: now())
@@ -47,14 +47,25 @@ final class CountdownEngine: ObservableObject {
         }
     }
 
+    func setClockEnabled(_ enabled: Bool) {
+        timer.setClockEnabled(enabled)
+        pomodoro.setClockEnabled(enabled, at: now())
+    }
+
+    func adjustPomodoroEndpoint(_ phase: PomodoroModel.Phase, steps: Int, at date: Date) {
+        pomodoro.adjustClockEndpoint(phase, steps: steps, at: date)
+    }
+
     func adjustPomodoroDuration(_ phase: PomodoroModel.Phase, by amount: TimeInterval, at date: Date? = nil) {
         pomodoro.adjustDuration(phase, by: amount, at: date ?? now())
     }
 
     /// Reset the cycle without changing the shared run state.
     func resetPomodoro() {
+        let clock = pomodoro.clockSchedule != nil
         pomodoro.reset()
         pomodoro.toggleRunning(at: now())
         if isPaused { pomodoro.pause(at: now()) }
+        pomodoro.setClockEnabled(clock, at: now())
     }
 }

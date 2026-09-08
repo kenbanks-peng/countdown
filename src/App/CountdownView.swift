@@ -61,7 +61,7 @@ struct CountdownView: View {
             if countdown.mode == .timer {
                 TimerContextMenu(model: countdown.timer, setToNextHour: countdown.setTimerToNextHour)
             } else {
-                Menu("Durations") {
+                Menu(features.isClockEnabled ? "End times" : "Durations") {
                     durationMenu("Focus", phase: .focus, duration: countdown.pomodoro.focusDuration)
                     durationMenu("Rest", phase: .rest, duration: countdown.pomodoro.restDuration)
                     durationMenu("Long rest", phase: .longRest, duration: countdown.pomodoro.longRestDuration)
@@ -84,7 +84,10 @@ struct CountdownView: View {
     }
 
     private func durationMenu(_ label: String, phase: PomodoroModel.Phase, duration: TimeInterval) -> some View {
-        Menu("\(label): \(Int(duration / 60)) min") {
+        let value = countdown.pomodoro.clockSchedule.map {
+            $0.end(for: phase).formatted(date: .omitted, time: .shortened)
+        } ?? "\(Int(duration / 60)) min"
+        return Menu("\(label): \(value)") {
             Button("Increase to next 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: 1) }
             Button("Decrease to previous 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: -1) }
         }

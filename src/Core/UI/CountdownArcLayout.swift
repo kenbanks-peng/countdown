@@ -24,15 +24,31 @@ struct CountdownArcLayout {
         return (Double(parts.minute ?? 0) + seconds / 60) / 60
     }
 
-    static func timer(remaining: TimeInterval, at date: Date?) -> Self {
-        Self(startProportion: date.map { minuteProportion(at: $0) } ?? 0,
-             proportion: min(1, max(0, remaining / 3_600)))
+    static func timer(remaining: TimeInterval, at date: Date?, endDate: Date? = nil, pausedAt: Date? = nil) -> Self {
+        if let date, let endDate {
+            let start = pausedAt ?? date
+            return Self(startProportion: minuteProportion(at: start),
+                        proportion: min(1, max(0, endDate.timeIntervalSince(start) / 3_600)))
+        }
+        return Self(startProportion: date.map { minuteProportion(at: $0) } ?? 0,
+                    proportion: min(1, max(0, remaining / 3_600)))
     }
 
     static func pomodoro(
         focusRemaining: TimeInterval, restRemaining: TimeInterval,
-        restDuration: TimeInterval, at date: Date?
+        restDuration: TimeInterval, at date: Date?,
+        schedule: PomodoroClockSchedule? = nil, restPhase: PomodoroModel.Phase = .rest
     ) -> (focus: Self, rest: Self) {
+        if let date, let schedule {
+            let start = schedule.pausedAt ?? date
+            let focusEnd = schedule.focusCompleted ? start : max(start, schedule.focusEnd)
+            return (
+                focus: Self(startProportion: minuteProportion(at: start),
+                            proportion: max(0, focusEnd.timeIntervalSince(start) / 3_600)),
+                rest: Self(startProportion: minuteProportion(at: focusEnd),
+                           proportion: max(0, schedule.end(for: restPhase).timeIntervalSince(focusEnd) / 3_600))
+            )
+        }
         let start = date.map { minuteProportion(at: $0) } ?? 0
         return (
             focus: Self(startProportion: date == nil ? restDuration / 3_600 : start,
