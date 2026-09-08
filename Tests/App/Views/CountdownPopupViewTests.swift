@@ -30,13 +30,10 @@ struct CountdownPopupViewTests {
         #expect(!text.contains(controller.pomodoro.phaseLabel))
         #expect(controller.mode.isClockEnabled)
 
-        // Outside the disc, preserve sectors and original hands, without clock marks or dots.
-        let normal = try render(NSHostingView(rootView: ZStack {
+        // Outside the disc, preserve sectors without hands, clock marks, or dots.
+        let normal = try render(NSHostingView(rootView:
             PomodoroView(model: controller.pomodoro, clockDate: now, showsSessionDots: false)
-            ClockHands(date: now)
-                .foregroundStyle(.white.opacity(0.42))
-                .padding(CountdownAppearance.circleInset)
-        }))
+        ))
         for angle in stride(from: 0.0, to: 360.0, by: 5) {
             let actual = try sample(bitmap, angle: angle, radius: 0.42)
             let expected = try sample(normal, angle: angle, radius: 0.42)

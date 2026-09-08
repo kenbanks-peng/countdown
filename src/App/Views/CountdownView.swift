@@ -34,11 +34,10 @@ struct CountdownView: View {
         Button(action: activate) {
             ZStack {
                 modeContent
-                if !isCompact {
+                if !isCompact && !isPopup {
                     CountdownClockOverlay(
                         isClockEnabled: countdown.mode.isClockEnabled,
-                        currentTime: currentTime,
-                        showsFace: !showsPopupDetails
+                        currentTime: currentTime
                     )
                     .padding(CountdownAppearance.circleInset)
                 }
