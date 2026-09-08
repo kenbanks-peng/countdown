@@ -179,7 +179,7 @@ struct CountdownAdjustmentTests {
             CountdownController(
                 sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
                 configuration: CountdownConfiguration(alarmNotificationURL: nil),
-                preferences: CountdownPreferences(popupEnabled: false),
+                preferences: CountdownPreferences(reminderEnabled: false),
                 playSound: { _ in }, now: { [unowned self] in now }, saveEnablement: { _, _ in }
             )
         }

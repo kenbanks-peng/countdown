@@ -61,8 +61,8 @@ struct CountdownConfigurationFile {
         }
     }
 
-    func doubleValue(for key: String) -> Double? {
-        guard let value = sectionValues[""]?[key] else { return nil }
+    func doubleValue(for key: String, section: String = "") -> Double? {
+        guard let value = sectionValues[section]?[key] else { return nil }
         return Double(value.split(separator: "#", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) ?? "")
     }
 

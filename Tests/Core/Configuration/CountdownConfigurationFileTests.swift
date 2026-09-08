@@ -14,17 +14,17 @@ struct CountdownConfigurationFileTests {
         return CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
     }
 
-    @Test(arguments: [nil, "", "[notifications]\nnotification_enabled = invalid\npopup_notification_enabled = 0\naudio_notification_enabled = \"false\"\nalarm_enabled = FALSE\nnotification_time_in_seconds = invalid\nnotification_interval_in_minutes = invalid"] as [String?])
+    @Test(arguments: [nil, "", "[notifications]\nnotification_enabled = invalid\nreminder_notification_enabled = 0\naudio_notification_enabled = \"false\"\nalarm_enabled = FALSE\nnotification_time_in_seconds = invalid\nnotification_interval_in_minutes = invalid"] as [String?])
     func missingAndInvalidValuesUseDefaults(contents: String?) throws {
         let config = try load(contents)
         #expect(config.size == 1)
         #expect(config.compactSize == 1)
         #expect(config.notificationEnabled)
-        #expect(config.popupNotificationEnabled)
+        #expect(config.reminderNotificationEnabled)
         #expect(config.audioNotificationEnabled)
         #expect(config.alarmEnabled)
-        #expect(config.popupTimeSeconds == 5)
-        #expect(config.popupIntervalMinutes == 15)
+        #expect(config.reminderTimeSeconds == 5)
+        #expect(config.reminderIntervalMinutes == 15)
         #expect(config.pomodoroFocusMinutes == 25)
         #expect(config.pomodoroRestMinutes == 5)
         #expect(config.pomodoroLongRestMinutes == 20)
@@ -48,7 +48,7 @@ struct CountdownConfigurationFileTests {
         [notifications]
         notification_enabled = false # Master control
         notification_enabled = true
-        popup_notification_enabled = false
+        reminder_notification_enabled = false
         audio_notification_enabled = false
         alarm_enabled = false
         notification_time_in_seconds = 7
@@ -64,11 +64,11 @@ struct CountdownConfigurationFileTests {
         #expect(config.size == 1.5)
         #expect(config.compactSize == 0.8)
         #expect(!config.notificationEnabled)
-        #expect(!config.popupNotificationEnabled)
+        #expect(!config.reminderNotificationEnabled)
         #expect(!config.audioNotificationEnabled)
         #expect(!config.alarmEnabled)
-        #expect(config.popupTimeSeconds == 7)
-        #expect(config.popupIntervalMinutes == 10)
+        #expect(config.reminderTimeSeconds == 7)
+        #expect(config.reminderIntervalMinutes == 10)
         #expect(config.pomodoroFocusMinutes == 20)
         #expect(config.pomodoroRestMinutes == 5)
         #expect(config.pomodoroLongRestMinutes == 60)
@@ -92,8 +92,8 @@ struct CountdownConfigurationFileTests {
         alarm_audio = "second.mp3"
         """)
         #expect(config.notificationEnabled)
-        #expect(config.popupTimeSeconds == 5)
-        #expect(config.popupIntervalMinutes == 15)
+        #expect(config.reminderTimeSeconds == 5)
+        #expect(config.reminderIntervalMinutes == 15)
         #expect(config.alarmNotificationURL?.lastPathComponent == "first.mp3")
     }
 }

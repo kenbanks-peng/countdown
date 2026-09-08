@@ -7,10 +7,12 @@ notification_enabled = true
 # Rounded to the nearest multiple of 5 minutes, with a minimum of 5.
 # Notifications count backwards from the active end time, including zero.
 notification_interval_in_minutes = 15
-# Seconds before a popup returns to compact mode.
+# Seconds the centered minutes stay visible between fades.
 notification_time_in_seconds = 5
 
-popup_notification_enabled = true
+reminder_notification_enabled = true
+# Font size in points, independent of the circle scale. Each fade takes 1.5 seconds.
+reminder_font_size_pt = 144
 
 audio_notification_enabled = true
 # Paths are relative to this file.

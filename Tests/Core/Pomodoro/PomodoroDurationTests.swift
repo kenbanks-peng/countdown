@@ -95,7 +95,7 @@ struct PomodoroDurationTests {
         lazy var timer = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: configuration,
-            preferences: CountdownPreferences(popupEnabled: false),
+            preferences: CountdownPreferences(reminderEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
         func removeState() { try? FileManager.default.removeItem(at: directory) }

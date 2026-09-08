@@ -18,8 +18,8 @@ struct CountdownViewLayoutTests {
             playSound: { _ in }
         )
         timer.selectMode(mode)
-        for (isCompact, isPopup) in [(false, false), (false, true), (true, false)] {
-            let hostingView = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: isCompact, isPopup: isPopup, scale: scale, changePresentation: {}))
+        for isCompact in [false, true] {
+            let hostingView = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: isCompact, scale: scale, changePresentation: {}))
             hostingView.wantsLayer = true
             hostingView.layer?.backgroundColor = NSColor.clear.cgColor
 

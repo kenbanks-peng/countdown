@@ -12,8 +12,8 @@ final class CountdownWindowController {
     private var normalFrame: NSRect?
     private var presentation: Presentation = .normal
     private var isTransitioning = false
-    private var popupSubscription: AnyCancellable?
-    private var popupDismissalTask: Task<Void, Never>?
+    private var reminderSubscription: AnyCancellable?
+    private let reminder = CountdownReminderController()
 
     private let windowState = CountdownWindowStateStore()
     private let transition = CountdownPanelTransition()
@@ -36,14 +36,14 @@ final class CountdownWindowController {
         normalFrame = windowState.restoredFrame(for: .normal, size: normalSize)
         panel.makeKeyAndOrderFront(nil)
 
-        observePopupIntervals(from: countdown.popups)
+        observeReminderIntervals(from: countdown.reminders)
         scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, normalScale: configuration.size, isCompact: { [weak self] in
             self?.presentation == .compact
         })
     }
 
     func save() {
-        popupDismissalTask?.cancel()
+        reminder.dismiss()
         countdown.save()
         savePanelState()
     }
@@ -65,30 +65,31 @@ final class CountdownWindowController {
         return panel
     }
 
-    private func observePopupIntervals(from model: PopupScheduler) {
-        popupSubscription = model.$popupIntervalCount
+    private func observeReminderIntervals(from model: ReminderScheduler) {
+        reminderSubscription = model.$reminderIntervalCount
             .dropFirst()
             .sink { [weak self] _ in
-                self?.handlePopupInterval()
+                self?.handleReminderInterval()
             }
     }
 
-    private func handlePopupInterval() {
+    private func handleReminderInterval() {
         guard presentation == .compact else { return }
 
-        showNormalWindow(requestKeyboardFocus: false, isPopup: true)
-        popupDismissalTask?.cancel()
-        let popupTimeSeconds = configuration.popupTimeSeconds
-        popupDismissalTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(popupTimeSeconds))
-            guard !Task.isCancelled else { return }
-            self?.showCompactWindow()
-        }
+        guard let screen = panel.screen ?? NSScreen.main else { return }
+        reminder.show(
+            content: NSHostingView(rootView: CountdownView(
+                countdown: countdown, isReminder: true, reminderFontSizePt: configuration.reminderFontSizePt,
+                changePresentation: {}
+            )),
+            screenFrame: screen.frame, size: screen.frame.size,
+            duration: TimeInterval(configuration.reminderTimeSeconds)
+        )
     }
 
-    private func contentView(isCompact: Bool, isPopup: Bool = false) -> NSView {
+    private func contentView(isCompact: Bool) -> NSView {
         NSHostingView(rootView: CountdownView(
-            countdown: countdown, isCompact: isCompact, isPopup: isPopup,
+            countdown: countdown, isCompact: isCompact,
             scale: isCompact ? configuration.compactSize : configuration.size,
             allowsClick: { [weak self] in self?.panel.allowsClick ?? true },
             changePresentation: { [weak self] in
@@ -151,10 +152,11 @@ final class CountdownWindowController {
         }
     }
 
-    private func showNormalWindow(requestKeyboardFocus: Bool = true, isPopup: Bool = false) {
+    private func showNormalWindow() {
         guard presentation == .compact, !isTransitioning else { return }
         let panel = panel
 
+        reminder.dismiss()
         isTransitioning = true
         savePanelState()
         presentation = .normal
@@ -169,16 +171,11 @@ final class CountdownWindowController {
             self.savePanelState(frame: fullFrame)
             self.normalFrame = nil
             self.isTransitioning = false
-            if requestKeyboardFocus {
-                panel.makeKeyAndOrderFront(nil)
-            } else {
-                // Automatic reminders must not interrupt typing in another app.
-                panel.orderFront(nil)
-            }
+            panel.makeKeyAndOrderFront(nil)
         }
 
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            panel.contentView = contentView(isCompact: false, isPopup: isPopup)
+            panel.contentView = contentView(isCompact: false)
             panel.setFrame(fullFrame, display: true)
             finishTransition()
             return
@@ -188,7 +185,7 @@ final class CountdownWindowController {
         // face and hands fade in with the circle instead of popping in after it
         // lands. Keeping the panel square and compact-sized while it travels
         // still prevents the growing circle from being clipped into a square.
-        let incoming = transition.crossFadeTo(contentView(isCompact: false, isPopup: isPopup), in: panel)
+        let incoming = transition.crossFadeTo(contentView(isCompact: false), in: panel)
 
         let slideWaypoint = transition.waypoint(from: panel.frame, to: fullFrame)
         transition.animate(panel, to: slideWaypoint, duration: transition.slideDuration, timingFunction: .easeIn) { [weak self] in

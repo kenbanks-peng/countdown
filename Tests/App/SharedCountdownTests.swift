@@ -11,7 +11,7 @@ struct SharedCountdownTests {
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         let store = TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path])
         let configuration = CountdownConfiguration(alarmNotificationURL: nil)
-        let preferences = CountdownPreferences(popupEnabled: false)
+        let preferences = CountdownPreferences(reminderEnabled: false)
         let controller = CountdownController(sessionStore: store, configuration: configuration, preferences: preferences, playSound: { _ in }, now: { now })
         controller.selectMode(mode)
         #expect(controller.controlLabel == "Pause")
@@ -45,7 +45,7 @@ struct SharedCountdownTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(popupEnabled: false),
+            preferences: CountdownPreferences(reminderEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.adjustTimerDuration(by: 1_200)

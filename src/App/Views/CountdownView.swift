@@ -5,17 +5,19 @@ import SwiftUI
 struct CountdownView: View {
     @ObservedObject var countdown: CountdownController
     var isCompact = false
-    var isPopup = false
+    var isReminder = false
     let scale: CGFloat
+    let reminderFontSizePt: CGFloat
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, isPopup: Bool = false, scale: CGFloat = 1, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isReminder: Bool = false, scale: CGFloat = 1, reminderFontSizePt: CGFloat = CountdownConfiguration.defaultReminderFontSizePt, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
-        self.isPopup = isPopup
+        self.isReminder = isReminder
         self.scale = scale
+        self.reminderFontSizePt = reminderFontSizePt
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
         self._currentTime = State(initialValue: countdown.currentTime)
@@ -23,10 +25,14 @@ struct CountdownView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            controls
-                .frame(width: geometry.size.width / scale, height: geometry.size.height / scale)
-                .scaleEffect(scale)
-                .frame(width: geometry.size.width, height: geometry.size.height)
+            if isReminder {
+                reminderOverlay
+            } else {
+                controls
+                    .frame(width: geometry.size.width / scale, height: geometry.size.height / scale)
+                    .scaleEffect(scale)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            }
         }
     }
 
@@ -34,15 +40,12 @@ struct CountdownView: View {
         Button(action: activate) {
             ZStack {
                 modeContent
-                if !isCompact && !isPopup {
+                if !isCompact {
                     CountdownClockOverlay(
                         isClockEnabled: countdown.mode.isClockEnabled,
                         currentTime: currentTime
                     )
                     .padding(CountdownAppearance.circleInset)
-                }
-                if showsPopupDetails {
-                    popupOverlay
                 }
             }
             .contentShape(Circle())
@@ -60,7 +63,7 @@ struct CountdownView: View {
             }
             .pickerStyle(.inline)
             Divider()
-            Toggle("Popups", isOn: Binding(get: { countdown.popups.isPopupEnabled }, set: countdown.popups.setPopupEnabled))
+            Toggle("Reminders", isOn: Binding(get: { countdown.reminders.isReminderEnabled }, set: countdown.reminders.setReminderEnabled))
             Button(countdown.controlLabel, action: countdown.toggleRunning)
             Button(isCompact ? "Normal" : "Compact", action: changePresentation)
             Divider()
@@ -84,17 +87,16 @@ struct CountdownView: View {
         }
     }
 
-    private var showsPopupDetails: Bool { isPopup && !isCompact }
-
-    private var popupOverlay: CountdownPopupOverlay {
+    private var reminderOverlay: CountdownReminderOverlay {
         if countdown.mode.usesTimer {
-            return CountdownPopupOverlay(
-                remaining: countdown.timer.remaining
+            return CountdownReminderOverlay(
+                remaining: countdown.timer.remaining, fontSizePt: reminderFontSizePt
             )
         }
         let model = countdown.pomodoro
-        return CountdownPopupOverlay(
-            remaining: model.focusRemaining, isRest: model.focusRemaining == 0
+        return CountdownReminderOverlay(
+            remaining: model.focusRemaining > 0 ? model.focusRemaining : model.restRemaining,
+            fontSizePt: reminderFontSizePt
         )
     }
 
@@ -102,9 +104,9 @@ struct CountdownView: View {
     private var modeContent: some View {
         switch countdown.mode {
         case .timer, .countdown:
-            TimerView(model: countdown.timer, isCompact: isCompact, clockDate: clockDate, showsLabels: !showsPopupDetails)
+            TimerView(model: countdown.timer, isCompact: isCompact, clockDate: clockDate)
         case .pomodoro:
-            PomodoroView(model: countdown.pomodoro, isCompact: isCompact, clockDate: clockDate, showsSessionDots: !showsPopupDetails)
+            PomodoroView(model: countdown.pomodoro, isCompact: isCompact, clockDate: clockDate)
         }
     }
 

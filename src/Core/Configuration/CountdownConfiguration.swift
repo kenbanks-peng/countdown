@@ -2,7 +2,7 @@ import Foundation
 
 struct CountdownConfiguration {
     let notificationEnabled: Bool
-    let popupNotificationEnabled: Bool
+    let reminderNotificationEnabled: Bool
     let audioNotificationEnabled: Bool
     let alarmEnabled: Bool
     let size: Double
@@ -11,8 +11,10 @@ struct CountdownConfiguration {
     let yellowNotificationURL: URL?
     let redNotificationURL: URL?
     let alarmNotificationURL: URL?
-    let popupTimeSeconds: Int
-    let popupIntervalMinutes: Int
+    static let defaultReminderFontSizePt: Double = 144
+    let reminderFontSizePt: Double
+    let reminderTimeSeconds: Int
+    let reminderIntervalMinutes: Int
     let pomodoroFocusPeriodsPerCycle: Int
     let pomodoroFocusMinutes: Int
     let pomodoroRestMinutes: Int
@@ -23,8 +25,9 @@ struct CountdownConfiguration {
         greenNotificationURL: URL? = nil,
         yellowNotificationURL: URL? = nil,
         redNotificationURL: URL? = nil,
-        popupTimeSeconds: Int = 5,
-        popupIntervalMinutes: Int = 15,
+        reminderTimeSeconds: Int = 5,
+        reminderFontSizePt: Double = CountdownConfiguration.defaultReminderFontSizePt,
+        reminderIntervalMinutes: Int = 15,
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
         pomodoroLongRestMinutes: Int = 20,
@@ -32,12 +35,12 @@ struct CountdownConfiguration {
         size: Double = 1,
         compactSize: Double = 1,
         notificationEnabled: Bool = true,
-        popupNotificationEnabled: Bool = true,
+        reminderNotificationEnabled: Bool = true,
         audioNotificationEnabled: Bool = true,
         alarmEnabled: Bool = true
     ) {
         self.notificationEnabled = notificationEnabled
-        self.popupNotificationEnabled = popupNotificationEnabled
+        self.reminderNotificationEnabled = reminderNotificationEnabled
         self.audioNotificationEnabled = audioNotificationEnabled
         self.alarmEnabled = alarmEnabled
         self.size = size.isFinite && size > 0 ? size : 1
@@ -47,10 +50,12 @@ struct CountdownConfiguration {
         self.yellowNotificationURL = yellowNotificationURL
         self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
-        self.popupTimeSeconds = popupTimeSeconds > 0 ? popupTimeSeconds : 5
-        let interval = max(5, popupIntervalMinutes)
+        self.reminderFontSizePt = reminderFontSizePt.isFinite && reminderFontSizePt > 0
+            ? reminderFontSizePt : Self.defaultReminderFontSizePt
+        self.reminderTimeSeconds = reminderTimeSeconds > 0 ? reminderTimeSeconds : 5
+        let interval = max(5, reminderIntervalMinutes)
         let roundedDown = interval - interval % 5
-        self.popupIntervalMinutes = interval % 5 >= 3 && roundedDown <= Int.max - 5 ? roundedDown + 5 : roundedDown
+        self.reminderIntervalMinutes = interval % 5 >= 3 && roundedDown <= Int.max - 5 ? roundedDown + 5 : roundedDown
         let focus = (1...59).contains(pomodoroFocusMinutes) ? pomodoroFocusMinutes : 25
         let rest = (1...59).contains(pomodoroRestMinutes) ? pomodoroRestMinutes : 5
         let longRest = (1...60).contains(pomodoroLongRestMinutes) ? pomodoroLongRestMinutes : 20
@@ -73,8 +78,9 @@ struct CountdownConfiguration {
             greenNotificationURL: configurationFile.soundURL(for: "green_audio", defaultName: "green.mp3"),
             yellowNotificationURL: configurationFile.soundURL(for: "yellow_audio", defaultName: "yellow.mp3"),
             redNotificationURL: configurationFile.soundURL(for: "red_audio", defaultName: "red.mp3"),
-            popupTimeSeconds: configurationFile.intValue(for: "notification_time_in_seconds", section: "notifications") ?? 5,
-            popupIntervalMinutes: configurationFile.intValue(for: "notification_interval_in_minutes", section: "notifications") ?? 15,
+            reminderTimeSeconds: configurationFile.intValue(for: "notification_time_in_seconds", section: "notifications") ?? 5,
+            reminderFontSizePt: configurationFile.doubleValue(for: "reminder_font_size_pt", section: "notifications") ?? Self.defaultReminderFontSizePt,
+            reminderIntervalMinutes: configurationFile.intValue(for: "notification_interval_in_minutes", section: "notifications") ?? 15,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,
             pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", section: "pomodoro") ?? 20,
@@ -82,7 +88,7 @@ struct CountdownConfiguration {
             size: configurationFile.doubleValue(for: "size") ?? 1,
             compactSize: configurationFile.doubleValue(for: "compact_size") ?? 1,
             notificationEnabled: configurationFile.boolValue(for: "notification_enabled") ?? true,
-            popupNotificationEnabled: configurationFile.boolValue(for: "popup_notification_enabled") ?? true,
+            reminderNotificationEnabled: configurationFile.boolValue(for: "reminder_notification_enabled") ?? true,
             audioNotificationEnabled: configurationFile.boolValue(for: "audio_notification_enabled") ?? true,
             alarmEnabled: configurationFile.boolValue(for: "alarm_enabled") ?? true
         )

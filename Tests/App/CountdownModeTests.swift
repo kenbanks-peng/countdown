@@ -36,7 +36,7 @@ struct CountdownModeTests {
         #expect(controller.timer.remaining == remaining)
         #expect(controller.pomodoro.clockSchedule?.focusEnd == focusEnd)
         #expect(controller.engine.isPaused)
-        controller.popups.setPopupEnabled(false)
+        controller.reminders.setReminderEnabled(false)
         controller.save()
         let restored = session.makeController()
         #expect(restored.mode == incoming)
@@ -45,10 +45,10 @@ struct CountdownModeTests {
         #expect(restored.timer.remaining == remaining)
         #expect(restored.engine.isPaused)
         #expect(restored.pomodoro.status == .paused)
-        let popups = try JSONDecoder().decode([String: Bool].self, from: Data(contentsOf:
+        let reminders = try JSONDecoder().decode([String: Bool].self, from: Data(contentsOf:
             session.store.stateDirectory.appendingPathComponent("features.json")))
-        #expect(popups["clock_enabled"] == nil)
-        #expect(popups["popup_enabled"] == false)
+        #expect(reminders["clock_enabled"] == nil)
+        #expect(reminders["reminder_enabled"] == false)
     }
 
     @Test(arguments: CountdownMode.allCases, CountdownMode.allCases)
@@ -127,7 +127,7 @@ struct CountdownModeTests {
         func makeController(autoSetToNextHour: Bool = false, alarm: Bool = true) -> CountdownController {
             CountdownController(
                 sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false),
-                preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, popupEnabled: false, alarmEnabled: alarm),
+                preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, reminderEnabled: false, alarmEnabled: alarm),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

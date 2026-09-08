@@ -77,7 +77,7 @@ struct CountdownControllerTests {
             CountdownController(
                 sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
                 configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false),
-                preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, popupEnabled: false),
+                preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, reminderEnabled: false),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

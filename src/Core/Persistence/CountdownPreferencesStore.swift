@@ -4,7 +4,7 @@ import Foundation
 struct CountdownPreferences {
     var showsRemainingMinutes = true
     var autoSetToNextHourEnabled = false
-    var popupEnabled = true
+    var reminderEnabled = true
     var alarmEnabled = true
 }
 
@@ -17,7 +17,7 @@ struct CountdownPreferencesStore {
         return CountdownPreferences(
             showsRemainingMinutes: values["current_timeout_enabled"] ?? true,
             autoSetToNextHourEnabled: values["autoset_enabled"] ?? false,
-            popupEnabled: values["popup_enabled"] ?? true,
+            reminderEnabled: values["reminder_enabled"] ?? true,
             alarmEnabled: values["alarm_enabled"] ?? true
         )
     }

@@ -131,8 +131,8 @@ struct PomodoroPersistenceTests {
         session.now += 839
         restored.update()
         #expect(restored.timer.completionCount == 1)
-        #expect(restored.popups.popupIntervalCount == 1)
-        #expect(session.sounds == 2) // Endpoint popup and completion alarm.
+        #expect(restored.reminders.reminderIntervalCount == 1)
+        #expect(session.sounds == 2) // Endpoint reminder and completion alarm.
     }
 
     @Test(arguments: [true, false])
@@ -235,7 +235,7 @@ struct PomodoroPersistenceTests {
         case .active:
             #expect(restored.timer.status == .active)
             #expect(restored.timer.remaining == 899)
-            #expect(session.sounds == 0) // Restored elapsed time must not replay Popup.
+            #expect(session.sounds == 0) // Restored elapsed time must not replay Reminder.
         case .prepared, .stalePrepared:
             #expect(restored.timer.isPaused == retainsPrepared)
             #expect(restored.timer.remaining == (retainsPrepared ? 1_200 : 0))

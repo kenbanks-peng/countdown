@@ -31,20 +31,22 @@ tools/swift-test --filter 'PomodoroClock|PomodoroCycleTests'
 tools/swift-test --filter 'TimerLifecycleTests|TimerClockEndpointTests'
 tools/swift-test --filter 'ScrollGestureTests|ScrollTargetTests|ScrollDurationTests'
 tools/swift-test --filter 'CountdownConfigurationFileTests|CountdownPreferencesTests'
-tools/swift-test --filter 'CountdownView|PomodoroRenderingTests|CountdownPopupViewTests|CountdownAccessibilityTests|CountdownWindowStateTests'
+tools/swift-test --filter 'CountdownView|PomodoroRenderingTests|CountdownReminderViewTests|CountdownAccessibilityTests|CountdownWindowStateTests'
 ```
 
 SwiftPM discovers tests recursively under `Tests/`. No source file list needs an
 update when a test moves. Suites are grouped by subject:
 
-- `Tests/Core/`: timing, configuration, persistence, popup schedules, and geometry.
+- `Tests/Core/`: timing, configuration, persistence, reminder schedules, and geometry.
 - `Tests/App/`: controller integration, window state, pointer/scroll input, and
   hosted view rendering and accessibility.
 - `Tests/Support/`: isolated clock and scroll sessions, event creation, bitmap
   rendering, OCR, and accessibility helpers.
 
 The former standalone circle-transition check is covered by the discovered
-layout suite. That suite checks all modes, popup display, and intermediate sizes.
+layout suite. That suite checks all modes and intermediate sizes. Reminder tests
+check text-only rendering, zero initial opacity, fixed screen-center placement,
+fade completion, and cancellation.
 Other view suites check sector colors, labels, pause state, and restart images.
 Tests use temporary state directories and injected clocks; they must not alter
 the user's saved timer state.

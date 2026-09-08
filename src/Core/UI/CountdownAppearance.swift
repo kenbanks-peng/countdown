@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Geometry shared by drawing, hit testing, and popup scaling.
+/// Geometry shared by drawing, hit testing, and reminder scaling.
 enum CountdownAppearance {
     static let normalSize: CGFloat = 188
     static let compactSize: CGFloat = 32

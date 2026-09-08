@@ -14,7 +14,7 @@ struct PomodoroRenderingTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(popupEnabled: false), playSound: { _ in }, now: { now }
+            preferences: CountdownPreferences(reminderEnabled: false), playSound: { _ in }, now: { now }
         )
         controller.selectMode(.pomodoro)
         now += elapsed
@@ -48,7 +48,7 @@ struct PomodoroRenderingTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(popupEnabled: false),
+            preferences: CountdownPreferences(reminderEnabled: false),
             playSound: { _ in }, now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }
         )
         controller.selectMode(.pomodoro)

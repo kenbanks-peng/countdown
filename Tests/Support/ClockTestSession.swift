@@ -21,7 +21,7 @@ final class ClockTestSession {
         CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false),
-            preferences: CountdownPreferences(popupEnabled: false),
+            preferences: CountdownPreferences(reminderEnabled: false),
             playSound: { _ in }, now: { [unowned self] in now }, saveEnablement: { _, _ in }
         )
     }

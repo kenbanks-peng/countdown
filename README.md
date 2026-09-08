@@ -21,17 +21,19 @@ See [the default configuration](resources/config.toml) for all properties.
 Restart Countdown after configuration changes. Saved Pomodoro duration edits
 take priority over configuration defaults.
 
-`notification_enabled` controls interval notifications. Popup display and audio
-have separate controls: `popup_notification_enabled` and `audio_notification_enabled`.
+`notification_enabled` controls interval notifications. Reminder display and audio
+have separate controls: `reminder_notification_enabled` and `audio_notification_enabled`.
 `alarm_enabled` controls the timeout alarm independently.
 
-`notification_time_in_seconds` sets the popup duration (default: 5 seconds).
+`notification_time_in_seconds` sets how long the centered reminder stays visible
+between fades (default: 5 seconds). `reminder_font_size_pt` sets its font size in
+points (default: 144). Each fade takes 1.5 seconds.
 `notification_interval_in_minutes` defaults to 15 and rounds to the nearest
 multiple of 5, with a minimum of 5 minutes. Notifications count backwards from
 the active end time and include that end time. Sound paths are relative to
 `config.toml`.
 
-The selected mode, popup and alarm enablement, auto-set, and timer state are stored
+The selected mode, reminder and alarm enablement, auto-set, and timer state are stored
 under `${XDG_STATE_HOME:-$HOME/.local/state}/countdown/`. Mode and Pomodoro settings
 use `settings.json`; other menu choices use `features.json`. Menu changes do not
 modify `config.toml`.

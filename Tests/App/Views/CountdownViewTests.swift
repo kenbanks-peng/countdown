@@ -14,7 +14,7 @@ struct CountdownViewTests {
         var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
         func makeController() -> CountdownController {
             CountdownController(sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil),
-                                preferences: CountdownPreferences(popupEnabled: false), playSound: { _ in }, now: { now })
+                                preferences: CountdownPreferences(reminderEnabled: false), playSound: { _ in }, now: { now })
         }
         let controller = makeController()
         controller.selectMode(.pomodoro)
@@ -51,7 +51,7 @@ struct CountdownViewTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(popupEnabled: false),
+            preferences: CountdownPreferences(reminderEnabled: false),
             playSound: { _ in }, now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }
         )
         controller.selectMode(.countdown)
@@ -87,7 +87,7 @@ struct CountdownViewTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(popupEnabled: false), playSound: { _ in },
+            preferences: CountdownPreferences(reminderEnabled: false), playSound: { _ in },
             now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }
         )
         controller.selectMode(.pomodoro)
@@ -160,7 +160,7 @@ struct CountdownViewTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(popupEnabled: false),
+            preferences: CountdownPreferences(reminderEnabled: false),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.adjustTimerDuration(by: 1_800)

@@ -35,7 +35,7 @@ struct TimerLifecycleTests {
         let timer = TimerModel(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSet, popupEnabled: false),
+            preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSet, reminderEnabled: false),
             isClockEnabled: false, playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.setDuration(from: 1.0 / 60)
