@@ -73,6 +73,21 @@ struct CountdownArcLayoutTests {
         #expect(!path.contains(CGPoint(x: 50, y: 90)))
     }
 
+    @Test(arguments: [false, true])
+    func longRestFitsAvailableSpaceWithoutOverlappingFocus(clock: Bool) {
+        for elapsed in [0.0, 300, 600, 900] {
+            let pair = CountdownArcLayout.pomodoro(
+                focusRemaining: 3_300 - elapsed, restRemaining: 900, restDuration: 900,
+                at: clock ? date(minute: 55, second: 13) + elapsed : nil
+            )
+            #expect(close(pair.rest.proportion, min(900, 300 + elapsed) / 3_600))
+            #expect(pair.focus.proportion + pair.rest.proportion <= 1)
+            if !clock {
+                #expect(close(pair.focus.startProportion, pair.rest.proportion))
+            }
+        }
+    }
+
     @Test func emptyAndFullHour() {
         let empty = CountdownArcLayout.timer(remaining: 0, at: date(minute: 20))
         let full = CountdownArcLayout.timer(remaining: 3_600, at: date(minute: 20))

@@ -100,7 +100,7 @@ struct CountdownAdjustmentTests {
             expectMark(pomodoroEnd(controller, phase: controller.pomodoro.restPhase))
             #expect(controller.pomodoro.focusDuration >= 300)
             #expect(controller.pomodoro.activeRestDuration >= 300)
-            #expect(controller.pomodoro.focusDuration + controller.pomodoro.activeRestDuration <= 3_600)
+            #expect(controller.pomodoro.focusDuration + controller.pomodoro.restDuration <= 3_600)
         }
     }
 
@@ -156,7 +156,8 @@ struct CountdownAdjustmentTests {
                 expectMark(pomodoroEnd(controller, phase: controller.pomodoro.restPhase))
                 #expect(controller.pomodoro.focusDuration >= 300)
                 #expect(controller.pomodoro.activeRestDuration >= 300)
-                #expect(controller.pomodoro.focusDuration + max(controller.pomodoro.restDuration, controller.pomodoro.longRestDuration) <= 3_600)
+                #expect(controller.pomodoro.focusDuration + controller.pomodoro.restDuration <= 3_600)
+                #expect(controller.pomodoro.longRestDuration <= 3_600)
             }
         }
     }

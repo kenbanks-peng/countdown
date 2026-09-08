@@ -50,7 +50,7 @@ struct PomodoroConfigurationTests {
         #expect(controller(configuration).pomodoro.cycles == 3)
     }
 
-    @Test(arguments: ["0", "-1", "60", "1.5", "\"NaN\"", "99999999999999999999999999"])
+    @Test(arguments: ["0", "-1", "61", "1.5", "\"NaN\"", "99999999999999999999999999"])
     func invalidConfigDurationsUseStandardDefaults(value: String) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -81,14 +81,25 @@ struct PomodoroConfigurationTests {
     func overCapacityConfigurationUsesStandardDefaults() {
         let configuration = CountdownConfiguration(
             alarmNotificationURL: nil, pomodoroFocusMinutes: 50,
-            pomodoroRestMinutes: 5, pomodoroLongRestMinutes: 20
+            pomodoroRestMinutes: 15, pomodoroLongRestMinutes: 20
         )
         #expect(configuration.pomodoroFocusMinutes == 25)
         #expect(configuration.pomodoroRestMinutes == 5)
         #expect(configuration.pomodoroLongRestMinutes == 15)
     }
 
-    @Test(arguments: ["-60", "0", "59", "2101", "1e309", "\"NaN\""])
+    @Test
+    func longRestDoesNotRestrictConfiguration() {
+        let configuration = CountdownConfiguration(
+            alarmNotificationURL: nil, pomodoroFocusMinutes: 55,
+            pomodoroRestMinutes: 5, pomodoroLongRestMinutes: 60
+        )
+        #expect(configuration.pomodoroFocusMinutes == 55)
+        #expect(configuration.pomodoroRestMinutes == 5)
+        #expect(configuration.pomodoroLongRestMinutes == 60)
+    }
+
+    @Test(arguments: ["-60", "0", "59", "3601", "1e309", "\"NaN\""])
     func invalidSavedLongRestUsesConfigDefaults(value: String) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

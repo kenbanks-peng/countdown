@@ -141,9 +141,9 @@ struct ScrollTimeAdjusterTests {
             }
         }
         try session.scroll(angle: angle, delta: 1_200, option: true)
-        #expect(selected() == (phase == .focus ? 2_700 : 2_100))
+        #expect(selected() == (phase == .focus ? 3_300 : (phase == .rest ? 2_100 : 3_600)))
         try session.scroll(angle: angle, delta: 12)
-        #expect(selected() == (phase == .focus ? 2_700 : 2_100))
+        #expect(selected() == (phase == .focus ? 3_300 : (phase == .rest ? 2_100 : 3_600)))
         try session.scroll(angle: angle, delta: -1_200, option: true)
         #expect(selected() == 300)
         let minimumAngle = phase == .focus ? 45.0 : 0

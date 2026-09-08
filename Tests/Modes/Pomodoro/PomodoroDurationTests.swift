@@ -17,18 +17,18 @@ struct PomodoroDurationTests {
         #expect(timer.pomodoro.focusRemaining == 1_200)
         #expect(timer.pomodoro.restRemaining == 420)
         timer.adjustPomodoroDuration(.focus, by: 6_000)
-        #expect(timer.pomodoro.focusDuration == 2_700)
+        #expect(timer.pomodoro.focusDuration == 3_180)
         #expect(timer.pomodoro.restDuration == 420)
         timer.adjustPomodoroDuration(.rest, by: -6_000)
-        #expect(timer.pomodoro.restDuration == 60)
-        #expect(timer.pomodoro.focusDuration == 2_700)
+        #expect(timer.pomodoro.restDuration == 300)
+        #expect(timer.pomodoro.focusDuration == 3_180)
         timer.resetPomodoro()
         #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.focusRemaining == 2_700)
-        #expect(timer.pomodoro.restRemaining == 60)
+        #expect(timer.pomodoro.focusRemaining == 3_180)
+        #expect(timer.pomodoro.restRemaining == 300)
         timer.selectMode(.timer)
         timer.adjustPomodoroDuration(.focus, by: -60)
-        #expect(timer.pomodoro.focusDuration == 2_700)
+        #expect(timer.pomodoro.focusDuration == 3_180)
         #expect(session.sounds == 0)
     }
 
@@ -58,19 +58,19 @@ struct PomodoroDurationTests {
         #expect(timer.pomodoro.focusRemaining == 0)
         #expect(timer.pomodoro.restRemaining == 420)
         if paused { timer.togglePomodoroRunning() }
-        session.now += 180
+        session.now += 300
         if paused { timer.togglePomodoroRunning() }
         timer.adjustPomodoroDuration(.rest, by: -240)
         #expect(timer.pomodoro.status == (paused ? .paused : .running))
         #expect(timer.pomodoro.stage == 2)
         #expect(timer.pomodoro.focusRemaining == 1_140)
-        #expect(timer.pomodoro.restRemaining == 180)
+        #expect(timer.pomodoro.restRemaining == 300)
         timer.adjustPomodoroDuration(.rest, by: 120)
         #expect(timer.pomodoro.status == (paused ? .paused : .running))
-        #expect(timer.pomodoro.restRemaining == 300)
+        #expect(timer.pomodoro.restRemaining == 420)
         timer.resetPomodoro()
         #expect(timer.pomodoro.focusRemaining == 1_140)
-        #expect(timer.pomodoro.restRemaining == 300)
+        #expect(timer.pomodoro.restRemaining == 420)
         #expect(session.sounds == 0)
     }
 

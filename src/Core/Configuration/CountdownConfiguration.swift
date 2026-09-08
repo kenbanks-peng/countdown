@@ -30,8 +30,8 @@ struct CountdownConfiguration {
         self.popupTime = popupTime > 0 && popupTime.isMultiple(of: 5) ? popupTime : 5
         let focus = (1...59).contains(pomodoroFocusMinutes) ? pomodoroFocusMinutes : 25
         let rest = (1...59).contains(pomodoroRestMinutes) ? pomodoroRestMinutes : 5
-        let longRest = (1...59).contains(pomodoroLongRestMinutes) ? pomodoroLongRestMinutes : 15
-        let valid = focus + max(rest, longRest) <= 60
+        let longRest = (1...60).contains(pomodoroLongRestMinutes) ? pomodoroLongRestMinutes : 15
+        let valid = focus + rest <= 60
         self.pomodoroFocusMinutes = valid ? focus : 25
         self.pomodoroRestMinutes = valid ? rest : 5
         self.pomodoroLongRestMinutes = valid ? longRest : 15

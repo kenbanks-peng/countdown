@@ -131,12 +131,12 @@ struct PomodoroCycleTests {
         #expect(model.status == (paused ? .paused : .running))
         #expect(model.focusRemaining == 1_560)
         #expect(model.restRemaining == 360)
-        #expect(model.longRestDuration == 240)
+        #expect(model.longRestDuration == 300)
         model.reset()
         #expect(model.stage == 1)
         #expect(model.focusDuration == 1_560)
         #expect(model.restDuration == 360)
-        #expect(model.longRestDuration == 240)
+        #expect(model.longRestDuration == 300)
     }
 
     @Test

@@ -46,15 +46,17 @@ struct CountdownArcLayout {
                 focus: Self(startProportion: minuteProportion(at: start),
                             proportion: max(0, focusEnd.timeIntervalSince(start) / 3_600)),
                 rest: Self(startProportion: minuteProportion(at: focusEnd),
-                           proportion: max(0, schedule.end(for: restPhase).timeIntervalSince(focusEnd) / 3_600))
+                           proportion: max(0, min(schedule.end(for: restPhase), start + 3_600)
+                            .timeIntervalSince(focusEnd) / 3_600))
             )
         }
         let start = date.map { minuteProportion(at: $0) } ?? 0
+        let visibleRest = max(0, min(restRemaining, 3_600 - focusRemaining))
         return (
-            focus: Self(startProportion: date == nil ? restDuration / 3_600 : start,
+            focus: Self(startProportion: date == nil ? min(restDuration, 3_600 - focusRemaining) / 3_600 : start,
                         proportion: max(0, focusRemaining / 3_600)),
             rest: Self(startProportion: date == nil ? 0 : start + focusRemaining / 3_600,
-                             proportion: max(0, restRemaining / 3_600))
+                             proportion: visibleRest / 3_600)
         )
     }
 }

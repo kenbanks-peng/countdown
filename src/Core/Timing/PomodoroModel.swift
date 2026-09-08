@@ -145,11 +145,11 @@ struct PomodoroModel {
         }
         switch phase {
         case .focus:
-            focusDuration = min(3_600 - max(restDuration, longRestDuration), max(60, focusDuration + amount))
+            focusDuration = min(3_600 - restDuration, max(300, focusDuration + amount))
         case .rest:
-            restDuration = min(3_600 - focusDuration, max(60, restDuration + amount))
+            restDuration = min(3_600 - focusDuration, max(300, restDuration + amount))
         case .longRest:
-            longRestDuration = min(3_600 - focusDuration, max(60, longRestDuration + amount))
+            longRestDuration = min(3_600, max(300, longRestDuration + amount))
         }
         // Removed time is not elapsed time in the next phase or stage.
         finishDepletedPhases()

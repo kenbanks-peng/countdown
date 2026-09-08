@@ -74,7 +74,7 @@ struct ClockEndpointScheduleTests {
         #expect(focusEdit.longRestDuration == before.longRestDuration)
         #expect(focusEdit.focusEnd > before.focusEnd)
         #expect(focusEdit.isValid(cycles: controller.pomodoro.cycles))
-        #expect(max(focusEdit.restEnd, focusEdit.longRestEnd) <= before.stageStart + 3_600)
+        #expect(focusEdit.restEnd <= before.stageStart + 3_600)
         controller.adjustPomodoroDuration(.rest, steps: -100)
         let restEdit = try #require(controller.pomodoro.clockSchedule)
         #expect(restEdit.focusEnd == focusEdit.focusEnd)
@@ -330,6 +330,106 @@ struct ClockEndpointScheduleTests {
         session.now += 173
         controller.toggleRunning()
         #expect(controller.pomodoro.restRemaining == frozen)
+    }
+
+    @Test
+    func normalRestAloneLimitsFocusAndLongRestDisplayGrowsWithTime() throws {
+        let session = Session()
+        defer { session.close() }
+        session.now = Calendar.current.startOfDay(for: session.now)
+        let controller = session.controller
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, steps: 100)
+        let selected = try #require(controller.pomodoro.clockSchedule)
+        #expect(selected.focusDuration == 3_300)
+        #expect(selected.restDuration == 300)
+        #expect(selected.longRestDuration == 900)
+        #expect(selected.isValid(cycles: controller.pomodoro.cycles))
+        session.now += 3 * 3_600
+        controller.update()
+        let last = try #require(controller.pomodoro.clockSchedule)
+        #expect(controller.pomodoro.restPhase == .longRest)
+        #expect(last.longRestDuration == 900)
+        for elapsed in [0.0, 300, 600] {
+            let arcs = CountdownArcLayout.pomodoro(
+                focusRemaining: 0, restRemaining: 0, restDuration: 900,
+                at: session.now + elapsed, schedule: last, restPhase: .longRest
+            )
+            #expect(abs(arcs.rest.proportion * 3_600 - (300 + elapsed)) < 1e-6)
+            #expect(abs(arcs.focus.proportion + arcs.rest.proportion - 1) < 1e-6)
+        }
+        controller.save()
+        let restored = session.makeController()
+        #expect(restored.pomodoro.focusDuration == 3_300)
+        #expect(restored.pomodoro.longRestDuration == 900)
+        controller.toggleRunning()
+        session.now += 300
+        controller.toggleRunning()
+        let resumed = try #require(controller.pomodoro.clockSchedule)
+        #expect(resumed.focusDuration == 3_300)
+        #expect(resumed.longRestDuration == 900)
+        session.now = resumed.longRestEnd - 1
+        controller.update()
+        #expect(controller.pomodoro.stage == 4)
+        #expect(controller.pomodoro.restRemaining == 1)
+        session.now += 1
+        controller.update()
+        #expect(controller.pomodoro.stage == 1)
+        #expect(controller.pomodoro.focusRemaining == 3_300)
+        #expect(controller.pomodoro.longRestDuration == 900)
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func focusEditLeavesFiveMinutesFromCurrentTime(paused: Bool, amountEdit: Bool) throws {
+        let session = Session()
+        defer { session.close() }
+        let start = Calendar.current.startOfDay(for: session.now) + 3 * 3_600
+        session.now = start
+        let controller = session.controller
+        controller.selectMode(.pomodoro)
+        session.now = start + 9 * 60
+        controller.update()
+        if paused {
+            controller.toggleRunning()
+            session.now += 7 * 60
+        }
+        // Request 3:10 from the initial 3:25 endpoint while the time is 3:09.
+        if amountEdit {
+            controller.adjustPomodoroDuration(.focus, by: -900)
+        } else {
+            controller.adjustPomodoroDuration(.focus, steps: -3)
+        }
+        let schedule = try #require(controller.pomodoro.clockSchedule)
+        #expect(schedule.focusEnd == start + 15 * 60)
+        #expect(controller.pomodoro.focusRemaining == 6 * 60)
+        #expect(schedule.restDuration == 300)
+        #expect(schedule.longRestDuration == 900)
+        expectMark(schedule.focusEnd)
+        // Time passing must not move the selected endpoint to enforce an edit limit.
+        if !paused {
+            session.now = start + 11 * 60
+            controller.update()
+            #expect(controller.pomodoro.focusRemaining == 4 * 60)
+            #expect(controller.pomodoro.clockSchedule?.focusEnd == schedule.focusEnd)
+        }
+    }
+
+    @Test
+    func clockEditsKeepFiveMinuteMinimumAtAnUnalignedStart() throws {
+        let session = Session()
+        defer { session.close() }
+        let controller = session.controller
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, steps: -100)
+        controller.adjustPomodoroDuration(.rest, steps: -100)
+        controller.adjustPomodoroDuration(.longRest, steps: -100)
+        let schedule = try #require(controller.pomodoro.clockSchedule)
+        #expect(schedule.focusDuration >= 300)
+        #expect(schedule.restDuration >= 300)
+        #expect(schedule.longRestDuration >= 300)
+        for phase: PomodoroModel.Phase in [.focus, .rest, .longRest] {
+            expectMark(schedule.end(for: phase))
+        }
     }
 
     private func expectMark(_ date: Date, sourceLocation: SourceLocation = #_sourceLocation) {

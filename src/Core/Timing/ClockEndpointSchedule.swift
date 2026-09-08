@@ -40,7 +40,7 @@ struct PomodoroClockSchedule: Codable {
         return values.allSatisfy { $0.timeIntervalSinceReferenceDate.isFinite }
             && (1...cycles).contains(stage)
             && focusDuration >= 60 && restDuration >= 60 && longRestDuration >= 60
-            && focusDuration + max(restDuration, longRestDuration) <= 3_600
+            && focusDuration + restDuration <= 3_600 && longRestDuration <= 3_600
     }
 
     func end(for phase: PomodoroModel.Phase) -> Date {
@@ -56,11 +56,17 @@ struct PomodoroClockSchedule: Codable {
         let maximum: Date
         switch phase {
         case .focus:
-            minimum = stageStart.addingTimeInterval(60)
-            maximum = stageStart.addingTimeInterval(3_600 - max(restDuration, longRestDuration))
-        case .rest, .longRest:
-            minimum = focusEnd.addingTimeInterval(60)
+            // An active focus edit must leave five minutes from the clock reference.
+            // Completed focus edits only change the allocation for following stages.
+            let reference = focusCompleted ? stageStart : max(stageStart, pausedAt ?? sampledAt)
+            minimum = reference.addingTimeInterval(300)
+            maximum = stageStart.addingTimeInterval(3_600 - restDuration)
+        case .rest:
+            minimum = focusEnd.addingTimeInterval(300)
             maximum = stageStart.addingTimeInterval(3_600)
+        case .longRest:
+            minimum = focusEnd.addingTimeInterval(300)
+            maximum = focusEnd.addingTimeInterval(3_600)
         }
         let end = end(for: phase)
         let target = steps.map { ClockBoundary.move(end, steps: $0, minimum: minimum, maximum: maximum) }
@@ -84,10 +90,10 @@ struct PomodoroClockSchedule: Codable {
         focusEnd += shift
         restEnd += shift
         longRestEnd += shift
-        // Snap each compensated setting once. Keep a nonzero interval between ends.
-        focusEnd = ClockBoundary.nearest(focusEnd, minimum: stageStart + 60, maximum: stageStart + 3_300)
-        restEnd = ClockBoundary.nearest(restEnd, minimum: focusEnd + 60, maximum: stageStart + 3_600)
-        longRestEnd = ClockBoundary.nearest(longRestEnd, minimum: focusEnd + 60, maximum: stageStart + 3_600)
+        // Snap each compensated setting once. Long rest can extend beyond the visible hour.
+        focusEnd = ClockBoundary.nearest(focusEnd, minimum: stageStart + 300, maximum: stageStart + 3_300)
+        restEnd = ClockBoundary.nearest(restEnd, minimum: focusEnd + 300, maximum: stageStart + 3_600)
+        longRestEnd = ClockBoundary.nearest(longRestEnd, minimum: focusEnd + 300, maximum: focusEnd + 3_600)
         self.pausedAt = nil
         sampledAt = now
     }
@@ -101,9 +107,9 @@ struct PomodoroClockSchedule: Codable {
             moveStage(to: start)
             // The first stage can start between marks. Snap newly created settings,
             // not the previous stage's selected endpoints, before repeating spacing.
-            focusEnd = ClockBoundary.nearest(focusEnd, minimum: start + 60, maximum: start + 3_300)
-            restEnd = ClockBoundary.nearest(restEnd, minimum: focusEnd + 60, maximum: start + 3_600)
-            longRestEnd = ClockBoundary.nearest(longRestEnd, minimum: focusEnd + 60, maximum: start + 3_600)
+            focusEnd = ClockBoundary.nearest(focusEnd, minimum: start + 300, maximum: start + 3_300)
+            restEnd = ClockBoundary.nearest(restEnd, minimum: focusEnd + 300, maximum: start + 3_600)
+            longRestEnd = ClockBoundary.nearest(longRestEnd, minimum: focusEnd + 300, maximum: focusEnd + 3_600)
             // Once the new endpoints are aligned, whole cycles preserve alignment.
             let cycle = Double(cycles) * focusDuration
                 + Double(cycles - 1) * restDuration + longRestDuration

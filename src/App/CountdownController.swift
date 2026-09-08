@@ -198,12 +198,12 @@ final class CountdownController: ObservableObject {
             // Completed focus can still be edited for the next stage from the menu.
             let remaining = model.focusRemaining > 0 ? model.focusRemaining : duration
             end = model.activeRestDuration + remaining
-            maximum = 3_600 - max(model.restDuration, model.longRestDuration)
+            maximum = 3_600 - model.restDuration
         case .rest, .longRest:
             duration = phase == .rest ? model.restDuration : model.longRestDuration
             let remaining = phase == model.restPhase ? model.restRemaining : duration
             end = remaining
-            maximum = 3_600 - model.focusDuration
+            maximum = phase == .longRest ? 3_600 : 3_600 - model.focusDuration
         }
         return (end: end, minimum: end + 300 - duration, maximum: end + maximum - duration)
     }
