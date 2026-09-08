@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Whole minutes on a small center disc, scaled with the popup circle.
+/// Focus minutes or a rest label on a center disc, scaled with the popup circle.
 struct CountdownPopupOverlay: View {
     let remaining: TimeInterval
+    var isRest = false
 
     static func timeLabel(_ remaining: TimeInterval) -> String {
         String(Int(ceil(max(0, remaining) / 60)))
@@ -10,7 +11,7 @@ struct CountdownPopupOverlay: View {
 
     var body: some View {
         GeometryReader { geometry in
-            Text(Self.timeLabel(remaining))
+            Text(isRest ? "REST" : Self.timeLabel(remaining))
                 .font(.system(size: 40, weight: .semibold).monospacedDigit())
                 .tracking(-1)
                 .foregroundStyle(.white)

@@ -162,11 +162,20 @@ final class CountdownController: ObservableObject {
 
     func update(at date: Date? = nil) {
         let previousElapsed = pomodoro.elapsedTime
-        let previousRemaining = pomodoro.focusRemaining > 0 ? pomodoro.focusRemaining : pomodoro.restRemaining
+        let previousFocus = pomodoro.focusRemaining
+        let previousRest = pomodoro.restRemaining
         engine.update(at: date)
-        if mode == .pomodoro {
-            let elapsed = max(0, pomodoro.elapsedTime - previousElapsed)
-            popups.reportElapsed(previousRemaining: previousRemaining, remaining: max(0, previousRemaining - elapsed))
+        guard mode == .pomodoro else { return }
+        let elapsed = max(0, pomodoro.elapsedTime - previousElapsed)
+        guard elapsed > 0 else { return }
+
+        // A late update can cross several phases or a whole cycle. Notify only
+        // for the current phase, never replay the phases that were missed.
+        let crossedStage = elapsed >= previousFocus + previousRest
+        if crossedStage || (previousFocus > 0 && pomodoro.focusRemaining == 0) {
+            popups.reportPhaseChange(remaining: pomodoro.focusRemaining)
+        } else if previousFocus > 0 {
+            popups.reportElapsed(previousRemaining: previousFocus, remaining: pomodoro.focusRemaining)
         }
     }
 

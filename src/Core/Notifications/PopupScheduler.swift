@@ -37,6 +37,16 @@ final class PopupScheduler: ObservableObject {
         guard configuration.notificationEnabled, previousRemaining.isFinite, remaining.isFinite,
               previousRemaining > remaining, previousRemaining > 0,
               ceil(previousRemaining / popupInterval) > ceil(max(0, remaining) / popupInterval) else { return }
+        notify(remaining: remaining)
+    }
+
+    /// Phase boundaries notify even when they do not cross an interval mark.
+    func reportPhaseChange(remaining: TimeInterval) {
+        guard configuration.notificationEnabled, remaining.isFinite else { return }
+        notify(remaining: remaining)
+    }
+
+    private func notify(remaining: TimeInterval) {
         if isPopupEnabled { popupIntervalCount += 1 }
         guard configuration.audioNotificationEnabled else { return }
         let sound: URL?

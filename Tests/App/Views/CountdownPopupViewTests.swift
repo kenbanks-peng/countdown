@@ -7,7 +7,7 @@ import Vision
 @MainActor
 struct CountdownPopupViewTests {
     @Test(arguments: [0.0, 1_500, 1_800, 6_900])
-    func popupShowsOnlyWholeMinutes(elapsed: TimeInterval) throws {
+    func pomodoroPopupShowsFocusMinutesOrRest(elapsed: TimeInterval) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         // Start on a clock mark so both displays have the same phase times.
@@ -24,7 +24,11 @@ struct CountdownPopupViewTests {
         let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isPopup: true, changePresentation: {}))
         let bitmap = try render(hosting)
         let text = try recognizedText(bitmap).joined(separator: " ")
-        try expectPopupMinutes(bitmap, remaining: elapsed == 1_500 ? 300 : elapsed == 6_900 ? 1_200 : 1_500)
+        if elapsed == 1_500 || elapsed == 6_900 {
+            #expect(text == "REST")
+        } else {
+            try expectPopupMinutes(bitmap, remaining: 1_500)
+        }
         #expect(!text.contains(":"))
         #expect(!text.contains("Session"))
         #expect(!text.contains(controller.pomodoro.phaseLabel))

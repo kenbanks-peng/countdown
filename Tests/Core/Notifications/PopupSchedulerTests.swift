@@ -114,7 +114,7 @@ struct PopupSchedulerTests {
     }
 
     @Test(arguments: [5, 8])
-    func pomodoroUsesFocusThenRestEndpoint(interval: Int) {
+    func pomodoroNotifiesDuringFocusAndAtPhaseBoundaries(interval: Int) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 14, minute: 25))!
@@ -124,12 +124,13 @@ struct PopupSchedulerTests {
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.rest, by: 600)
         controller.popups.setPopupEnabled(false)
-        now += 8 * 60 // 14:33, focus ends at 14:50 and rest ends at 14:55.
+        now += 8 * 60 // 14:33, focus ends at 14:50 and rest ends at 15:05.
         controller.update()
         controller.popups.setPopupEnabled(true)
         var popupMinutes: [Int] = []
-        for _ in 0..<(22 * 60) {
+        for _ in 0..<(32 * 60) {
             now += 1
             let count = controller.popups.popupIntervalCount
             controller.update()
@@ -137,7 +138,45 @@ struct PopupSchedulerTests {
                 popupMinutes.append(Calendar.current.component(.minute, from: now))
             }
         }
-        #expect(popupMinutes == (interval == 5 ? [35, 40, 45, 50, 55] : [40, 50, 55]))
+        #expect(popupMinutes == (interval == 5 ? [35, 40, 45, 50, 5] : [40, 50, 5]))
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func pomodoroLongRestAndLateUpdates(popup: Bool, notifications: Bool) {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let start = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 12))!
+        var now = start
+        var sounds = 0
+        let controller = CountdownController(
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationEnabled: notifications),
+            preferences: CountdownPreferences(popupEnabled: popup),
+            playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
+        )
+        controller.selectMode(.pomodoro)
+        // Skip to long rest, then cross its interval marks without notifications.
+        now = start + 115 * 60
+        controller.update()
+        #expect(controller.pomodoro.focusRemaining == 0)
+        #expect(controller.popups.popupIntervalCount == (popup && notifications ? 1 : 0))
+        for minute in [120, 125, 130, 134] {
+            now = start + Double(minute * 60)
+            controller.update()
+        }
+        #expect(controller.popups.popupIntervalCount == (popup && notifications ? 1 : 0))
+        #expect(sounds == (notifications ? 1 : 0))
+        now = start + 135 * 60
+        controller.update()
+        #expect(controller.pomodoro.focusRemaining == 1_500)
+        #expect(controller.popups.popupIntervalCount == (popup && notifications ? 2 : 0))
+        #expect(sounds == (notifications ? 2 : 0))
+        // A complete cycle still emits once, even if the stage number is unchanged.
+        now += controller.pomodoro.cycleDuration
+        controller.update()
+        controller.update()
+        #expect(controller.popups.popupIntervalCount == (popup && notifications ? 3 : 0))
+        #expect(sounds == (notifications ? 3 : 0))
     }
 
     @Test(arguments: CountdownMode.allCases)
