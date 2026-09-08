@@ -23,11 +23,16 @@ struct CountdownView: View {
         Button(action: activate) {
             ZStack {
                 modeContent
+                if !isCompact {
+                    CountdownClockOverlay(
+                        isClockEnabled: countdown.mode.isClockEnabled,
+                        currentTime: currentTime,
+                        showsFace: !showsPopupDetails
+                    )
+                    .padding(CountdownAppearance.circleInset)
+                }
                 if showsPopupDetails {
                     popupOverlay
-                } else if !isCompact {
-                    CountdownClockOverlay(isClockEnabled: countdown.mode.isClockEnabled, currentTime: currentTime)
-                        .padding(CountdownAppearance.circleInset)
                 }
             }
             .contentShape(Circle())
@@ -74,15 +79,12 @@ struct CountdownView: View {
     private var popupOverlay: CountdownPopupOverlay {
         if countdown.mode.usesTimer {
             return CountdownPopupOverlay(
-                remaining: countdown.timer.remaining, phase: countdown.mode.label, isPaused: countdown.engine.isPaused
+                remaining: countdown.timer.remaining
             )
         }
         let model = countdown.pomodoro
         return CountdownPopupOverlay(
-            remaining: model.focusRemaining > 0 ? model.focusRemaining : model.restRemaining,
-            phase: model.phaseLabel,
-            session: "Session \(model.stage) of \(model.focusPeriodsPerCycle)",
-            isPaused: countdown.engine.isPaused
+            remaining: model.focusRemaining > 0 ? model.focusRemaining : model.restRemaining
         )
     }
 

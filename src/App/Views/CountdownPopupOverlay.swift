@@ -1,50 +1,27 @@
 import SwiftUI
 
-/// Readable details for an automatic popup, scaled with its expanding circle.
+/// Whole minutes on a small center disc, scaled with the popup circle.
 struct CountdownPopupOverlay: View {
     let remaining: TimeInterval
-    let phase: String
-    var session: String? = nil
-    var isPaused = false
 
     static func timeLabel(_ remaining: TimeInterval) -> String {
-        let seconds = Int(ceil(max(0, remaining)))
-        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+        String(Int(ceil(max(0, remaining) / 60)))
     }
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                VStack(spacing: 3) {
-                    Text(phase)
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(Self.timeLabel(remaining))
-                        .font(.system(size: 34, weight: .semibold).monospacedDigit())
-                        .tracking(-1)
-                    Text(isPaused ? "Paused" : "remaining")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.white.opacity(0.8))
-                }
+            Text(Self.timeLabel(remaining))
+                .font(.system(size: 40, weight: .semibold).monospacedDigit())
+                .tracking(-1)
                 .foregroundStyle(.white)
-                .frame(width: 106, height: 88)
-                .background(Color.countdownSurface, in: RoundedRectangle(cornerRadius: 17))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 17)
-                        .strokeBorder(Color.countdownMuted.opacity(0.6), lineWidth: 0.7)
-                }
-                if let session {
-                    Text(session)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Color.countdownSurface, in: Capsule())
-                        .offset(y: 60)
-                }
-            }
-            .frame(width: CountdownAppearance.normalSize, height: CountdownAppearance.normalSize)
-            .scaleEffect(min(geometry.size.width, geometry.size.height) / CountdownAppearance.normalSize)
-            .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+                .frame(width: 60, height: 72)
+                .frame(width: 72, height: 72)
+                .background(Color.countdownSurface, in: Circle())
+                .frame(width: CountdownAppearance.normalSize, height: CountdownAppearance.normalSize)
+                .scaleEffect(min(geometry.size.width, geometry.size.height) / CountdownAppearance.normalSize)
+                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
         }
         .allowsHitTesting(false)
         // The containing timer button already describes the countdown.
