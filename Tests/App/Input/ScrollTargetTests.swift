@@ -29,6 +29,24 @@ struct ScrollTargetTests {
         }
     }
 
+    @Test(arguments: [0.8, 1.5], [false, true])
+    func scaledCircleUsesScaledScrollBoundary(scale: Double, isCompact: Bool) throws {
+        let session = ScrollTestSession(isCompact: isCompact)
+        defer { session.close() }
+        let side = (isCompact ? 32.0 : 188) * scale
+        session.window.setContentSize(NSSize(width: side, height: side))
+        // AppKit can round the requested window size to whole points.
+        let bounds = try #require(session.window.contentView).bounds
+        let radius = min(bounds.width, bounds.height) / 2 - (isCompact ? 0 : 6 * scale)
+        let adjuster = ScrollTimeAdjuster(countdown: session.controller, window: session.window,
+                                         normalScale: scale, isCompact: { isCompact })
+        for distance in [radius + 0.01, radius] {
+            let point = NSPoint(x: bounds.midX + distance, y: bounds.midY)
+            adjuster.handle(try scrollEvent(in: session.window, at: point, delta: 1))
+            #expect(session.controller.timer.remaining == (distance == radius ? 300 : 0))
+        }
+    }
+
     @Test(arguments: [false, true])
     func normalPomodoroScrollAdjustsOnlyTheSelectedDuration(isCompact: Bool) throws {
         let session = ScrollTestSession(isCompact: isCompact)

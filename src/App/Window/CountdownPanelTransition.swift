@@ -7,7 +7,6 @@ struct CountdownPanelTransition {
     let slideDuration: TimeInterval = 0.07
     let resizeDuration: TimeInterval = 0.29
     private let slideProgress: CGFloat = 0.18
-    private let compactSize = NSSize(width: CountdownAppearance.compactSize, height: CountdownAppearance.compactSize)
     private var contentFadeDuration: TimeInterval { slideDuration + resizeDuration }
 
     func animate(
@@ -80,7 +79,7 @@ struct CountdownPanelTransition {
             x: compactCenter.x + (normalCenter.x - compactCenter.x) * slideProgress,
             y: compactCenter.y + (normalCenter.y - compactCenter.y) * slideProgress
         )
-        return frame(size: compactSize, centeredAt: waypointCenter)
+        return frame(size: compactFrame.size, centeredAt: waypointCenter)
     }
 }
 

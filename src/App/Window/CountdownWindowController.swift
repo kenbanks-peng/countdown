@@ -17,11 +17,17 @@ final class CountdownWindowController {
 
     private let windowState = CountdownWindowStateStore()
     private let transition = CountdownPanelTransition()
-    private let normalSize = NSSize(width: CountdownAppearance.normalSize, height: CountdownAppearance.normalSize)
-    private let compactSize = NSSize(width: CountdownAppearance.compactSize, height: CountdownAppearance.compactSize)
+    private let configuration: CountdownConfiguration
+    private let normalSize: NSSize
+    private let compactSize: NSSize
 
-    init(countdown: CountdownController) {
+    init(countdown: CountdownController, configuration: CountdownConfiguration = .default) {
         self.countdown = countdown
+        self.configuration = configuration
+        let normalSide = CountdownAppearance.normalSize * configuration.size
+        let compactSide = CountdownAppearance.compactSize * configuration.compactSize
+        normalSize = NSSize(width: normalSide, height: normalSide)
+        compactSize = NSSize(width: compactSide, height: compactSide)
         presentation = windowState.presentation
         let initialSize = presentation == .compact ? compactSize : normalSize
         panel = Self.makePanel(size: initialSize, hasShadow: presentation == .normal)
@@ -31,7 +37,7 @@ final class CountdownWindowController {
         panel.makeKeyAndOrderFront(nil)
 
         observePopupIntervals(from: countdown.popups)
-        scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, isCompact: { [weak self] in
+        scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, normalScale: configuration.size, isCompact: { [weak self] in
             self?.presentation == .compact
         })
     }
@@ -82,6 +88,7 @@ final class CountdownWindowController {
     private func contentView(isCompact: Bool, isPopup: Bool = false) -> NSView {
         NSHostingView(rootView: CountdownView(
             countdown: countdown, isCompact: isCompact, isPopup: isPopup,
+            scale: isCompact ? configuration.compactSize : configuration.size,
             allowsClick: { [weak self] in self?.panel.allowsClick ?? true },
             changePresentation: { [weak self] in
                 if isCompact { self?.showNormalWindow() } else { self?.showCompactWindow() }

@@ -10,6 +10,7 @@ final class ScrollTimeAdjuster {
 
     private weak var countdown: CountdownController?
     private weak var window: NSWindow?
+    private let normalScale: CGFloat
     private let isCompact: () -> Bool
     private let uptime: () -> TimeInterval
     private var previousTarget: Target?
@@ -24,10 +25,11 @@ final class ScrollTimeAdjuster {
     private let preciseStepDistance = 12.0
     private let gestureTimeout: TimeInterval = 0.35
 
-    init(countdown: CountdownController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false },
+    init(countdown: CountdownController, window: NSWindow? = nil, normalScale: CGFloat = 1, isCompact: @escaping () -> Bool = { false },
          uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
         self.countdown = countdown
         self.window = window
+        self.normalScale = normalScale
         self.isCompact = isCompact
         self.uptime = uptime
         modeSubscription = countdown.$mode.sink { [weak self] _ in
@@ -130,7 +132,7 @@ final class ScrollTimeAdjuster {
         let point = content.convert(windowPoint, from: nil)
         let x = point.x - content.bounds.midX
         let y = (content.isFlipped ? -1.0 : 1.0) * (point.y - content.bounds.midY)
-        let inset = isCompact() ? 0 : CountdownAppearance.circleInset
+        let inset = isCompact() ? 0 : CountdownAppearance.circleInset * normalScale
         let radius = min(content.bounds.width, content.bounds.height) / 2 - inset
         let distance = hypot(x, y)
         // Coordinate conversion can put a perimeter point a few ULPs outside.

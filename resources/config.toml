@@ -1,3 +1,9 @@
+# Circle scale factors. 1 keeps the original size for each mode.
+# Use positive numbers, such as size = 1.5 and compact_size = 0.8.
+# Missing or invalid values use 1. Restart Countdown after changes.
+size = 1
+compact_size = 1
+
 [pomodoro]
 # Defaults in minutes. Saved duration edits take priority.
 # Focus and rest must be 1–59; long-rest must be 1–60.

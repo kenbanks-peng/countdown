@@ -49,6 +49,11 @@ struct CountdownConfigurationFile {
         return URL(fileURLWithPath: String(value.dropFirst().dropLast()), relativeTo: url.deletingLastPathComponent())
     }
 
+    func doubleValue(for key: String) -> Double? {
+        guard let value = sectionValues[""]?[key] else { return nil }
+        return Double(value.split(separator: "#", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) ?? "")
+    }
+
     func intValue(for key: String, section: String? = nil) -> Int? {
         let value: String?
         if let section {

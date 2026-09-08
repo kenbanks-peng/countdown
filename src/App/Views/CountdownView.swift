@@ -6,20 +6,31 @@ struct CountdownView: View {
     @ObservedObject var countdown: CountdownController
     var isCompact = false
     var isPopup = false
+    let scale: CGFloat
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, isPopup: Bool = false, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isPopup: Bool = false, scale: CGFloat = 1, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
         self.isPopup = isPopup
+        self.scale = scale
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
         self._currentTime = State(initialValue: countdown.currentTime)
     }
 
     var body: some View {
+        GeometryReader { geometry in
+            controls
+                .frame(width: geometry.size.width / scale, height: geometry.size.height / scale)
+                .scaleEffect(scale)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+        }
+    }
+
+    private var controls: some View {
         Button(action: activate) {
             ZStack {
                 modeContent

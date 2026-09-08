@@ -1,6 +1,8 @@
 import Foundation
 
 struct CountdownConfiguration {
+    let size: Double
+    let compactSize: Double
     let greenNotificationURL: URL?
     let yellowNotificationURL: URL?
     let redNotificationURL: URL?
@@ -20,8 +22,12 @@ struct CountdownConfiguration {
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
         pomodoroLongRestMinutes: Int = 15,
-        pomodoroFocusPeriodsPerCycle: Int = 4
+        pomodoroFocusPeriodsPerCycle: Int = 4,
+        size: Double = 1,
+        compactSize: Double = 1
     ) {
+        self.size = size.isFinite && size > 0 ? size : 1
+        self.compactSize = compactSize.isFinite && compactSize > 0 ? compactSize : 1
         self.pomodoroFocusPeriodsPerCycle = PomodoroModel.normalizedFocusPeriodCount(pomodoroFocusPeriodsPerCycle)
         self.greenNotificationURL = greenNotificationURL
         self.yellowNotificationURL = yellowNotificationURL
@@ -57,7 +63,9 @@ struct CountdownConfiguration {
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,
             pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", section: "pomodoro") ?? 15,
-            pomodoroFocusPeriodsPerCycle: configurationFile.intValue(for: "cycles", section: "pomodoro") ?? 4
+            pomodoroFocusPeriodsPerCycle: configurationFile.intValue(for: "cycles", section: "pomodoro") ?? 4,
+            size: configurationFile.doubleValue(for: "size") ?? 1,
+            compactSize: configurationFile.doubleValue(for: "compact_size") ?? 1
         )
     }
 
