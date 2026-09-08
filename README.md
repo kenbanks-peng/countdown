@@ -27,7 +27,8 @@ long-rest = 15
 cycles = 4
 
 [notifications]
-popup_time = 5
+popup_time_in_seconds = 3
+popup_interval_in_minutes = 5
 
 # Relative paths are relative to config.toml.
 green_notification = "green_notification.mp3"
@@ -36,9 +37,11 @@ red_notification = "red_notification.mp3"
 alarm_notification = "alarm_notification.mp3"
 ```
 
-`popup_time` is the popup interval in minutes: 5, 10, 15, 20, and so on.
-Invalid values use 5 minutes. The first popup rounds up to a 5-minute clock
-boundary after the interval; later popups keep that clock schedule.
+`popup_time_in_seconds` sets how long a popup stays in normal mode before
+returning to compact mode (default: 3 seconds).
+`popup_interval_in_minutes` rounds to the nearest multiple of 5, with a minimum
+of 5 minutes. Popups count backwards from the active end time and include that
+end time. During Pomodoro focus, they use the focus end time.
 
 The selected mode, popup and alarm enablement, auto-set, and timer state are stored
 under `${XDG_STATE_HOME:-$HOME/.local/state}/countdown/`. Mode and Pomodoro settings

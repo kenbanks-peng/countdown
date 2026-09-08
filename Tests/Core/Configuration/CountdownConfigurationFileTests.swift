@@ -13,7 +13,8 @@ struct CountdownConfigurationFileTests {
         [unrelated]
         focus = 59
         rest = 44
-        popup_time = 10
+        popup_time_in_seconds = 7
+        popup_interval_in_minutes = 8
         [pomodoro] # Minutes
         focus = 20 # First focus wins.
         focus = 30
@@ -21,7 +22,7 @@ struct CountdownConfigurationFileTests {
         focus = 40
         long-rest = 60
         [notifications]
-        popup_time = 15
+        popup_interval_in_minutes = 15
         alarm_notification = "sounds/alarm.mp3"
         green_notification = "sounds/green.mp3"
         red_notification = "invalid.mp3" # Quoted sound values require a closing quote.
@@ -31,6 +32,7 @@ struct CountdownConfigurationFileTests {
         #expect(config.pomodoroFocusMinutes == 20)
         #expect(config.pomodoroRestMinutes == 5) // No fallback to an unrelated section.
         #expect(config.pomodoroLongRestMinutes == 60)
+        #expect(config.popupTimeSeconds == 7)
         #expect(config.popupIntervalMinutes == 10) // Notification lookup remains unscoped.
         #expect(config.greenNotificationURL?.standardizedFileURL == configDirectory.appendingPathComponent("sounds/green.mp3"))
         #expect(config.alarmNotificationURL?.standardizedFileURL == configDirectory.appendingPathComponent("sounds/alarm.mp3"))
@@ -49,13 +51,16 @@ struct CountdownConfigurationFileTests {
         focus = invalid
         focus = 20
         [notifications]
-        popup_time = invalid
-        popup_time = 15
+        popup_time_in_seconds = invalid
+        popup_time_in_seconds = 9
+        popup_interval_in_minutes = invalid
+        popup_interval_in_minutes = 15
         alarm_notification = "first.mp3"
         alarm_notification = "second.mp3"
         """.write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
         let config = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
         #expect(config.pomodoroFocusMinutes == 25)
+        #expect(config.popupTimeSeconds == 3)
         #expect(config.popupIntervalMinutes == 5)
         #expect(config.alarmNotificationURL?.lastPathComponent == "first.mp3")
     }

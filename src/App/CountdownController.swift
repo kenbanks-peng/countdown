@@ -45,7 +45,7 @@ final class CountdownController: ObservableObject {
         )
         let state = preferences ?? preferencesStore.load()
         let popups = PopupScheduler(
-            configuration: configuration, state: state, playSound: playSound, now: now,
+            configuration: configuration, state: state, playSound: playSound,
             saveEnablement: saveEnablement ?? { preferencesStore.saveEnablement($0, enabled: $1) }
         )
         self.popups = popups
@@ -84,7 +84,6 @@ final class CountdownController: ObservableObject {
 
     func toggleRunning() {
         update()
-        if engine.isPaused { popups.skipPausedPopups() }
         engine.toggleRunning()
         saveSettings()
     }
@@ -163,12 +162,11 @@ final class CountdownController: ObservableObject {
 
     func update(at date: Date? = nil) {
         let previousElapsed = pomodoro.elapsedTime
+        let previousRemaining = pomodoro.focusRemaining > 0 ? pomodoro.focusRemaining : pomodoro.restRemaining
         engine.update(at: date)
         if mode == .pomodoro {
-            let remaining = pomodoro.focusRemaining + pomodoro.restRemaining
-            popups.reportElapsed(previousRemaining: remaining + pomodoro.elapsedTime - previousElapsed, remaining: remaining)
-        } else if timer.remaining == 0 {
-            popups.reportElapsed(previousRemaining: 0, remaining: 0)
+            let elapsed = max(0, pomodoro.elapsedTime - previousElapsed)
+            popups.reportElapsed(previousRemaining: previousRemaining, remaining: max(0, previousRemaining - elapsed))
         }
     }
 

@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// App-wide interval notifications, shared by all modes.
+/// Interval notifications counted backwards from the active countdown endpoint.
 @MainActor
 final class PopupScheduler: ObservableObject {
     @Published private(set) var isPopupEnabled: Bool
@@ -10,8 +10,6 @@ final class PopupScheduler: ObservableObject {
     private let configuration: CountdownConfiguration
     private let playSound: @MainActor (URL?) -> Void
     private let saveEnablement: (String, Bool) -> Void
-    private let now: () -> Date
-    private var nextPopupDate: Date?
 
     private var popupInterval: TimeInterval { TimeInterval(configuration.popupIntervalMinutes) * 60 }
 
@@ -19,10 +17,8 @@ final class PopupScheduler: ObservableObject {
         configuration: CountdownConfiguration,
         state: CountdownPreferences = CountdownPreferences(),
         playSound: @escaping @MainActor (URL?) -> Void,
-        now: @escaping () -> Date = Date.init,
         saveEnablement: @escaping (String, Bool) -> Void = { CountdownPreferencesStore().saveEnablement($0, enabled: $1) }
     ) {
-        self.now = now
         self.configuration = configuration
         self.playSound = playSound
         self.saveEnablement = saveEnablement
@@ -30,48 +26,17 @@ final class PopupScheduler: ObservableObject {
     }
 
     func setPopupEnabled(_ enabled: Bool) {
-        if enabled != isPopupEnabled {
-            nextPopupDate = enabled ? firstPopup(after: now()) : nil
-        }
         isPopupEnabled = enabled
         saveEnablement("popup_enabled", enabled)
     }
 
-    /// Skip paused clock boundaries without changing the original schedule.
-    func skipPausedPopups() {
-        advanceSchedule(past: now())
-    }
-
-    private func firstPopup(after start: Date) -> Date {
-        let earliest = start.addingTimeInterval(popupInterval)
-        let calendar = Calendar.current
-        let minute = calendar.dateInterval(of: .minute, for: earliest)!.start
-        let remainder = calendar.component(.minute, from: minute) % 5
-        if remainder == 0 && earliest == minute { return minute }
-        return minute.addingTimeInterval(TimeInterval(5 - remainder) * 60)
-    }
-
-    private func advanceSchedule(past date: Date) {
-        guard let nextPopupDate, nextPopupDate <= date else { return }
-        let intervals = floor(date.timeIntervalSince(nextPopupDate) / popupInterval) + 1
-        self.nextPopupDate = nextPopupDate.addingTimeInterval(intervals * popupInterval)
-    }
-
-    /// Duration edits do not emit popups. Late updates emit at most once.
+    /// Call only for elapsed time, not duration edits. Late updates emit at most once.
+    /// Remaining-time multiples place every popup on the endpoint's clock schedule,
+    /// including zero. No stored schedule can become stale after an endpoint edit.
     func reportElapsed(previousRemaining: TimeInterval, remaining: TimeInterval) {
-        guard isPopupEnabled else { return }
-        guard remaining > 0 else {
-            nextPopupDate = nil
-            return
-        }
-        let currentTime = now()
-        if nextPopupDate == nil {
-            let elapsed = max(0, previousRemaining - remaining)
-            nextPopupDate = firstPopup(after: currentTime.addingTimeInterval(-elapsed))
-        }
-        guard previousRemaining > remaining,
-              let nextPopupDate, currentTime >= nextPopupDate else { return }
-        advanceSchedule(past: currentTime)
+        guard isPopupEnabled, previousRemaining.isFinite, remaining.isFinite,
+              previousRemaining > remaining, previousRemaining > 0,
+              ceil(previousRemaining / popupInterval) > ceil(max(0, remaining) / popupInterval) else { return }
         popupIntervalCount += 1
         let sound: URL?
         switch CountdownUrgency(remaining: remaining) {

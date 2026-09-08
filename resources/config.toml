@@ -16,8 +16,11 @@ long-rest = 15
 cycles = 4
 
 [notifications]
-# Positive multiples of 5 minutes; invalid values use 5.
-popup_time = 5
+# Seconds in normal mode before returning to compact mode. Positive integer; default 3.
+popup_time_in_seconds = 3
+# Rounded to the nearest multiple of 5 minutes, with a minimum of 5.
+# Count backwards from the active end time, including the end time.
+popup_interval_in_minutes = 5
 
 # Paths are relative to this file.
 green_notification = "green_notification.mp3"

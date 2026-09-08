@@ -27,7 +27,8 @@ struct CountdownPreferencesTests {
         [notifications]
         popup_enabled = true
         alarm_enabled = true
-        popup_time = 15
+        popup_time_in_seconds = 3
+        popup_interval_in_minutes = 15
         alarm_notification = "alarm.mp3"
         """
         try contents.write(to: configURL, atomically: true, encoding: .utf8)

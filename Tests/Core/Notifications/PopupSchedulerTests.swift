@@ -4,9 +4,14 @@ import Testing
 
 @MainActor
 struct PopupSchedulerTests {
-    @Test(arguments: [-10, 0, 1, 2, 7, 14, 16])
-    func unsupportedIntervalsUseDefault(value: Int) {
+    @Test(arguments: [-10, 0, 1, 2, 7])
+    func smallIntervalsUseFiveMinutes(value: Int) {
         #expect(CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: value).popupIntervalMinutes == 5)
+    }
+
+    @Test(arguments: [(8, 10), (12, 10), (13, 15), (14, 15), (16, 15), (18, 20)])
+    func intervalsRoundToNearestFive(value: Int, expected: Int) {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: value).popupIntervalMinutes == expected)
     }
 
     @Test(arguments: [5, 10, 15, 20, 60, 120])
@@ -14,71 +19,124 @@ struct PopupSchedulerTests {
         #expect(CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: value).popupIntervalMinutes == value)
     }
 
-    @Test(arguments: [0, 1, 59])
-    func firstPopupRoundsUpThenKeepsItsClockSchedule(seconds: Int) {
-        let start = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 8, minute: 8, second: seconds))!
-        var now = start
+    @Test(arguments: [-1, 0, 1, 7, 30])
+    func popupDisplayTimeUsesPositiveSeconds(value: Int) {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, popupTimeSeconds: value).popupTimeSeconds == (value > 0 ? value : 3))
+    }
+
+    @Test(arguments: [5, 8])
+    func scheduleCountsBackwardsFromEndTime(interval: Int) {
+        let end = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 14, minute: 50))!
+        var now = end.addingTimeInterval(-17 * 60) // 14:33
+        var sounds = 0
         let popups = PopupScheduler(
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 15),
-            playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: interval),
+            playSound: { _ in sounds += 1 }, saveEnablement: { _, _ in }
         )
-        var remaining: TimeInterval = 7_200
-        func advance(_ seconds: TimeInterval) {
-            let previous = remaining
-            now += seconds
-            remaining -= seconds
-            popups.reportElapsed(previousRemaining: previous, remaining: remaining)
+        var popupMinutes: [Int] = []
+        while now < end {
+            let previous = end.timeIntervalSince(now)
+            now += 1
+            let count = popups.popupIntervalCount
+            popups.reportElapsed(previousRemaining: previous, remaining: end.timeIntervalSince(now))
+            if popups.popupIntervalCount > count {
+                #expect(Calendar.current.component(.second, from: now) == 0)
+                popupMinutes.append(Calendar.current.component(.minute, from: now))
+            }
         }
-        advance(TimeInterval(17 * 60 - seconds - 1)) // 08:24:59
-        #expect(popups.popupIntervalCount == 0)
-        advance(1) // 08:25
-        #expect(popups.popupIntervalCount == 1)
-        advance(899)
-        #expect(popups.popupIntervalCount == 1)
-        advance(1) // 08:40
-        #expect(popups.popupIntervalCount == 2)
-        advance(2 * 900 + 30) // Late update at 09:10:30 emits once.
-        #expect(popups.popupIntervalCount == 3)
-        advance(869)
-        #expect(popups.popupIntervalCount == 3)
-        advance(1) // 09:25, not 09:25:30.
-        #expect(popups.popupIntervalCount == 4)
+        #expect(popupMinutes == (interval == 5 ? [35, 40, 45, 50] : [40, 50]))
+        #expect(sounds == popupMinutes.count)
+        popups.reportElapsed(previousRemaining: 0, remaining: 0)
+        #expect(popups.popupIntervalCount == sounds)
     }
 
     @Test
-    func alignedStartDoesNotAddAnotherFiveMinutes() {
-        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 8, minute: 10))!
-        let popups = PopupScheduler(
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 15),
-            playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
-        )
-        now += 900
-        popups.reportElapsed(previousRemaining: 3_600, remaining: 2_700)
+    func lateUpdatesEmitOnceAndKeepEndpointSchedule() {
+        let popups = PopupScheduler(configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in }, saveEnablement: { _, _ in })
+        popups.reportElapsed(previousRemaining: 1_020, remaining: 299)
+        #expect(popups.popupIntervalCount == 1)
+        popups.reportElapsed(previousRemaining: 299, remaining: 1)
+        #expect(popups.popupIntervalCount == 1)
+        popups.reportElapsed(previousRemaining: 1, remaining: 0)
+        #expect(popups.popupIntervalCount == 2)
+    }
+
+    @Test
+    func disabledAndPausedUpdatesDoNotReplayPopups() {
+        let popups = PopupScheduler(configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in }, saveEnablement: { _, _ in })
+        popups.setPopupEnabled(false)
+        popups.reportElapsed(previousRemaining: 1_020, remaining: 600)
+        popups.setPopupEnabled(true)
+        popups.reportElapsed(previousRemaining: 600, remaining: 600)
+        popups.reportElapsed(previousRemaining: 600, remaining: 301)
+        #expect(popups.popupIntervalCount == 0)
+        popups.reportElapsed(previousRemaining: 301, remaining: 300)
         #expect(popups.popupIntervalCount == 1)
     }
 
-    @Test(arguments: CountdownMode.allCases)
-    func resumeSkipsPausedPopupsAndKeepsOriginalClockTimes(mode: CountdownMode) {
+    @Test(arguments: [5, 8])
+    func pomodoroUsesFocusThenRestEndpoint(interval: Int) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 8, minute: 8))!
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 14, minute: 25))!
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 15),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: interval),
+            playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
+        )
+        controller.selectMode(.pomodoro)
+        controller.popups.setPopupEnabled(false)
+        now += 8 * 60 // 14:33, focus ends at 14:50 and rest ends at 14:55.
+        controller.update()
+        controller.popups.setPopupEnabled(true)
+        var popupMinutes: [Int] = []
+        for _ in 0..<(22 * 60) {
+            now += 1
+            let count = controller.popups.popupIntervalCount
+            controller.update()
+            if controller.popups.popupIntervalCount > count {
+                popupMinutes.append(Calendar.current.component(.minute, from: now))
+            }
+        }
+        #expect(popupMinutes == (interval == 5 ? [35, 40, 45, 50, 55] : [40, 50, 55]))
+    }
+
+    @Test(arguments: CountdownMode.allCases)
+    func resumeUsesCurrentEndpointWithoutReplayingPausedPopups(mode: CountdownMode) {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 14, minute: 25))!
+        let controller = CountdownController(
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 10),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)
-        if mode.usesTimer { controller.adjustTimerDuration(by: 3_600) }
-        now += 120 // Pause at 08:10.
+        if mode.usesTimer { controller.adjustTimerDuration(by: 1_500) }
+        now += 120
         controller.toggleRunning()
-        now += 31 * 60 // Resume at 08:41, without updates during the pause.
+        now += 31 * 60
         controller.toggleRunning()
         #expect(controller.popups.popupIntervalCount == 0)
-        now += 14 * 60 - 1
+        let remaining = mode.usesTimer ? controller.timer.remaining : controller.pomodoro.focusRemaining
+        let untilPopup = remaining.truncatingRemainder(dividingBy: 600)
+        now += (untilPopup > 0 ? untilPopup : 600) - 1
         controller.update()
         #expect(controller.popups.popupIntervalCount == 0)
-        now += 1 // 08:55: original schedule, not a new interval from resume.
+        now += 1
         controller.update()
         #expect(controller.popups.popupIntervalCount == 1)
+    }
+
+    @Test
+    func endpointEditsDoNotLeaveAStaleSchedule() {
+        let popups = PopupScheduler(configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 10), playSound: { _ in }, saveEnablement: { _, _ in })
+        popups.reportElapsed(previousRemaining: 1_020, remaining: 900)
+        #expect(popups.popupIntervalCount == 0)
+        // The caller adds five minutes, without reporting the edit as elapsed time.
+        popups.reportElapsed(previousRemaining: 1_200, remaining: 900)
+        #expect(popups.popupIntervalCount == 0)
+        popups.reportElapsed(previousRemaining: 900, remaining: 600)
+        #expect(popups.popupIntervalCount == 1)
     }
 }

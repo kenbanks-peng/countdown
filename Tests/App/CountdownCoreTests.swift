@@ -70,7 +70,7 @@ struct CountdownCoreTests {
         )
         #expect(controller.timer.remaining == 1_440)
         #expect(sounds == 0)
-        now += 539
+        now += 239 // One second before the next end-anchored popup.
         controller.update()
         #expect(sounds == 0)
         now += 1
@@ -94,8 +94,8 @@ struct CountdownCoreTests {
         now += 300
         controller.update()
         #expect(sounds == 1)
-        if mode.usesTimer { controller.adjustTimerDuration(by: 60) }
-        else { controller.adjustPomodoroDuration(.focus, by: 60) }
+        if mode.usesTimer { controller.adjustTimerDuration(by: 300) }
+        else { controller.adjustPomodoroDuration(.focus, by: 300) }
         now += 60
         controller.update()
         #expect(sounds == 1)
@@ -160,6 +160,6 @@ struct CountdownCoreTests {
         now += 10_000
         timer.update()
         timer.update()
-        #expect(timer.popups.popupIntervalCount == (mode == .pomodoro ? 3 : 2))
+        #expect(timer.popups.popupIntervalCount == 3) // Includes the endpoint popup.
     }
 }

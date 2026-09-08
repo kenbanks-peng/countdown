@@ -131,7 +131,8 @@ struct PomodoroPersistenceTests {
         session.now += 839
         restored.update()
         #expect(restored.timer.completionCount == 1)
-        #expect(session.sounds == 1)
+        #expect(restored.popups.popupIntervalCount == 1)
+        #expect(session.sounds == 2) // Endpoint popup and completion alarm.
     }
 
     @Test(arguments: [true, false])

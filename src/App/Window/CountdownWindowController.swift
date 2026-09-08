@@ -78,8 +78,9 @@ final class CountdownWindowController {
 
         showNormalWindow(requestKeyboardFocus: false, isPopup: true)
         popupDismissalTask?.cancel()
+        let popupTimeSeconds = configuration.popupTimeSeconds
         popupDismissalTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(3))
+            try? await Task.sleep(for: .seconds(popupTimeSeconds))
             guard !Task.isCancelled else { return }
             self?.showCompactWindow()
         }

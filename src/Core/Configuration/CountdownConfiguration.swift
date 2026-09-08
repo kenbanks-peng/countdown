@@ -7,6 +7,7 @@ struct CountdownConfiguration {
     let yellowNotificationURL: URL?
     let redNotificationURL: URL?
     let alarmNotificationURL: URL?
+    let popupTimeSeconds: Int
     let popupIntervalMinutes: Int
     let pomodoroFocusPeriodsPerCycle: Int
     let pomodoroFocusMinutes: Int
@@ -18,6 +19,7 @@ struct CountdownConfiguration {
         greenNotificationURL: URL? = nil,
         yellowNotificationURL: URL? = nil,
         redNotificationURL: URL? = nil,
+        popupTimeSeconds: Int = 3,
         popupIntervalMinutes: Int = 5,
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
@@ -33,7 +35,10 @@ struct CountdownConfiguration {
         self.yellowNotificationURL = yellowNotificationURL
         self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
-        self.popupIntervalMinutes = popupIntervalMinutes > 0 && popupIntervalMinutes.isMultiple(of: 5) ? popupIntervalMinutes : 5
+        self.popupTimeSeconds = popupTimeSeconds > 0 ? popupTimeSeconds : 3
+        let interval = max(5, popupIntervalMinutes)
+        let roundedDown = interval - interval % 5
+        self.popupIntervalMinutes = interval % 5 >= 3 && roundedDown <= Int.max - 5 ? roundedDown + 5 : roundedDown
         let focus = (1...59).contains(pomodoroFocusMinutes) ? pomodoroFocusMinutes : 25
         let rest = (1...59).contains(pomodoroRestMinutes) ? pomodoroRestMinutes : 5
         let longRest = (1...60).contains(pomodoroLongRestMinutes) ? pomodoroLongRestMinutes : 15
@@ -59,7 +64,8 @@ struct CountdownConfiguration {
             greenNotificationURL: configurationFile.soundURL(for: "green_notification") ?? alarmNotificationURL,
             yellowNotificationURL: configurationFile.soundURL(for: "yellow_notification") ?? alarmNotificationURL,
             redNotificationURL: configurationFile.soundURL(for: "red_notification") ?? alarmNotificationURL,
-            popupIntervalMinutes: configurationFile.intValue(for: "popup_time") ?? 5,
+            popupTimeSeconds: configurationFile.intValue(for: "popup_time_in_seconds") ?? 3,
+            popupIntervalMinutes: configurationFile.intValue(for: "popup_interval_in_minutes") ?? 5,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,
             pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", section: "pomodoro") ?? 15,
