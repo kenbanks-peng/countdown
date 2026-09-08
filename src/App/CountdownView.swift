@@ -53,11 +53,6 @@ struct CountdownView: View {
             if countdown.mode.usesTimer {
                 TimerContextMenu(model: countdown.timer, setToNextHour: countdown.setTimerToNextHour)
             } else {
-                Menu("End times") {
-                    endTimeMenu("Focus", phase: .focus)
-                    endTimeMenu("Rest", phase: .rest)
-                    endTimeMenu("Long rest", phase: .longRest)
-                }
                 Button("Reset", action: countdown.resetPomodoro)
             }
             Divider()
@@ -71,17 +66,6 @@ struct CountdownView: View {
                 currentTime = countdown.currentTime
                 expandAtOneMinuteRemaining()
                 try? await Task.sleep(for: .milliseconds(100))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func endTimeMenu(_ label: String, phase: PomodoroModel.Phase) -> some View {
-        if let schedule = countdown.pomodoro.clockSchedule {
-            let value = schedule.end(for: phase).formatted(date: .omitted, time: .shortened)
-            Menu("\(label): \(value)") {
-                Button("Increase to next 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: 1) }
-                Button("Decrease to previous 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: -1) }
             }
         }
     }
