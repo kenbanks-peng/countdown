@@ -21,7 +21,7 @@ struct CountdownSettingsStore {
               settings.focusDuration >= 60, settings.restDuration >= 60,
               settings.focusDuration + settings.restDuration <= 3_600
         else { return defaults }
-        let longRest = settings.longRestDuration ?? defaults.longRestDuration ?? 900
+        let longRest = settings.longRestDuration ?? defaults.longRestDuration ?? 1_200
         guard longRest.isFinite, longRest >= 60,
               longRest <= 3_600 else { return defaults }
         settings.longRestDuration = longRest

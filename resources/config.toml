@@ -1,29 +1,32 @@
-# Circle scale factors. 1 keeps the original size for each mode.
-# Use positive numbers, such as size = 1.5 and compact_size = 0.8.
-# Missing or invalid values use 1. Restart Countdown after changes.
+# Positive scale factors. Restart Countdown after configuration changes.
 size = 1
 compact_size = 1
 
+[notifications]
+notification_enabled = true
+# Rounded to the nearest multiple of 5 minutes, with a minimum of 5.
+# Notifications count backwards from the active end time, including zero.
+notification_interval_in_minutes = 15
+# Seconds before a popup returns to compact mode.
+notification_time_in_seconds = 5
+
+popup_notification_enabled = true
+
+audio_notification_enabled = true
+# Paths are relative to this file.
+green_audio = "green.mp3"
+yellow_audio = "yellow.mp3"
+red_audio = "red.mp3"
+
+# The alarm is independent of interval notifications.
+alarm_enabled = true
+alarm_audio = "alarm.mp3"
+
 [pomodoro]
 # Defaults in minutes. Saved duration edits take priority.
-# Focus and rest must be 1–59; long-rest must be 1–60.
-# Focus + rest must not exceed 60; long-rest has its own limit.
-# Invalid values use defaults; an invalid focus + rest total resets all three.
+# Focus and rest: 1–59; long-rest: 1–60; focus + rest: at most 60.
 focus = 25
 rest = 5
-long-rest = 15
-# Focus periods before a long rest. Use 1–12; invalid values use 4.
+long-rest = 20
+# Focus periods before a long rest (1–12).
 cycles = 4
-
-[notifications]
-# Seconds in normal mode before returning to compact mode. Positive integer; default 3.
-popup_time_in_seconds = 3
-# Rounded to the nearest multiple of 5 minutes, with a minimum of 5.
-# Count backwards from the active end time, including the end time.
-popup_interval_in_minutes = 5
-
-# Paths are relative to this file.
-green_notification = "green_notification.mp3"
-yellow_notification = "yellow_notification.mp3"
-red_notification = "red_notification.mp3"
-alarm_notification = "alarm_notification.mp3"

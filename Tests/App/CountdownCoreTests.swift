@@ -49,7 +49,7 @@ struct CountdownCoreTests {
         now += 600
         timer.update()
         #expect(timer.popups.popupIntervalCount == 2)
-        #expect(sounds == 2)
+        #expect(sounds == (mode.usesTimer ? 4 : 3)) // Disabling popups does not disable audio.
         #expect(settings == ["popup_enabled": false])
     }
 

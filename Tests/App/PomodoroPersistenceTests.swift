@@ -271,7 +271,7 @@ struct PomodoroPersistenceTests {
         var store: TimerSessionStore { TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]) }
         var settingsURL: URL { directory.appendingPathComponent("countdown/settings.json") }
         func makeController(
-            configuration: CountdownConfiguration = CountdownConfiguration(alarmNotificationURL: nil)
+            configuration: CountdownConfiguration = CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15)
         ) -> CountdownController {
             CountdownController(
                 sessionStore: store, configuration: configuration,

@@ -22,7 +22,7 @@ final class PopupScheduler: ObservableObject {
         self.configuration = configuration
         self.playSound = playSound
         self.saveEnablement = saveEnablement
-        isPopupEnabled = state.popupEnabled
+        isPopupEnabled = configuration.popupNotificationEnabled && state.popupEnabled
     }
 
     func setPopupEnabled(_ enabled: Bool) {
@@ -34,10 +34,11 @@ final class PopupScheduler: ObservableObject {
     /// Remaining-time multiples place every popup on the endpoint's clock schedule,
     /// including zero. No stored schedule can become stale after an endpoint edit.
     func reportElapsed(previousRemaining: TimeInterval, remaining: TimeInterval) {
-        guard isPopupEnabled, previousRemaining.isFinite, remaining.isFinite,
+        guard configuration.notificationEnabled, previousRemaining.isFinite, remaining.isFinite,
               previousRemaining > remaining, previousRemaining > 0,
               ceil(previousRemaining / popupInterval) > ceil(max(0, remaining) / popupInterval) else { return }
-        popupIntervalCount += 1
+        if isPopupEnabled { popupIntervalCount += 1 }
+        guard configuration.audioNotificationEnabled else { return }
         let sound: URL?
         switch CountdownUrgency(remaining: remaining) {
         case .normal: sound = configuration.greenNotificationURL

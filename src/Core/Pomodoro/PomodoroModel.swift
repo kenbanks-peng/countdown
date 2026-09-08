@@ -27,7 +27,7 @@ struct PomodoroModel {
     private(set) var clockSchedule: PomodoroClockSchedule?
 
     init(focusDuration: TimeInterval = 25 * 60, restDuration: TimeInterval = 5 * 60,
-         longRestDuration: TimeInterval = 15 * 60, focusPeriodsPerCycle: Int = 4,
+         longRestDuration: TimeInterval = 20 * 60, focusPeriodsPerCycle: Int = 4,
          defaultDurations: (focus: TimeInterval, rest: TimeInterval, longRest: TimeInterval)? = nil) {
         self.defaultDurations = defaultDurations ?? (focusDuration, restDuration, longRestDuration)
         self.focusPeriodsPerCycle = Self.normalizedFocusPeriodCount(focusPeriodsPerCycle)

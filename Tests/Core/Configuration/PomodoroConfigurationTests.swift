@@ -61,7 +61,7 @@ struct PomodoroConfigurationTests {
         let configuration = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
         #expect(configuration.pomodoroFocusMinutes == 25)
         #expect(configuration.pomodoroRestMinutes == 5)
-        #expect(configuration.pomodoroLongRestMinutes == 15)
+        #expect(configuration.pomodoroLongRestMinutes == 20)
     }
 
     @Test(arguments: ["", "cycles = 0", "cycles = -1", "cycles = 13", "cycles = 1.5",
@@ -85,7 +85,7 @@ struct PomodoroConfigurationTests {
         )
         #expect(configuration.pomodoroFocusMinutes == 25)
         #expect(configuration.pomodoroRestMinutes == 5)
-        #expect(configuration.pomodoroLongRestMinutes == 15)
+        #expect(configuration.pomodoroLongRestMinutes == 20)
     }
 
     @Test

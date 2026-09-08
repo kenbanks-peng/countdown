@@ -17,31 +17,19 @@ See the [source organization](docs/architecture.md).
 
 Countdown reads its configuration from `$XDG_CONFIG_HOME/countdown/config.toml` or `~/.config/countdown/config.toml`
 
-```toml
-[pomodoro]
-# Defaults in minutes; saved duration edits take priority.
-focus = 25
-rest = 5
-long-rest = 15
-# Focus periods before a long rest (1–12).
-cycles = 4
+See [the default configuration](resources/config.toml) for all properties.
+Restart Countdown after configuration changes. Saved Pomodoro duration edits
+take priority over configuration defaults.
 
-[notifications]
-popup_time_in_seconds = 3
-popup_interval_in_minutes = 5
+`notification_enabled` controls interval notifications. Popup display and audio
+have separate controls: `popup_notification_enabled` and `audio_notification_enabled`.
+`alarm_enabled` controls the timeout alarm independently.
 
-# Relative paths are relative to config.toml.
-green_notification = "green_notification.mp3"
-yellow_notification = "yellow_notification.mp3"
-red_notification = "red_notification.mp3"
-alarm_notification = "alarm_notification.mp3"
-```
-
-`popup_time_in_seconds` sets how long a popup stays in normal mode before
-returning to compact mode (default: 3 seconds).
-`popup_interval_in_minutes` rounds to the nearest multiple of 5, with a minimum
-of 5 minutes. Popups count backwards from the active end time and include that
-end time. During Pomodoro focus, they use the focus end time.
+`notification_time_in_seconds` sets the popup duration (default: 5 seconds).
+`notification_interval_in_minutes` defaults to 15 and rounds to the nearest
+multiple of 5, with a minimum of 5 minutes. Notifications count backwards from
+the active end time and include that end time. Sound paths are relative to
+`config.toml`.
 
 The selected mode, popup and alarm enablement, auto-set, and timer state are stored
 under `${XDG_STATE_HOME:-$HOME/.local/state}/countdown/`. Mode and Pomodoro settings

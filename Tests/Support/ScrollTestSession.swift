@@ -12,7 +12,7 @@ final class ScrollTestSession {
     let isCompact: Bool
     lazy var controller = CountdownController(
         sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-        configuration: CountdownConfiguration(alarmNotificationURL: nil),
+        configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false),
         preferences: CountdownPreferences(popupEnabled: false),
         playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now },
         saveEnablement: { _, _ in }

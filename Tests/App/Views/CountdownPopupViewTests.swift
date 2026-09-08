@@ -24,7 +24,7 @@ struct CountdownPopupViewTests {
         let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isPopup: true, changePresentation: {}))
         let bitmap = try render(hosting)
         let text = try recognizedText(bitmap).joined(separator: " ")
-        try expectPopupMinutes(bitmap, remaining: elapsed == 1_500 ? 300 : elapsed == 6_900 ? 900 : 1_500)
+        try expectPopupMinutes(bitmap, remaining: elapsed == 1_500 ? 300 : elapsed == 6_900 ? 1_200 : 1_500)
         #expect(!text.contains(":"))
         #expect(!text.contains("Session"))
         #expect(!text.contains(controller.pomodoro.phaseLabel))

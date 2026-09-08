@@ -25,11 +25,12 @@ struct CountdownPreferencesTests {
         [display]
         current_timeout_enabled = true
         [notifications]
-        popup_enabled = true
+        popup_notification_enabled = true
+        audio_notification_enabled = false
         alarm_enabled = true
-        popup_time_in_seconds = 3
-        popup_interval_in_minutes = 15
-        alarm_notification = "alarm.mp3"
+        notification_time_in_seconds = 5
+        notification_interval_in_minutes = 15
+        alarm_audio = "alarm.mp3"
         """
         try contents.write(to: configURL, atomically: true, encoding: .utf8)
         let configuration = CountdownConfiguration.load(environment: [

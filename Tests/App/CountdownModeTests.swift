@@ -126,7 +126,7 @@ struct CountdownModeTests {
 
         func makeController(autoSetToNextHour: Bool = false, alarm: Bool = true) -> CountdownController {
             CountdownController(
-                sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil),
+                sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false),
                 preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, popupEnabled: false, alarmEnabled: alarm),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )

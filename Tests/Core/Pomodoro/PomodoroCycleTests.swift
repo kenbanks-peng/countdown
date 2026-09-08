@@ -7,7 +7,7 @@ struct PomodoroCycleTests {
 
     @Test
     func fourFocusPeriodsUseThreeRestsAndOneLongRestThenRepeat() {
-        var model = PomodoroModel()
+        var model = PomodoroModel(longRestDuration: 900)
         #expect(model.cycleDuration == 130 * 60)
         model.toggleRunning(at: start)
         for stage in 1...4 {
@@ -38,7 +38,7 @@ struct PomodoroCycleTests {
 
     @Test(arguments: [1, 3, 4, 12])
     func configuredCyclesRepeatAfterLongRest(focusPeriodsPerCycle: Int) {
-        var model = PomodoroModel(focusPeriodsPerCycle: focusPeriodsPerCycle)
+        var model = PomodoroModel(longRestDuration: 900, focusPeriodsPerCycle: focusPeriodsPerCycle)
         #expect(model.cycleDuration == Double(focusPeriodsPerCycle) * 1_500 + Double(focusPeriodsPerCycle - 1) * 300 + 900)
         model.toggleRunning(at: start)
         for stage in 1...focusPeriodsPerCycle {
@@ -93,7 +93,7 @@ struct PomodoroCycleTests {
 
     @Test
     func editedDurationsCarryIntoFollowingStagesAndCycles() {
-        var model = PomodoroModel()
+        var model = PomodoroModel(longRestDuration: 900)
         model.toggleRunning(at: start)
         model.adjustDuration(.focus, by: -300, at: start + 600)
         model.adjustDuration(.rest, by: 120, at: start + 600)
@@ -115,7 +115,7 @@ struct PomodoroCycleTests {
 
     @Test(arguments: [false, true])
     func longRestEditsKeepElapsedTimeAndDoNotChangeShortRests(paused: Bool) {
-        var model = PomodoroModel()
+        var model = PomodoroModel(longRestDuration: 900)
         model.toggleRunning(at: start)
         let now = start + 7_200 // Five minutes into the long rest.
         model.update(at: now)
@@ -141,7 +141,7 @@ struct PomodoroCycleTests {
 
     @Test
     func longRestPauseResumeAndResetKeepStageAndAllocations() {
-        var model = PomodoroModel()
+        var model = PomodoroModel(longRestDuration: 900)
         model.toggleRunning(at: start)
         model.pause(at: start + 7_000)
         #expect(model.stage == 4)
@@ -156,7 +156,7 @@ struct PomodoroCycleTests {
 
     @Test(arguments: [Double.nan, Double.infinity, -Double.infinity])
     func invalidEditsDoNotChangeAllocations(amount: Double) {
-        var model = PomodoroModel()
+        var model = PomodoroModel(longRestDuration: 900)
         for phase in [PomodoroModel.Phase.focus, .rest, .longRest] {
             model.adjustDuration(phase, by: amount, at: start)
         }

@@ -49,7 +49,7 @@ if [ ! -f "$config_dir/config.toml" ]; then
   install -m 644 "resources/config.toml" "$config_dir/config.toml"
   resources_installed=true
 fi
-for file in green_notification.mp3 yellow_notification.mp3 red_notification.mp3 alarm_notification.mp3; do
+for file in green.mp3 yellow.mp3 red.mp3 alarm.mp3; do
   if [ ! -f "$config_dir/$file" ] || ! cmp -s "resources/$file" "$config_dir/$file"; then
     install -m 644 "resources/$file" "$config_dir/$file"
     resources_installed=true

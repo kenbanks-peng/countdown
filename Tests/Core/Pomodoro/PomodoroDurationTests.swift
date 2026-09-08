@@ -91,7 +91,7 @@ struct PomodoroDurationTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
-        var configuration = CountdownConfiguration(alarmNotificationURL: nil)
+        var configuration = CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false)
         lazy var timer = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: configuration,

@@ -3,65 +3,97 @@ import Testing
 @testable import Countdown
 
 struct CountdownConfigurationFileTests {
-    @Test
-    func firstMatchingValuesAndSectionScopeRemainUnchanged() throws {
+    private func load(_ contents: String?) throws -> CountdownConfiguration {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let configDirectory = directory.appendingPathComponent("countdown")
-        try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
-        try """
-        [unrelated]
-        focus = 59
-        rest = 44
-        popup_time_in_seconds = 7
-        popup_interval_in_minutes = 8
-        [pomodoro] # Minutes
-        focus = 20 # First focus wins.
-        focus = 30
-        [pomodoro]
-        focus = 40
-        long-rest = 60
-        [notifications]
-        popup_interval_in_minutes = 15
-        alarm_notification = "sounds/alarm.mp3"
-        green_notification = "sounds/green.mp3"
-        red_notification = "invalid.mp3" # Quoted sound values require a closing quote.
-        """.write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
+        if let contents {
+            try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
+            try contents.write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
+        }
+        return CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
+    }
 
-        let config = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
-        #expect(config.pomodoroFocusMinutes == 20)
-        #expect(config.pomodoroRestMinutes == 5) // No fallback to an unrelated section.
-        #expect(config.pomodoroLongRestMinutes == 60)
-        #expect(config.popupTimeSeconds == 7)
-        #expect(config.popupIntervalMinutes == 10) // Notification lookup remains unscoped.
-        #expect(config.greenNotificationURL?.standardizedFileURL == configDirectory.appendingPathComponent("sounds/green.mp3"))
-        #expect(config.alarmNotificationURL?.standardizedFileURL == configDirectory.appendingPathComponent("sounds/alarm.mp3"))
-        #expect(config.yellowNotificationURL == config.alarmNotificationURL)
-        #expect(config.redNotificationURL == config.alarmNotificationURL)
+    @Test(arguments: [nil, "", "[notifications]\nnotification_enabled = invalid\npopup_notification_enabled = 0\naudio_notification_enabled = \"false\"\nalarm_enabled = FALSE\nnotification_time_in_seconds = invalid\nnotification_interval_in_minutes = invalid"] as [String?])
+    func missingAndInvalidValuesUseDefaults(contents: String?) throws {
+        let config = try load(contents)
+        #expect(config.size == 1)
+        #expect(config.compactSize == 1)
+        #expect(config.notificationEnabled)
+        #expect(config.popupNotificationEnabled)
+        #expect(config.audioNotificationEnabled)
+        #expect(config.alarmEnabled)
+        #expect(config.popupTimeSeconds == 5)
+        #expect(config.popupIntervalMinutes == 15)
+        #expect(config.pomodoroFocusMinutes == 25)
+        #expect(config.pomodoroRestMinutes == 5)
+        #expect(config.pomodoroLongRestMinutes == 20)
+        #expect(config.pomodoroFocusPeriodsPerCycle == 4)
+        #expect(config.greenNotificationURL?.lastPathComponent == "green.mp3")
+        #expect(config.yellowNotificationURL?.lastPathComponent == "yellow.mp3")
+        #expect(config.redNotificationURL?.lastPathComponent == "red.mp3")
+        #expect(config.alarmNotificationURL?.lastPathComponent == "alarm.mp3")
     }
 
     @Test
-    func invalidFirstValuesDoNotFallThroughToLaterDuplicates() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let configDirectory = directory.appendingPathComponent("countdown")
-        try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
-        try """
-        [pomodoro]
-        focus = invalid
-        focus = 20
+    func valuesUseTheirOwnSectionsAndFirstDuplicate() throws {
+        let config = try load("""
+        size = 1.5
+        compact_size = 0.8
+        [unrelated]
+        notification_enabled = true
+        notification_time_in_seconds = 99
+        green_audio = "wrong.mp3"
+        focus = 59
         [notifications]
-        popup_time_in_seconds = invalid
-        popup_time_in_seconds = 9
-        popup_interval_in_minutes = invalid
-        popup_interval_in_minutes = 15
-        alarm_notification = "first.mp3"
-        alarm_notification = "second.mp3"
-        """.write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
-        let config = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
-        #expect(config.pomodoroFocusMinutes == 25)
-        #expect(config.popupTimeSeconds == 3)
-        #expect(config.popupIntervalMinutes == 5)
+        notification_enabled = false # Master control
+        notification_enabled = true
+        popup_notification_enabled = false
+        audio_notification_enabled = false
+        alarm_enabled = false
+        notification_time_in_seconds = 7
+        notification_interval_in_minutes = 8
+        alarm_audio = "/tmp/alarm.mp3"
+        green_audio = "sounds/green.mp3" # Relative path
+        red_audio = invalid
+        [pomodoro]
+        focus = 20
+        focus = 30
+        long-rest = 60
+        """)
+        #expect(config.size == 1.5)
+        #expect(config.compactSize == 0.8)
+        #expect(!config.notificationEnabled)
+        #expect(!config.popupNotificationEnabled)
+        #expect(!config.audioNotificationEnabled)
+        #expect(!config.alarmEnabled)
+        #expect(config.popupTimeSeconds == 7)
+        #expect(config.popupIntervalMinutes == 10)
+        #expect(config.pomodoroFocusMinutes == 20)
+        #expect(config.pomodoroRestMinutes == 5)
+        #expect(config.pomodoroLongRestMinutes == 60)
+        #expect(config.greenNotificationURL?.standardizedFileURL.path.hasSuffix("/countdown/sounds/green.mp3") == true)
+        #expect(config.alarmNotificationURL?.path == "/tmp/alarm.mp3")
+        #expect(config.yellowNotificationURL?.lastPathComponent == "yellow.mp3")
+        #expect(config.redNotificationURL?.lastPathComponent == "red.mp3")
+    }
+
+    @Test
+    func invalidFirstValuesDoNotFallThrough() throws {
+        let config = try load("""
+        [notifications]
+        notification_enabled = invalid
+        notification_enabled = false
+        notification_time_in_seconds = invalid
+        notification_time_in_seconds = 9
+        notification_interval_in_minutes = invalid
+        notification_interval_in_minutes = 30
+        alarm_audio = "first.mp3"
+        alarm_audio = "second.mp3"
+        """)
+        #expect(config.notificationEnabled)
+        #expect(config.popupTimeSeconds == 5)
+        #expect(config.popupIntervalMinutes == 15)
         #expect(config.alarmNotificationURL?.lastPathComponent == "first.mp3")
     }
 }

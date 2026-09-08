@@ -61,7 +61,7 @@ final class CountdownController: ObservableObject {
         )
         var pomodoro = PomodoroModel(
             focusDuration: settings.focusDuration, restDuration: settings.restDuration,
-            longRestDuration: settings.longRestDuration ?? 900, focusPeriodsPerCycle: configuration.pomodoroFocusPeriodsPerCycle,
+            longRestDuration: settings.longRestDuration ?? TimeInterval(configuration.pomodoroLongRestMinutes * 60), focusPeriodsPerCycle: configuration.pomodoroFocusPeriodsPerCycle,
             defaultDurations: (
                 TimeInterval(configuration.pomodoroFocusMinutes * 60),
                 TimeInterval(configuration.pomodoroRestMinutes * 60),

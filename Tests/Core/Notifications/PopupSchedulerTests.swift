@@ -4,6 +4,45 @@ import Testing
 
 @MainActor
 struct PopupSchedulerTests {
+    @Test(arguments: [false, true], [false, true])
+    func popupAndAudioAreIndependent(popup: Bool, audio: Bool) {
+        var sounds: [URL?] = []
+        let green = URL(fileURLWithPath: "/tmp/green.mp3")
+        let yellow = URL(fileURLWithPath: "/tmp/yellow.mp3")
+        let red = URL(fileURLWithPath: "/tmp/red.mp3")
+        let popups = PopupScheduler(
+            configuration: CountdownConfiguration(
+                alarmNotificationURL: nil, greenNotificationURL: green,
+                yellowNotificationURL: yellow, redNotificationURL: red,
+                popupIntervalMinutes: 5, popupNotificationEnabled: popup,
+                audioNotificationEnabled: audio
+            ), playSound: { sounds.append($0) }, saveEnablement: { _, _ in }
+        )
+        popups.reportElapsed(previousRemaining: 1_801, remaining: 1_800)
+        popups.reportElapsed(previousRemaining: 601, remaining: 600)
+        popups.reportElapsed(previousRemaining: 1, remaining: 0)
+        #expect(popups.popupIntervalCount == (popup ? 3 : 0))
+        #expect(sounds == (audio ? [green, yellow, red] : []))
+        popups.setPopupEnabled(false)
+        popups.reportElapsed(previousRemaining: 1, remaining: 0)
+        #expect(popups.popupIntervalCount == (popup ? 3 : 0))
+        #expect(sounds.count == (audio ? 4 : 0))
+    }
+
+    @Test
+    func masterControlDisablesPopupAndAudio() {
+        var sounds = 0
+        let popups = PopupScheduler(
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationEnabled: false),
+            playSound: { _ in sounds += 1 }, saveEnablement: { _, _ in }
+        )
+        popups.setPopupEnabled(true)
+        popups.reportElapsed(previousRemaining: 901, remaining: 900)
+        popups.reportElapsed(previousRemaining: 1, remaining: 0)
+        #expect(popups.popupIntervalCount == 0)
+        #expect(sounds == 0)
+    }
+
     @Test(arguments: [-10, 0, 1, 2, 7])
     func smallIntervalsUseFiveMinutes(value: Int) {
         #expect(CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: value).popupIntervalMinutes == 5)
@@ -21,7 +60,7 @@ struct PopupSchedulerTests {
 
     @Test(arguments: [-1, 0, 1, 7, 30])
     func popupDisplayTimeUsesPositiveSeconds(value: Int) {
-        #expect(CountdownConfiguration(alarmNotificationURL: nil, popupTimeSeconds: value).popupTimeSeconds == (value > 0 ? value : 3))
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, popupTimeSeconds: value).popupTimeSeconds == (value > 0 ? value : 5))
     }
 
     @Test(arguments: [5, 8])
@@ -63,7 +102,7 @@ struct PopupSchedulerTests {
 
     @Test
     func disabledAndPausedUpdatesDoNotReplayPopups() {
-        let popups = PopupScheduler(configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in }, saveEnablement: { _, _ in })
+        let popups = PopupScheduler(configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 5), playSound: { _ in }, saveEnablement: { _, _ in })
         popups.setPopupEnabled(false)
         popups.reportElapsed(previousRemaining: 1_020, remaining: 600)
         popups.setPopupEnabled(true)

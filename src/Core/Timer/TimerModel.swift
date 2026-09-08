@@ -50,7 +50,7 @@ final class TimerModel: ObservableObject {
         let state = preferences ?? preferencesStore.load()
         showsRemainingMinutes = state.showsRemainingMinutes
         isAutoSetToNextHourEnabled = state.autoSetToNextHourEnabled
-        isAlarmEnabled = state.alarmEnabled
+        isAlarmEnabled = configuration.alarmEnabled && state.alarmEnabled
         self.isClockEnabled = isClockEnabled
         restore()
         if timeoutActionsEnabled() { autoSetToNextHour() }
