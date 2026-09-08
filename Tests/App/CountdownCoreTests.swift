@@ -18,7 +18,7 @@ struct CountdownCoreTests {
             saveEnablement: { settings[$0] = $1 }
         )
         timer.selectMode(mode)
-        if mode == .timer { timer.adjustTimerDuration(by: 1_800) }
+        if mode.usesTimer { timer.adjustTimerDuration(by: 1_800) }
         #expect(timer.controlLabel == "Pause")
         now += 300
         timer.update()
@@ -41,17 +41,16 @@ struct CountdownCoreTests {
         now += 300
         timer.update()
         #expect(timer.features.popupIntervalCount == 2)
-        timer.features.setClockEnabled(false)
+        timer.selectMode(.countdown)
         let features = timer.features
-        timer.selectMode(mode == .timer ? .pomodoro : .timer)
+        timer.selectMode(mode.usesTimer ? .pomodoro : .timer)
         #expect(timer.features === features)
-        #expect(!timer.features.isClockEnabled)
         #expect(!timer.features.isPopupEnabled)
         now += 600
         timer.update()
         #expect(timer.features.popupIntervalCount == 2)
         #expect(sounds == 2)
-        #expect(settings == ["clock_enabled": false, "popup_enabled": false])
+        #expect(settings == ["popup_enabled": false])
     }
 
     @Test
@@ -91,11 +90,11 @@ struct CountdownCoreTests {
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)
-        if mode == .timer { controller.adjustTimerDuration(by: 1_800) }
+        if mode.usesTimer { controller.adjustTimerDuration(by: 1_800) }
         now += 300
         controller.update()
         #expect(sounds == 1)
-        if mode == .timer { controller.adjustTimerDuration(by: 60) }
+        if mode.usesTimer { controller.adjustTimerDuration(by: 60) }
         else { controller.adjustPomodoroDuration(.focus, by: 60) }
         now += 60
         controller.update()
@@ -142,7 +141,7 @@ struct CountdownCoreTests {
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
-        if mode == .timer {
+        if mode.usesTimer {
             timer.adjustTimerDuration(by: 1_800)
             timer.adjustTimerDuration(by: -600)
         } else {

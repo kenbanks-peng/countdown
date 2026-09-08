@@ -28,15 +28,15 @@ struct CountdownControllerTests {
         let session = Session()
         defer { session.removeState() }
         let controller = session.makeController()
-        controller.adjustTimerDuration(by: 60)
+        controller.adjustTimerDuration(by: 300)
         controller.selectMode(.pomodoro)
-        session.now += 61
+        session.now += 301
         controller.selectMode(.timer)
         #expect(controller.timer.status == .empty)
         #expect(controller.timer.completionCount == 0)
         #expect(session.sounds == 0)
-        controller.adjustTimerDuration(by: 60)
-        session.now += 60
+        controller.adjustTimerDuration(by: 300)
+        session.now += controller.timer.remaining
         controller.update()
         controller.update()
         #expect(controller.timer.completionCount == 1)
@@ -71,13 +71,13 @@ struct CountdownControllerTests {
     @MainActor
     private final class Session {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         func makeController(autoset: Bool = false) -> CountdownController {
             CountdownController(
                 stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
                 configuration: CountdownConfiguration(alarmNotificationURL: nil),
-                featureState: CountdownFeatureState(clockEnabled: false, autosetEnabled: autoset, popupEnabled: false),
+                featureState: CountdownFeatureState(autosetEnabled: autoset, popupEnabled: false),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

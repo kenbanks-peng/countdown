@@ -1,6 +1,6 @@
 import Foundation
 
-/// Duration mode stores allocations. Clock mode also stores its fixed schedule.
+/// Stores the selected mode and the fixed Pomodoro schedule.
 struct CountdownSettings: Codable {
     var mode: CountdownMode = .timer
     var focusDuration: TimeInterval = 25 * 60

@@ -166,7 +166,7 @@ struct ClockEndpointScheduleTests {
         #expect(controller.pomodoro.focusRemaining == 0)
         let remaining = resumed.restEnd.timeIntervalSince(session.now)
         #expect(controller.pomodoro.restRemaining == remaining)
-        controller.features.setClockEnabled(false)
+        controller.selectMode(.countdown)
         #expect(controller.pomodoro.focusRemaining == 0)
         #expect(controller.pomodoro.restRemaining == remaining)
         session.now += 30
@@ -344,20 +344,19 @@ struct ClockEndpointScheduleTests {
         controller.adjustPomodoroDuration(.focus, by: 300)
         let before = controller.pomodoro
         let timerRemaining = controller.timer.remaining
-        controller.features.setClockEnabled(true)
+        controller.selectMode(.timer)
         controller.update()
         #expect(controller.pomodoro.focusRemaining == before.focusRemaining)
         #expect(controller.pomodoro.restRemaining == before.restRemaining)
         #expect(controller.timer.remaining == timerRemaining)
         let schedule = try #require(controller.pomodoro.clockSchedule)
-        controller.selectMode(.timer)
         session.now += 150
         controller.selectMode(.pomodoro)
         #expect(controller.pomodoro.clockSchedule?.restEnd == schedule.restEnd)
-        controller.features.setClockEnabled(false)
+        controller.selectMode(.countdown)
         controller.toggleRunning()
         let frozen = controller.pomodoro.restRemaining
-        session.now += 173
+        session.now += 300
         controller.toggleRunning()
         #expect(controller.pomodoro.restRemaining == frozen)
     }
@@ -543,14 +542,17 @@ struct ClockEndpointScheduleTests {
     private final class Session {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 2, second: 13))!.addingTimeInterval(0.25)
-        let clock: Bool
         lazy var controller = makeController()
-        init(clock: Bool = true) { self.clock = clock }
+        init(clock: Bool = true) {
+            let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
+            CountdownSettingsStore(fileManager: .default, stateDirectory: store.stateDirectory)
+                .save(CountdownSettings(mode: clock ? .timer : .countdown))
+        }
         func makeController() -> CountdownController {
             CountdownController(
                 stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
                 configuration: CountdownConfiguration(alarmNotificationURL: nil),
-                featureState: CountdownFeatureState(clockEnabled: clock, popupEnabled: false),
+                featureState: CountdownFeatureState(popupEnabled: false),
                 playSound: { _ in }, now: { [unowned self] in now }, saveEnablement: { _, _ in }
             )
         }

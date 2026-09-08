@@ -6,197 +6,92 @@ import Vision
 
 @MainActor
 struct CountdownViewTests {
-    @Test(arguments: [true, false])
-    func defaultPomodoroRendersFixedScaleSectorsWithoutPhaseText(timeoutEnabled: Bool) throws {
+    @Test(arguments: [0.0, 600, 1_500, 1_620, 1_800, 6_900], [false, true])
+    func pomodoroClockRendersCurrentSectorsAcrossPhases(elapsed: TimeInterval, isCompact: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let timer = CountdownController(
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
+        let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, currentTimeoutEnabled: timeoutEnabled, popupEnabled: false),
-            playSound: { _ in }
+            featureState: CountdownFeatureState(popupEnabled: false), playSound: { _ in }, now: { now }
         )
-        timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: {}))
-        let bitmap = try render(hosting)
-
-        // Literal samples on each side of the specified 0°, 30°, and 180° boundaries.
-        for angle in [3.0, 15, 27] {
-            let color = try sample(bitmap, angle: angle)
-            #expect(color.blueComponent > color.greenComponent + 0.15)
-            #expect(color.blueComponent > color.redComponent + 0.25)
+        controller.selectMode(.pomodoro)
+        now += elapsed
+        controller.update()
+        let side = isCompact ? 32.0 : 188
+        let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isCompact: isCompact, changePresentation: {}))
+        let bitmap = try render(hosting, side: side)
+        let model = controller.pomodoro
+        let schedule = try #require(model.clockSchedule)
+        func angle(at date: Date) -> Double {
+            date.timeIntervalSince(Calendar.current.startOfDay(for: date))
+                .truncatingRemainder(dividingBy: 3_600) / 10
         }
-        for angle in [33.0, 90, 177] {
-            let color = try sample(bitmap, angle: angle)
-            #expect(abs(color.redComponent - 0.24) < 0.03)
-            #expect(abs(color.greenComponent - 0.68) < 0.03)
-            #expect(abs(color.blueComponent - 0.42) < 0.03)
+        if model.focusRemaining > 0 {
+            let middle = now + model.focusRemaining / 2
+            #expect(try sample(bitmap, angle: angle(at: middle), radius: 0.32).greenComponent > 0.6)
         }
-        for angle in [183.0, 270, 357] {
-            let color = try sample(bitmap, angle: angle)
-            #expect(abs(color.redComponent - 0.11) < 0.03)
-            #expect(abs(color.greenComponent - 0.11) < 0.03)
-            #expect(abs(color.blueComponent - 0.12) < 0.03)
-        }
-        // Near the center, color is still filled; this is not a progress ring.
-        let interior = try sample(bitmap, angle: 90, radius: 0.12)
-        #expect(abs(interior.greenComponent - 0.68) < 0.03)
-
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        try VNImageRequestHandler(cgImage: #require(bitmap.cgImage)).perform([request])
-        let text = request.results?.compactMap { $0.topCandidates(1).first?.string } ?? []
-        #expect(text.isEmpty)
-        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
-        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
-        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
-        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
-        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = hosting
-        defer { window.close() }
-        hosting.layoutSubtreeIfNeeded()
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Rest: 5 minutes remaining."))
+        let restEnd = schedule.end(for: model.restPhase)
+        let restMiddle = restEnd - model.restRemaining / 2
+        #expect(try sample(bitmap, angle: angle(at: restMiddle), radius: 0.32).blueComponent > 0.8)
+        let text = try recognizedText(bitmap)
+        #expect(!text.contains("Focus") && !text.contains("Rest"))
+        #expect(controller.mode.isClockEnabled)
+        #expect(controller.pomodoro.stage == (elapsed < 1_800 ? 1 : elapsed < 6_900 ? 2 : 4))
     }
 
-    @Test
-    func restartedPomodoroRendersSavedAllocationsAndStartsFocus() throws {
+    @Test(arguments: [false, true], [false, true])
+    func editedClockPresentationAndRestartKeepTheSchedule(paused: Bool, isCompact: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
-        let configuration = CountdownConfiguration(alarmNotificationURL: nil)
-        let featureState = CountdownFeatureState(clockEnabled: false, popupEnabled: false)
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
-        var sounds = 0
-        let timer = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in sounds += 1 }, now: { now })
-        timer.selectMode(.pomodoro)
-        timer.adjustPomodoroDuration(.focus, by: -300)
-        timer.adjustPomodoroDuration(.rest, by: 120)
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
+        func makeController() -> CountdownController {
+            CountdownController(stateStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil),
+                                featureState: CountdownFeatureState(popupEnabled: false), playSound: { _ in }, now: { now })
+        }
+        let controller = makeController()
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, steps: -1)
+        controller.adjustPomodoroDuration(.rest, steps: 1)
         now += 1_320
-        timer.update()
-        #expect(timer.pomodoro.phaseLabel == "Rest")
-        timer.save()
-        now += 7_200
-
-        let restored = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in sounds += 1 }, now: { now })
-        let hosting = NSHostingView(rootView: CountdownView(countdown: restored, changePresentation: {}))
-        let bitmap = try render(hosting)
-        // Saved 7-minute rest spans 42°; saved 20-minute focus ends at 162°.
-        for angle in [3.0, 39] {
-            #expect(try sample(bitmap, angle: angle).blueComponent > 0.8)
+        controller.update()
+        if paused { controller.toggleRunning() }
+        controller.save()
+        #expect(controller.pomodoro.phaseLabel == "Rest")
+        #expect(controller.pomodoro.focusRemaining == 0)
+        #expect(controller.pomodoro.restRemaining == 480)
+        let side = isCompact ? 32.0 : 188
+        func image(_ value: CountdownController) throws -> Data? {
+            try render(NSHostingView(rootView: CountdownView(countdown: value, isCompact: isCompact, changePresentation: {})), side: side)
+                .representation(using: .png, properties: [:])
         }
-        for angle in [45.0, 90, 159] {
-            #expect(try sample(bitmap, angle: angle).greenComponent > 0.6)
-        }
-        for angle in [165.0, 270, 357] {
-            #expect(try sample(bitmap, angle: angle).greenComponent < 0.2)
-        }
-        #expect(try recognizedText(bitmap).isEmpty)
-        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
-        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
-        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
-        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
-        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = hosting
-        defer { window.close() }
-        hosting.layoutSubtreeIfNeeded()
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 20 minutes remaining. Rest: 7 minutes remaining."))
-        #expect(sounds == 0)
-    }
-
-    @Test
-    func runningPomodoroDepletesGreenThenBlueAtFixedBoundaries() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
-        var expansions = 0
-        var sounds = 0
-        let timer = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, autosetEnabled: true, popupEnabled: false),
-            playSound: { _ in sounds += 1 }, now: { now }
-        )
-        timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: { expansions += 1 }))
-        _ = try render(hosting)
-        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
-        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
-        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
-        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
-        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = hosting
-        defer { window.close() }
-
-        now += 600
-        timer.update()
-        let focus = try render(hosting)
-        for angle in [3.0, 15, 27] {
-            #expect(try sample(focus, angle: angle).blueComponent > 0.8)
-        }
-        for angle in [33.0, 90, 117] {
-            #expect(try sample(focus, angle: angle).greenComponent > 0.6)
-        }
-        for angle in [123.0, 177, 183, 270, 357] {
-            #expect(try sample(focus, angle: angle).greenComponent < 0.2)
-        }
-        #expect(try recognizedText(focus).isEmpty)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 15 minutes remaining. Rest: 5 minutes remaining."))
-
-        now += 900
-        timer.update()
-        let transition = try render(hosting)
-        #expect(try sample(transition, angle: 27).blueComponent > 0.8)
-        #expect(try sample(transition, angle: 33).greenComponent < 0.2)
-        #expect(try recognizedText(transition).isEmpty)
-
-        now += 120
-        timer.update()
-        let rest = try render(hosting)
-        for angle in [3.0, 15] {
-            #expect(try sample(rest, angle: angle).blueComponent > 0.8)
-        }
-        for angle in [21.0, 27, 33, 90, 177, 270] {
-            #expect(try sample(rest, angle: angle).blueComponent < 0.2)
-        }
-        #expect(try recognizedText(rest).isEmpty)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Rest: 3 minutes remaining. Focus complete."))
-        timer.togglePomodoroRunning()
-        _ = try render(hosting)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Rest: 3 minutes remaining. Focus complete."))
-        timer.togglePomodoroRunning()
-        now += 120
-        timer.update() // Final minute must not request a presentation change.
+        let before = try image(controller)
+        _ = try render(NSHostingView(rootView: CountdownView(countdown: controller, isCompact: !isCompact, changePresentation: {})))
+        #expect(try image(controller) == before)
+        let restored = makeController()
+        #expect(try image(restored) == before)
+        #expect(restored.pomodoro.accessibilityDescription == controller.pomodoro.accessibilityDescription)
+        #expect(restored.countdown.isPaused == paused)
         now += 60
-        timer.update()
-        timer.update()
-        let nextStage = try render(hosting)
-        #expect(timer.pomodoro.stage == 2)
-        for angle in [3.0, 15, 27] {
-            #expect(try sample(nextStage, angle: angle).blueComponent > 0.8)
-        }
-        for angle in [33.0, 90, 177] {
-            #expect(try sample(nextStage, angle: angle).greenComponent > 0.6)
-        }
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Rest: 5 minutes remaining."))
-        #expect(expansions == 0)
-        #expect(sounds == 0)
+        restored.update()
+        #expect(restored.pomodoro.restRemaining == (paused ? 480 : 420))
     }
 
     @Test(arguments: CountdownMode.allCases, [false, true])
     func hostedPressChangesPresentationWithoutChangingTimerState(mode: CountdownMode, isCompact: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
         var expansions = 0
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
+            featureState: CountdownFeatureState(popupEnabled: false),
             playSound: { _ in }, now: { now }
         )
+        timer.selectMode(.countdown)
         timer.adjustTimerDuration(by: 1_800)
         timer.toggleRunning()
         timer.selectMode(mode)
@@ -211,6 +106,7 @@ struct CountdownViewTests {
         window.contentView = hosting
         defer { window.close() }
         hosting.layoutSubtreeIfNeeded()
+        #expect(accessibilityLabels(hosting).contains(mode == .pomodoro ? timer.pomodoro.accessibilityDescription : "30 minutes remaining"))
         #expect(pressTimer(hosting, labelPrefix: mode == .pomodoro ? "Pomodoro " : "30 minutes remaining"))
         #expect(expansions == 1)
         #expect(timer.controlLabel == "Resume")
@@ -241,11 +137,12 @@ struct CountdownViewTests {
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
-            playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }
+            featureState: CountdownFeatureState(popupEnabled: false),
+            playSound: { _ in }, now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }
         )
+        timer.selectMode(.countdown)
         timer.adjustTimerDuration(by: 1_200)
-        timer.toggleTimerRunning()
+        timer.toggleRunning()
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: {}))
         let before = try render(hosting)
         timer.selectMode(.pomodoro)
@@ -257,9 +154,8 @@ struct CountdownViewTests {
         event.location = CGPoint(x: 120, y: 50)
         adapter.handle(try #require(NSEvent(cgEvent: event)))
         let preview = try render(hosting)
-        #expect(try sample(preview, angle: 15).blueComponent > 0.8)
-        #expect(try sample(preview, angle: 90).greenComponent > 0.6)
-        timer.selectMode(.timer)
+        #expect(preview.representation(using: .png, properties: [:]) != before.representation(using: .png, properties: [:]))
+        timer.selectMode(.countdown)
         let after = try render(hosting)
         #expect(before.representation(using: .png, properties: [:]) == after.representation(using: .png, properties: [:]))
         #expect(timer.timer.isPaused)
@@ -270,82 +166,6 @@ struct CountdownViewTests {
         #expect(request.results?.contains { $0.topCandidates(1).first?.string == "20" } == true)
     }
 
-    @Test
-    func sectorScrollUpdatesHostedGeometryPhaseTextAndAccessibility() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
-        var sounds = 0
-        let timer = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
-            playSound: { _ in sounds += 1 }, now: { now }
-        )
-        timer.selectMode(.pomodoro)
-        let hosting = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: {}))
-        _ = try render(hosting)
-        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
-        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
-        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
-        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
-        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = hosting
-        defer { window.close() }
-        var scrollTime: TimeInterval = 0
-        let adapter = ScrollTimeAdjuster(countdown: timer, window: window, uptime: { scrollTime })
-        let blue = NSPoint(x: 110, y: 158)
-        let green = NSPoint(x: 160, y: 94)
-        adapter.handle(try scrollEvent(in: window, at: blue, delta: 12))
-        let largerRest = try render(hosting)
-        #expect(try sample(largerRest, angle: 33).blueComponent > 0.8)
-        #expect(try sample(largerRest, angle: 63).greenComponent > 0.6)
-        #expect(try sample(largerRest, angle: 207).greenComponent > 0.6)
-        #expect(try sample(largerRest, angle: 213).greenComponent < 0.2)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 25 minutes remaining. Rest: 10 minutes remaining."))
-        adapter.handle(try scrollEvent(in: window, at: green, delta: 12))
-        let largerFocus = try render(hosting)
-        #expect(try sample(largerFocus, angle: 33).blueComponent > 0.8)
-        #expect(try sample(largerFocus, angle: 237).greenComponent > 0.6)
-        #expect(try sample(largerFocus, angle: 243).greenComponent < 0.2)
-        adapter.handle(try scrollEvent(in: window, at: blue, delta: -12))
-        let smallerRest = try render(hosting)
-        #expect(try sample(smallerRest, angle: 27).blueComponent > 0.8)
-        #expect(try sample(smallerRest, angle: 33).greenComponent > 0.6)
-        #expect(try sample(smallerRest, angle: 207).greenComponent > 0.6)
-        #expect(try sample(smallerRest, angle: 213).greenComponent < 0.2)
-
-        now += 600
-        adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 127, y: 36), delta: -12))
-        let running = try render(hosting)
-        #expect(try sample(running, angle: 27).blueComponent > 0.8)
-        #expect(try sample(running, angle: 117).greenComponent > 0.6)
-        #expect(try sample(running, angle: 123).greenComponent < 0.2)
-        #expect(try recognizedText(running).isEmpty)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro running. Focus: 15 minutes remaining. Rest: 5 minutes remaining."))
-        timer.togglePomodoroRunning()
-        now += 1_200
-        adapter.handle(try scrollEvent(in: window, at: blue, delta: 12))
-        let paused = try render(hosting)
-        #expect(try sample(paused, angle: 33).blueComponent > 0.8)
-        #expect(try sample(paused, angle: 63).greenComponent > 0.6)
-        #expect(try sample(paused, angle: 147).greenComponent > 0.6)
-        #expect(try sample(paused, angle: 153).greenComponent < 0.2)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Focus: 15 minutes remaining. Rest: 10 minutes remaining."))
-        for _ in 0..<3 {
-            scrollTime += 0.5
-            adapter.handle(try scrollEvent(in: window, at: green, delta: -1, option: true))
-        }
-        let rest = try render(hosting)
-        #expect(try sample(rest, angle: 33).blueComponent > 0.8)
-        #expect(try sample(rest, angle: 63).greenComponent < 0.2)
-        #expect(try recognizedText(rest).isEmpty)
-        #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Rest: 10 minutes remaining. Focus complete."))
-        #expect(sounds == 0)
-        #expect(timer.timer.status == .empty)
-    }
-
     @Test(arguments: [32.0, 71, 123, 188], [false, true])
     func pomodoroStaysCircularAtBothPresentationsAndSquareTransitionSizes(side: Double, isCompact: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -353,21 +173,21 @@ struct CountdownViewTests {
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
-            playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }
+            featureState: CountdownFeatureState(popupEnabled: false),
+            playSound: { _ in }, now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }
         )
         timer.selectMode(.pomodoro)
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: isCompact, changePresentation: {}))
         let bitmap = try render(hosting, side: side)
         let radius = (side / 2 - (isCompact ? 0 : 6) - 4) / side
-        #expect(try sample(bitmap, angle: 15, radius: radius).blueComponent > 0.8)
+        #expect(try sample(bitmap, angle: 165, radius: radius).blueComponent > 0.8)
         #expect(try sample(bitmap, angle: 90, radius: radius).greenComponent > 0.6)
-        #expect(try sample(bitmap, angle: 270, radius: radius).greenComponent < 0.2)
+        #expect(try sample(bitmap, angle: 255, radius: min(radius, 0.32)).greenComponent < 0.2)
         if isCompact { #expect(try recognizedText(bitmap).isEmpty) }
         if isCompact && side == 188 {
-            #expect(try sample(bitmap, angle: 27).blueComponent > 0.8)
+            #expect(try sample(bitmap, angle: 153).blueComponent > 0.8)
             #expect(try sample(bitmap, angle: 33).greenComponent > 0.6)
-            #expect(try sample(bitmap, angle: 177).greenComponent > 0.6)
+            #expect(try sample(bitmap, angle: 147).greenComponent > 0.6)
             #expect(try sample(bitmap, angle: 183).greenComponent < 0.2)
         }
         #expect(try sample(bitmap, angle: 90, radius: 0.12).greenComponent > 0.6)
@@ -400,8 +220,8 @@ struct CountdownViewTests {
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false), playSound: { _ in },
-            now: { Date(timeIntervalSince1970: 1_700_000_000) }
+            featureState: CountdownFeatureState(popupEnabled: false), playSound: { _ in },
+            now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }
         )
         timer.selectMode(.pomodoro)
         let side = isCompact ? 32.0 : 188
@@ -413,7 +233,7 @@ struct CountdownViewTests {
         defer { window.close() }
         let adapter = ScrollTimeAdjuster(countdown: timer, window: window, isCompact: { isCompact }, uptime: { 0 })
         let radius = isCompact ? 14.0 : 80
-        let blue = NSPoint(x: side / 2 + radius * sin(.pi / 12), y: side / 2 + radius * cos(.pi / 12))
+        let blue = NSPoint(x: side / 2 + radius * sin(11 * .pi / 12), y: side / 2 + radius * cos(11 * .pi / 12))
         let green = NSPoint(x: side / 2 + radius, y: side / 2)
         adapter.handle(try scrollEvent(in: window, at: blue, delta: 12))
         #expect(timer.pomodoro.restDuration == 600)
@@ -423,139 +243,13 @@ struct CountdownViewTests {
         adapter.handle(try scrollEvent(in: window, at: green, delta: 5, option: true))
         #expect(timer.pomodoro.focusDuration == 1_800)
         let edited = try render(hosting, side: side)
-        #expect(try sample(edited, angle: 24).blueComponent > 0.8)
+        #expect(try sample(edited, angle: 210).blueComponent > 0.8)
         #expect(try sample(edited, angle: 72).greenComponent > 0.6)
-        #expect(try sample(edited, angle: 180).greenComponent > 0.6)
+        #expect(try sample(edited, angle: 174).greenComponent > 0.6)
         #expect(try sample(edited, angle: 252).greenComponent < 0.2)
         // OCR can read the four rings as punctuation; there must be no phase label.
         #expect(try recognizedText(edited).allSatisfy { $0 != "Focus" && $0 != "Rest" })
         #expect(timer.timer.status == .empty)
-    }
-
-    @Test
-    func presentationReplacementKeepsEditedRunningAndPausedPair() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
-        var sounds = 0
-        var presentationRequests = 0
-        let timer = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, autosetEnabled: true, popupEnabled: false),
-            playSound: { _ in sounds += 1 }, now: { now }
-        )
-        timer.selectMode(.pomodoro)
-        let normal = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: { presentationRequests += 1 }))
-        let compact = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: true, changePresentation: { presentationRequests += 1 }))
-        _ = try render(normal)
-        _ = try render(compact, side: 32)
-        let enhancedUI = NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface")
-        let previousEnhancedUI = NSApplication.shared.accessibilityAttributeValue(enhancedUI)
-        NSApplication.shared.accessibilitySetValue(true, forAttribute: enhancedUI)
-        defer { NSApplication.shared.accessibilitySetValue(previousEnhancedUI, forAttribute: enhancedUI) }
-        let window = NSWindow(contentRect: normal.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = normal
-        defer { window.close() }
-        var isCompact = false
-        let adapter = ScrollTimeAdjuster(countdown: timer, window: window, isCompact: { isCompact })
-        adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 110, y: 158), delta: 12, option: true))
-        adapter.handle(try scrollEvent(in: window, at: NSPoint(x: 160, y: 94), delta: -12, option: true))
-        #expect(timer.pomodoro.focusDuration == 1_200)
-        #expect(timer.pomodoro.restDuration == 600)
-
-        func showCompact() throws {
-            isCompact = true
-            window.contentView = compact
-            window.setContentSize(NSSize(width: 32, height: 32))
-            let bitmap = try render(compact, side: 32)
-            #expect(try recognizedText(bitmap).isEmpty)
-            #expect(timer.mode == .pomodoro)
-            #expect(timer.pomodoro.focusDuration == 1_200)
-            #expect(timer.pomodoro.restDuration == 600)
-        }
-        func showNormal() throws {
-            isCompact = false
-            window.contentView = normal
-            window.setContentSize(NSSize(width: 188, height: 188))
-            _ = try render(normal)
-            #expect(timer.mode == .pomodoro)
-            #expect(timer.pomodoro.focusDuration == 1_200)
-            #expect(timer.pomodoro.restDuration == 600)
-        }
-
-        try showCompact()
-        #expect(timer.pomodoro.status == .running)
-        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 20 minutes remaining. Rest: 10 minutes remaining."))
-        let ready = try render(compact, side: 32)
-        #expect(try sample(ready, angle: 30).blueComponent > 0.8)
-        #expect(try sample(ready, angle: 90).greenComponent > 0.6)
-        #expect(try sample(ready, angle: 210).greenComponent < 0.2)
-        try showNormal()
-        #expect(timer.pomodoro.status == .running)
-        now += 600
-        timer.update()
-        try showCompact()
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.focusRemaining == 600)
-        #expect(timer.pomodoro.restRemaining == 600)
-        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 10 minutes remaining. Rest: 10 minutes remaining."))
-        let focus = try render(compact, side: 32)
-        #expect(try sample(focus, angle: 30).blueComponent > 0.8)
-        #expect(try sample(focus, angle: 90).greenComponent > 0.6)
-        #expect(try sample(focus, angle: 150).greenComponent < 0.2)
-
-        // Both hosts can exist during the app's cross-fade. Repeated updates at
-        // one command time must not consume elapsed time twice or repeat a pair.
-        now += 600
-        timer.update()
-        try showNormal()
-        timer.update()
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.restRemaining == 600)
-        #expect(try recognizedText(render(normal)).isEmpty)
-        now += 120
-        timer.toggleRunning()
-        try showCompact()
-        now += 1_200
-        timer.update()
-        #expect(timer.pomodoro.status == .paused)
-        #expect(timer.pomodoro.restRemaining == 480)
-        #expect(accessibilityLabels(compact).contains("Pomodoro paused. Rest: 8 minutes remaining. Focus complete."))
-        let paused = try render(compact, side: 32)
-        #expect(try sample(paused, angle: 30).blueComponent > 0.8)
-        #expect(try sample(paused, angle: 90).greenComponent < 0.2)
-        try showNormal()
-        #expect(timer.pomodoro.status == .paused)
-        #expect(timer.pomodoro.restRemaining == 480)
-        try showCompact()
-        timer.toggleRunning()
-        now += 420
-        timer.update()
-        _ = try render(compact, side: 32)
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.restRemaining == 60)
-        #expect(presentationRequests == 0)
-        now += 60
-        timer.update()
-        timer.update()
-        let nextStage = try render(compact, side: 32)
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.stage == 2)
-        #expect(timer.pomodoro.focusRemaining == 1_200)
-        #expect(timer.pomodoro.restRemaining == 600)
-        #expect(try sample(nextStage, angle: 30).blueComponent > 0.8)
-        #expect(try sample(nextStage, angle: 90).greenComponent > 0.6)
-        #expect(accessibilityLabels(compact).contains("Pomodoro running. Focus: 20 minutes remaining. Rest: 10 minutes remaining."))
-        try showNormal()
-        #expect(timer.pomodoro.status == .running)
-        #expect(presentationRequests == 0)
-        #expect(sounds == 0)
-        #expect(timer.timer.status == .active)
-        #expect(!timer.countdown.isPaused)
-        #expect(timer.features.popupIntervalCount == 0)
     }
 
     @Test
@@ -565,9 +259,10 @@ struct CountdownViewTests {
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false), playSound: { _ in },
-            now: { Date(timeIntervalSince1970: 1_700_000_000) }
+            featureState: CountdownFeatureState(), playSound: { _ in },
+            now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }
         )
+        timer.selectMode(.countdown)
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: true, changePresentation: {}))
         let original = NSHostingView(rootView: CompactTimerView(model: timer.timer))
         func expectUnchangedBitmap() throws {
@@ -578,71 +273,73 @@ struct CountdownViewTests {
         try expectUnchangedBitmap() // Empty Countdown.
         timer.adjustTimerDuration(by: 1_200)
         try expectUnchangedBitmap() // Active Countdown.
-        timer.toggleTimerRunning()
+        timer.toggleRunning()
         try expectUnchangedBitmap() // Paused Countdown.
         timer.selectMode(.pomodoro)
         let pomodoro = try render(hosting, side: 32)
-        #expect(try sample(pomodoro, angle: 15).blueComponent > 0.8)
+        #expect(timer.mode.isClockEnabled)
         #expect(try recognizedText(pomodoro).isEmpty)
-        timer.selectMode(.timer)
+        timer.selectMode(.countdown)
         #expect(timer.timer.isPaused)
         #expect(timer.timer.remaining == 1_200)
         try expectUnchangedBitmap()
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func compactDirectionFollowsClockSetting(mode: CountdownMode) throws {
+    func compactDirectionFollowsTimerMode(mode: CountdownMode) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 20))!
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: true, popupEnabled: false),
+            featureState: CountdownFeatureState(popupEnabled: false),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.adjustTimerDuration(by: 1_800)
         timer.selectMode(mode)
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isCompact: true, changePresentation: {}))
-        let clock = try render(hosting, side: 32)
-        #expect(try sample(clock, angle: 240).greenComponent > 0.6)
-        #expect(try sample(clock, angle: 15).greenComponent < 0.2)
-        #expect(try sample(clock, angle: 15).blueComponent < 0.2)
-        if mode == .pomodoro { #expect(try sample(clock, angle: 282).blueComponent > 0.8) }
-        timer.features.setClockEnabled(false)
-        let duration = try render(hosting, side: 32)
-        #expect(try sample(duration, angle: 240).greenComponent < 0.2)
-        #expect(try sample(duration, angle: 90).greenComponent > 0.6)
-        timer.features.setClockEnabled(true)
-        #expect(try render(hosting, side: 32).representation(using: .png, properties: [:]) == clock.representation(using: .png, properties: [:]))
+        let initial = try render(hosting, side: 32)
+        if mode.isClockEnabled {
+            #expect(try sample(initial, angle: 240).greenComponent > 0.6)
+            #expect(try sample(initial, angle: 15).greenComponent < 0.2)
+        } else {
+            #expect(try sample(initial, angle: 90).greenComponent > 0.6)
+            #expect(try sample(initial, angle: 240).greenComponent < 0.2)
+        }
+        if mode == .pomodoro { #expect(try sample(initial, angle: 282).blueComponent > 0.8) }
+        for other in CountdownMode.allCases { timer.selectMode(other) }
+        timer.selectMode(mode)
+        #expect(try render(hosting, side: 32).representation(using: .png, properties: [:]) == initial.representation(using: .png, properties: [:]))
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func sharedClockControlsChangeBothModeDisplays(mode: CountdownMode) throws {
+    func modeSelectionChangesDisplayAndReturnsToTheSameImage(mode: CountdownMode) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false),
-            playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_700_000_000) }, saveEnablement: { _, _ in }
+            featureState: CountdownFeatureState(),
+            playSound: { _ in }, now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, changePresentation: {}))
         func image() throws -> Data? {
             try render(hosting).representation(using: .png, properties: [:])
         }
-        let plain = try image()
-        timer.features.setClockEnabled(true)
-        let clock = try image()
-        #expect(clock != plain)
-        timer.features.setClockEnabled(false)
-        #expect(try image() == plain)
+        let initial = try image()
+        for other in CountdownMode.allCases where other != mode {
+            timer.selectMode(other)
+            #expect(try image() != initial)
+        }
+        timer.selectMode(mode)
+        #expect(try image() == initial)
     }
 
     @Test(arguments: [0.0, 1_500, 1_800, 3_600, 5_400, 6_900, 7_800])
     func fourDotsRenderCompletedCurrentAndPendingFocus(elapsed: TimeInterval) throws {
-        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let start = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
         var model = PomodoroModel()
         model.toggleRunning(at: start)
         model.update(at: start + elapsed)
@@ -674,8 +371,8 @@ struct CountdownViewTests {
         }
     }
 
-    @Test(arguments: [0.0, 1_500, 1_800, 6_900], [false, true])
-    func popupShowsCurrentPhaseTimeAndSession(elapsed: TimeInterval, clockEnabled: Bool) throws {
+    @Test(arguments: [0.0, 1_500, 1_800, 6_900])
+    func popupShowsCurrentPhaseTimeAndSession(elapsed: TimeInterval) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         // Start on a clock mark so both displays have the same phase times.
@@ -683,7 +380,7 @@ struct CountdownViewTests {
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: clockEnabled, popupEnabled: false),
+            featureState: CountdownFeatureState(popupEnabled: false),
             playSound: { _ in }, now: { now }
         )
         timer.selectMode(.pomodoro)
@@ -696,11 +393,11 @@ struct CountdownViewTests {
         #expect(text.contains(elapsed == 1_500 ? "5:00" : elapsed == 6_900 ? "15:00" : "25:00"))
         #expect(text.contains("Session \(timer.pomodoro.stage) of 4"))
         #expect(!text.contains("Next"))
-        #expect(timer.features.isClockEnabled == clockEnabled)
+        #expect(timer.mode.isClockEnabled)
 
         // The popup does not change sector geometry outside its label.
         let normal = try render(NSHostingView(rootView: PomodoroView(
-            model: timer.pomodoro, clockDate: clockEnabled ? now : nil
+            model: timer.pomodoro, clockDate: now
         )))
         for angle in [15.0, 90, 270, 345] {
             let actual = try sample(bitmap, angle: angle, radius: 0.42)
@@ -715,21 +412,22 @@ struct CountdownViewTests {
     func timerPopupShowsExactTimeEvenWithTimeoutDisabled(clockEnabled: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
         let timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: clockEnabled, currentTimeoutEnabled: false, popupEnabled: false),
+            featureState: CountdownFeatureState(currentTimeoutEnabled: false, popupEnabled: false),
             playSound: { _ in }, now: { now }
         )
+        timer.selectMode(clockEnabled ? .timer : .countdown)
         timer.adjustTimerDuration(by: 600)
         let hosting = NSHostingView(rootView: CountdownView(countdown: timer, isPopup: true, changePresentation: {}))
-        #expect(try recognizedText(render(hosting)).contains(clockEnabled ? "11:40" : "10:00"))
+        #expect(try recognizedText(render(hosting)).contains("10:00"))
         now += 78
         timer.update()
         let text = try recognizedText(render(hosting)).joined(separator: " ")
-        #expect(text.contains("Timer"))
-        #expect(text.contains(clockEnabled ? "10:22" : "8:42"))
+        #expect(text.contains(timer.mode.label))
+        #expect(text.contains("8:42"))
         #expect(!text.contains("Session"))
         timer.toggleRunning()
         #expect(try recognizedText(render(hosting)).contains("Paused"))

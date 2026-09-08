@@ -1,14 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// Shared presentation, clock, update loop, and controls surround either timing mode.
+/// Shared presentation, clock, update loop, and controls surround all three modes.
 struct CountdownView: View {
     @ObservedObject var countdown: CountdownController
     var isCompact = false
     var isPopup = false
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
-    @ObservedObject private var features: CountdownFeatures
     @State private var currentTime = Date.now
 
     init(countdown: CountdownController, isCompact: Bool = false, isPopup: Bool = false, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
@@ -17,7 +16,6 @@ struct CountdownView: View {
         self.isPopup = isPopup
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
-        self.features = countdown.features
         self._currentTime = State(initialValue: countdown.currentTime)
     }
 
@@ -28,7 +26,7 @@ struct CountdownView: View {
                 if showsPopupDetails {
                     popupOverlay
                 } else if !isCompact {
-                    CountdownClockOverlay(features: features, currentTime: currentTime)
+                    CountdownClockOverlay(isClockEnabled: countdown.mode.isClockEnabled, currentTime: currentTime)
                         .padding(6)
                 }
             }
@@ -40,13 +38,7 @@ struct CountdownView: View {
         .accessibilityHint("Click to use \(isCompact ? "normal" : "compact") view. Use the right-click menu to \(countdown.controlLabel.lowercased()).")
         .help("Click to change view. Use the right-click menu for timer controls. Scroll to adjust time; hold Option for slower adjustment.")
         .contextMenu {
-            Picker("Display", selection: Binding(get: { features.isClockEnabled }, set: features.setClockEnabled)) {
-                Text("Countdown").tag(false)
-                Text("Clock").tag(true)
-            }
-            .pickerStyle(.inline)
-            Divider()
-            Picker("Timer Mode", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
+            Picker("Timer mode", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
                 ForEach(CountdownMode.allCases, id: \.self) { mode in
                     Text(mode.label).tag(mode)
                 }
@@ -58,13 +50,13 @@ struct CountdownView: View {
                 .disabled(!countdown.canToggleRunning)
             Button(isCompact ? "Normal" : "Compact", action: changePresentation)
             Divider()
-            if countdown.mode == .timer {
+            if countdown.mode.usesTimer {
                 TimerContextMenu(model: countdown.timer, setToNextHour: countdown.setTimerToNextHour)
             } else {
-                Menu(features.isClockEnabled ? "End times" : "Durations") {
-                    durationMenu("Focus", phase: .focus, duration: countdown.pomodoro.focusDuration)
-                    durationMenu("Rest", phase: .rest, duration: countdown.pomodoro.restDuration)
-                    durationMenu("Long rest", phase: .longRest, duration: countdown.pomodoro.longRestDuration)
+                Menu("End times") {
+                    endTimeMenu("Focus", phase: .focus)
+                    endTimeMenu("Rest", phase: .rest)
+                    endTimeMenu("Long rest", phase: .longRest)
                 }
                 Button("Reset", action: countdown.resetPomodoro)
             }
@@ -83,22 +75,23 @@ struct CountdownView: View {
         }
     }
 
-    private func durationMenu(_ label: String, phase: PomodoroModel.Phase, duration: TimeInterval) -> some View {
-        let value = countdown.pomodoro.clockSchedule.map {
-            $0.end(for: phase).formatted(date: .omitted, time: .shortened)
-        } ?? "\(Int(duration / 60)) min"
-        return Menu("\(label): \(value)") {
-            Button("Increase to next 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: 1) }
-            Button("Decrease to previous 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: -1) }
+    @ViewBuilder
+    private func endTimeMenu(_ label: String, phase: PomodoroModel.Phase) -> some View {
+        if let schedule = countdown.pomodoro.clockSchedule {
+            let value = schedule.end(for: phase).formatted(date: .omitted, time: .shortened)
+            Menu("\(label): \(value)") {
+                Button("Increase to next 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: 1) }
+                Button("Decrease to previous 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: -1) }
+            }
         }
     }
 
     private var showsPopupDetails: Bool { isPopup && !isCompact }
 
     private var popupOverlay: CountdownPopupOverlay {
-        if countdown.mode == .timer {
+        if countdown.mode.usesTimer {
             return CountdownPopupOverlay(
-                remaining: countdown.timer.remaining, phase: "Timer", isPaused: countdown.countdown.isPaused
+                remaining: countdown.timer.remaining, phase: countdown.mode.label, isPaused: countdown.countdown.isPaused
             )
         }
         let model = countdown.pomodoro
@@ -113,7 +106,7 @@ struct CountdownView: View {
     @ViewBuilder
     private var modeContent: some View {
         switch countdown.mode {
-        case .timer:
+        case .timer, .countdown:
             if isCompact {
                 CompactTimerView(model: countdown.timer, clockDate: clockDate)
             } else {
@@ -125,12 +118,12 @@ struct CountdownView: View {
     }
 
     private var clockDate: Date? {
-        features.isClockEnabled ? currentTime : nil
+        countdown.mode.isClockEnabled ? currentTime : nil
     }
 
     private var accessibilityLabel: String {
         switch countdown.mode {
-        case .timer:
+        case .timer, .countdown:
             countdown.timer.status == .empty ? "Empty Timer" : "\(countdown.timer.remainingMinutes) minutes remaining"
         case .pomodoro: countdown.pomodoro.accessibilityDescription
         }
@@ -138,7 +131,7 @@ struct CountdownView: View {
 
     private func activate() {
         guard allowsClick() else { return }
-        if countdown.mode == .timer, !isCompact, NSEvent.modifierFlags.contains(.option) {
+        if countdown.mode.usesTimer, !isCompact, NSEvent.modifierFlags.contains(.option) {
             countdown.setTimerToNextHour()
         } else {
             changePresentation()
@@ -146,7 +139,7 @@ struct CountdownView: View {
     }
 
     private func expandAtOneMinuteRemaining() {
-        guard isCompact, countdown.mode == .timer, countdown.timer.status == .active,
+        guard isCompact, countdown.mode.usesTimer, countdown.timer.status == .active,
               countdown.timer.remaining > 0, countdown.timer.remaining <= 60 else { return }
         changePresentation()
     }

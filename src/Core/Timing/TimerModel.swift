@@ -18,7 +18,7 @@ final class TimerModel: ObservableObject {
     var isPausedByCore = false
     private(set) var endDate: Date?
     private(set) var pausedAt: Date?
-    private(set) var isClockEnabled = false
+    private(set) var isClockEnabled: Bool
     private var completionWasReported = false
     private let stateStore: TimerStateStore
     private let configuration: CountdownConfiguration
@@ -33,6 +33,7 @@ final class TimerModel: ObservableObject {
         stateStore: TimerStateStore = .default,
         configuration: CountdownConfiguration = .default,
         featureState: CountdownFeatureState? = nil,
+        isClockEnabled: Bool,
         playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
         reportElapsed: @escaping (TimeInterval, TimeInterval) -> Void = { _, _ in },
@@ -51,7 +52,7 @@ final class TimerModel: ObservableObject {
         isCurrentTimeoutEnabled = state.currentTimeoutEnabled
         isAutosetEnabled = state.autosetEnabled
         isAlarmEnabled = state.alarmEnabled
-        isClockEnabled = state.clockEnabled
+        self.isClockEnabled = isClockEnabled
         restore()
         if timeoutActionsEnabled() { autoset() }
     }

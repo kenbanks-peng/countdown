@@ -23,7 +23,6 @@ struct CountdownFeatureStateTests {
         let configURL = configDirectory.appendingPathComponent("config.toml")
         let contents = """
         [display]
-        clock_enabled = true
         current_timeout_enabled = true
         [notifications]
         popup_enabled = true
@@ -50,7 +49,7 @@ struct CountdownFeatureStateTests {
             )
         }
         let original = controller()
-        original.features.setClockEnabled(false)
+        original.selectMode(.countdown)
         original.features.setPopupEnabled(false)
         original.timer.setCurrentTimeoutEnabled(false)
         original.timer.setAutosetEnabled(true)
@@ -61,7 +60,7 @@ struct CountdownFeatureStateTests {
         )
         #expect(savedFeatures["popup_enabled"] == false)
         let restored = controller()
-        #expect(!restored.features.isClockEnabled)
+        #expect(!restored.mode.isClockEnabled)
         #expect(!restored.features.isPopupEnabled)
         #expect(!restored.timer.isCurrentTimeoutEnabled)
         #expect(restored.timer.isAutosetEnabled)
@@ -76,7 +75,7 @@ struct CountdownFeatureStateTests {
         #expect(try String(contentsOf: configURL, encoding: .utf8) == contents)
     }
 
-    @Test(arguments: [nil, "{}", "invalid", "{\"clock_enabled\":false}", "{\"alarm_enabled\":\"invalid\"}"] as [String?])
+    @Test(arguments: [nil, "{}", "invalid", "{\"alarm_enabled\":false}", "{\"alarm_enabled\":\"invalid\"}"] as [String?])
     func missingPartialOrInvalidStateUsesDefaults(contents: String?) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -85,10 +84,9 @@ struct CountdownFeatureStateTests {
             try contents.write(to: directory.appendingPathComponent("features.json"), atomically: true, encoding: .utf8)
         }
         let state = CountdownFeatureStateStore(stateDirectory: directory).load()
-        #expect(state.clockEnabled == (contents != "{\"clock_enabled\":false}"))
         #expect(state.currentTimeoutEnabled)
         #expect(state.popupEnabled)
-        #expect(state.alarmEnabled)
+        #expect(state.alarmEnabled == (contents != "{\"alarm_enabled\":false}"))
         #expect(!state.autosetEnabled)
     }
 
@@ -101,11 +99,11 @@ struct CountdownFeatureStateTests {
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in }
         )
-        controller.features.setClockEnabled(false)
+        controller.selectMode(.countdown)
         controller.features.setPopupEnabled(false)
         controller.timer.setCurrentTimeoutEnabled(false)
         controller.timer.setAutosetEnabled(true)
-        #expect(!controller.features.isClockEnabled)
+        #expect(!controller.mode.isClockEnabled)
         #expect(!controller.features.isPopupEnabled)
         #expect(!controller.timer.isCurrentTimeoutEnabled)
         #expect(controller.timer.isAutosetEnabled)
@@ -118,7 +116,6 @@ struct CountdownFeatureStateTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let timerStore = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
         let stateStore = CountdownFeatureStateStore(stateDirectory: timerStore.stateDirectory)
-        stateStore.saveEnablement("clock_enabled", enabled: false)
         stateStore.saveEnablement("current_timeout_enabled", enabled: false)
         stateStore.saveEnablement("popup_enabled", enabled: false)
         let controller = CountdownController(
@@ -126,7 +123,7 @@ struct CountdownFeatureStateTests {
             configuration: CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path]),
             playSound: { _ in }
         )
-        #expect(!controller.features.isClockEnabled)
+        #expect(controller.mode == .timer)
         #expect(!controller.features.isPopupEnabled)
         #expect(!controller.timer.isCurrentTimeoutEnabled)
     }

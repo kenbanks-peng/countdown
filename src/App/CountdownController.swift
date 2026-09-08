@@ -50,32 +50,26 @@ final class CountdownController: ObservableObject {
         )
         self.features = features
         let timer = TimerModel(
-            stateStore: stateStore, configuration: configuration, featureState: state, playSound: playSound, now: now,
+            stateStore: stateStore, configuration: configuration, featureState: state,
+            isClockEnabled: settings.mode.isClockEnabled, playSound: playSound, now: now,
             reportElapsed: { previous, remaining in
-                if policy.mode == .timer {
+                if policy.mode.usesTimer {
                     features.reportElapsed(previousRemaining: previous, remaining: remaining)
                 }
             },
-            timeoutActionsEnabled: { policy.mode == .timer }
+            timeoutActionsEnabled: { policy.mode.usesTimer }
         )
         var pomodoro = PomodoroModel(
             focusDuration: settings.focusDuration, restDuration: settings.restDuration,
             longRestDuration: settings.longRestDuration ?? 900, cycles: configuration.pomodoroCycles
         )
-        if state.clockEnabled, let schedule = settings.pomodoroClockSchedule {
+        if let schedule = settings.pomodoroClockSchedule {
             pomodoro.restoreClockSchedule(schedule, at: now())
         }
         countdown = CountdownEngine(
             timer: timer, pomodoro: pomodoro,
             isPaused: settings.isPaused ?? timer.isPaused, now: now
         )
-        countdown.setClockEnabled(state.clockEnabled)
-        features.clockEnablementChanged = { [weak self] enabled in
-            guard let self else { return }
-            self.update()
-            self.countdown.setClockEnabled(enabled)
-            self.saveSettings()
-        }
         countdownChanges = countdown.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
         }
@@ -97,20 +91,21 @@ final class CountdownController: ObservableObject {
         update()
         self.mode = mode
         timeoutPolicy.mode = mode
+        timer.setClockEnabled(mode.isClockEnabled)
         saveSettings()
     }
 
     func adjustTimerDuration(by amount: TimeInterval) {
-        guard mode == .timer else { return }
+        guard mode.usesTimer else { return }
         update()
         timer.adjustDuration(by: amount)
     }
 
     func adjustTimerDuration(steps: Int) {
-        guard mode == .timer, steps != 0 else { return }
+        guard mode.usesTimer, steps != 0 else { return }
         let date = currentTime
         update(at: date)
-        if features.isClockEnabled {
+        if mode.isClockEnabled {
             timer.adjustClockEndpoint(steps: steps, at: date)
             return
         }
@@ -122,12 +117,12 @@ final class CountdownController: ObservableObject {
     }
 
     func toggleTimerRunning() {
-        guard mode == .timer else { return }
+        guard mode.usesTimer else { return }
         toggleRunning()
     }
 
     func setTimerToNextHour() {
-        guard mode == .timer else { return }
+        guard mode.usesTimer else { return }
         update()
         timer.setDurationToNextHour()
     }
@@ -143,69 +138,8 @@ final class CountdownController: ObservableObject {
         guard mode == .pomodoro, steps != 0 else { return }
         let date = currentTime
         update(at: date)
-        if features.isClockEnabled {
-            countdown.adjustPomodoroEndpoint(phase, steps: steps, at: date)
-            saveSettings()
-            return
-        }
-        let originalStage = pomodoro.stage
-        let originalEnd = pomodoroAdjustmentRange(phase).end
-        let leading = pomodoro.restPhase
-        let trailing: PomodoroModel.Phase = .focus
-        let editsVisiblePair = phase == .focus || phase == pomodoro.restPhase
-
-        if editsVisiblePair && phase == trailing {
-            alignPomodoroEnd(leading, at: date)
-        }
-        let range = pomodoroAdjustmentRange(phase)
-        let delta = CountdownAdjustment.delta(
-            steps: steps, end: range.end, minimum: range.minimum, maximum: range.maximum,
-            from: originalEnd
-        )
-        countdown.adjustPomodoroDuration(phase, by: delta, at: date)
-        if editsVisiblePair {
-            if pomodoro.stage != originalStage {
-                // A decrease can finish rest. Align the new pair, not the completed stage.
-                alignPomodoroEnd(pomodoro.restPhase, at: date)
-                alignPomodoroEnd(.focus, at: date)
-            } else {
-                // Moving the leading boundary must not leave the following end between marks.
-                alignPomodoroEnd(trailing, at: date)
-            }
-        }
+        countdown.adjustPomodoroEndpoint(phase, steps: steps, at: date)
         saveSettings()
-    }
-
-    private func alignPomodoroEnd(_ phase: PomodoroModel.Phase, at date: Date) {
-        if phase == .focus && pomodoro.focusRemaining == 0 { return }
-        let range = pomodoroAdjustmentRange(phase)
-        let delta = CountdownAdjustment.nearestDelta(
-            end: range.end, minimum: range.minimum, maximum: range.maximum
-        )
-        countdown.adjustPomodoroDuration(phase, by: delta, at: date)
-    }
-
-    private func pomodoroAdjustmentRange(
-        _ phase: PomodoroModel.Phase
-    ) -> (end: TimeInterval, minimum: TimeInterval, maximum: TimeInterval) {
-        let model = pomodoro
-        let duration: TimeInterval
-        let end: TimeInterval
-        let maximum: TimeInterval
-        switch phase {
-        case .focus:
-            duration = model.focusDuration
-            // Completed focus can still be edited for the next stage from the menu.
-            let remaining = model.focusRemaining > 0 ? model.focusRemaining : duration
-            end = model.activeRestDuration + remaining
-            maximum = 3_600 - model.restDuration
-        case .rest, .longRest:
-            duration = phase == .rest ? model.restDuration : model.longRestDuration
-            let remaining = phase == model.restPhase ? model.restRemaining : duration
-            end = remaining
-            maximum = phase == .longRest ? 3_600 : 3_600 - model.focusDuration
-        }
-        return (end: end, minimum: end + 300 - duration, maximum: end + maximum - duration)
     }
 
     func togglePomodoroRunning() {

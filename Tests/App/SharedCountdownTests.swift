@@ -8,23 +8,23 @@ struct SharedCountdownTests {
     func pauseWithAnEmptyTimerAppliesToNewDurationsAndSurvivesRestart(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
         let configuration = CountdownConfiguration(alarmNotificationURL: nil)
-        let featureState = CountdownFeatureState(clockEnabled: false, popupEnabled: false)
+        let featureState = CountdownFeatureState(popupEnabled: false)
         let controller = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in }, now: { now })
         controller.selectMode(mode)
         #expect(controller.canToggleRunning)
         #expect(controller.controlLabel == "Pause")
         controller.toggleRunning()
-        now += 100
+        now += 300
         controller.selectMode(.timer)
         controller.adjustTimerDuration(by: 600)
         #expect(controller.timer.isPaused)
         #expect(controller.pomodoro.status == .paused)
         controller.selectMode(.pomodoro)
         controller.save()
-        now += 100
+        now += 300
         let restored = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in }, now: { now })
         #expect(restored.controlLabel == "Resume")
         #expect(restored.timer.remaining == 600)
@@ -42,11 +42,11 @@ struct SharedCountdownTests {
     func switchingModesDoesNotPauseAndPomodoroStartsAutomatically() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         let controller = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
+            featureState: CountdownFeatureState(popupEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.adjustTimerDuration(by: 1_200)

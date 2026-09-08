@@ -32,7 +32,7 @@ struct CountdownPersistenceTests {
         #expect(restored.longRestDuration == 900)
         let data = try Data(contentsOf: directory.appendingPathComponent("settings.json"))
         let record = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        #expect(record["mode"] as? String == (mode == .timer ? "Timer" : "Pomodoro"))
+        #expect(record["mode"] as? String == mode.rawValue)
         #expect(Set(record.keys) == ["mode", "focusDuration", "restDuration", "longRestDuration"])
         #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("session.json").path))
     }

@@ -23,6 +23,8 @@ final class CountdownEngine: ObservableObject {
         } else {
             timer.start()
         }
+        // Pomodoro keeps its clock schedule while either timer presentation is selected.
+        self.pomodoro.setClockEnabled(true, at: now())
         timerChanges = timer.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
         }
@@ -47,11 +49,6 @@ final class CountdownEngine: ObservableObject {
         }
     }
 
-    func setClockEnabled(_ enabled: Bool) {
-        timer.setClockEnabled(enabled)
-        pomodoro.setClockEnabled(enabled, at: now())
-    }
-
     func adjustPomodoroEndpoint(_ phase: PomodoroModel.Phase, steps: Int, at date: Date) {
         pomodoro.adjustClockEndpoint(phase, steps: steps, at: date)
     }
@@ -62,10 +59,9 @@ final class CountdownEngine: ObservableObject {
 
     /// Reset the cycle without changing the shared run state.
     func resetPomodoro() {
-        let clock = pomodoro.clockSchedule != nil
         pomodoro.reset()
         pomodoro.toggleRunning(at: now())
         if isPaused { pomodoro.pause(at: now()) }
-        pomodoro.setClockEnabled(clock, at: now())
+        pomodoro.setClockEnabled(true, at: now())
     }
 }

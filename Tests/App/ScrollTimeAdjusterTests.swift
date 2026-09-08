@@ -10,7 +10,6 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.now = Calendar.current.startOfDay(for: session.now) + 3 * 3_600 + 10 * 60
         let timer = session.timer
-        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         timer.adjustPomodoroDuration(.focus, steps: 100)
         session.now += 15 * 60
@@ -49,7 +48,6 @@ struct ScrollTimeAdjusterTests {
     func downwardScrollKeepsItsTargetWhenTheSectorShrinks() throws {
         let session = Session()
         defer { session.close() }
-        session.timer.features.setClockEnabled(true)
         session.timer.selectMode(.pomodoro)
         // :44 is initially focus, but becomes rest after the first decrease.
         try session.scroll(angle: 264, delta: -12)
@@ -68,7 +66,6 @@ struct ScrollTimeAdjusterTests {
     func endedGesturesReleaseTheTargetAndMomentumDoesNotEdit(ending: NSEvent.Phase) throws {
         let session = Session()
         defer { session.close() }
-        session.timer.features.setClockEnabled(true)
         session.timer.selectMode(.pomodoro)
         try session.scroll(angle: 264, delta: -1, phase: .began)
         #expect(session.timer.pomodoro.focusDuration == 1_200)
@@ -83,10 +80,11 @@ struct ScrollTimeAdjusterTests {
         #expect(session.timer.pomodoro.restDuration == 900)
     }
 
-    @Test(arguments: [false, true])
-    func timerScrollUsesFiveMinuteStepsAndStopsAtFiveMinutes(option: Bool) throws {
+    @Test(arguments: [CountdownMode.timer, .countdown], [false, true])
+    func timerScrollUsesFiveMinuteStepsAndStopsAtFiveMinutes(mode: CountdownMode, option: Bool) throws {
         let session = Session()
         defer { session.close() }
+        session.timer.selectMode(mode)
         let timer = session.timer.timer
         try session.scroll(angle: 90, delta: 1, option: option)
         #expect(timer.remaining == 300)
@@ -106,27 +104,27 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        try session.scroll(angle: 15, delta: 12)
+        try session.scroll(angle: 285, delta: 12)
         #expect(timer.pomodoro.restDuration == 600)
         #expect(timer.pomodoro.focusDuration == 1_500)
-        try session.scroll(angle: 45, delta: -12) // Rest now ends at 60 degrees.
+        try session.scroll(angle: 315, delta: -12) // Rest now ends at 330 degrees.
         #expect(timer.pomodoro.restDuration == 300)
-        try session.scroll(angle: 90, delta: 12)
+        try session.scroll(angle: 180, delta: 12)
         #expect(timer.pomodoro.focusDuration == 1_800)
-        try session.scroll(angle: 90, delta: -12)
+        try session.scroll(angle: 180, delta: -12)
         #expect(timer.pomodoro.focusDuration == 1_500)
         #expect(timer.pomodoro.restDuration == 300)
         #expect(timer.timer.status == .empty)
     }
 
-    @Test(arguments: [0.0, 29.999, 30, 30.001, 179.999, 180, 270, 359.999], [false, true])
-    func boundariesBelongToTheFollowingAllocatedSector(angle: Double, isCompact: Bool) throws {
+    @Test(arguments: [0.0, 149.999, 150, 150.001, 179.999, 180, 270, 359.999], [false, true])
+    func boundariesBelongToTheFollowingClockSector(angle: Double, isCompact: Bool) throws {
         let session = Session(isCompact: isCompact)
         defer { session.close() }
         session.timer.selectMode(.pomodoro)
-        try session.scroll(angle: angle, delta: 12)
-        #expect(session.timer.pomodoro.restDuration == (angle < 30 ? 600 : 300))
-        #expect(session.timer.pomodoro.focusDuration == (angle >= 30 && angle < 180 ? 1_800 : 1_500))
+        try session.scroll(angle: (angle + 120).truncatingRemainder(dividingBy: 360), delta: 12)
+        #expect(session.timer.pomodoro.restDuration == (angle >= 150 && angle < 180 ? 600 : 300))
+        #expect(session.timer.pomodoro.focusDuration == (angle < 150 ? 1_800 : 1_500))
     }
 
     @Test(arguments: [0.0, 88, 88.001, 100], [0.0, 15, 27])
@@ -134,7 +132,7 @@ struct ScrollTimeAdjusterTests {
         let session = Session()
         defer { session.close() }
         session.timer.selectMode(.pomodoro)
-        try session.scroll(angle: angle, radius: radius, delta: 12)
+        try session.scroll(angle: angle + 270, radius: radius, delta: 12)
         #expect(session.timer.pomodoro.restDuration == (radius == 88 ? 600 : 300))
         #expect(session.timer.pomodoro.focusDuration == 1_500)
     }
@@ -144,7 +142,7 @@ struct ScrollTimeAdjusterTests {
         let session = Session(isCompact: true)
         defer { session.close() }
         session.timer.selectMode(.pomodoro)
-        try session.scroll(angle: angle, radius: radius, delta: 12)
+        try session.scroll(angle: angle + 270, radius: radius, delta: 12)
         #expect(session.timer.pomodoro.restDuration == (radius == 16 ? 600 : 300))
         #expect(session.timer.pomodoro.focusDuration == 1_500)
     }
@@ -155,20 +153,20 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         let timer = session.timer
         timer.selectMode(.pomodoro)
-        try session.scroll(angle: 90, delta: 1, option: true)
+        try session.scroll(angle: 180, delta: 1, option: true)
         #expect(timer.pomodoro.focusDuration == 1_800)
-        try session.scroll(angle: 15, delta: 1, option: true, after: 0.001)
+        try session.scroll(angle: 315, delta: 1, option: true, after: 0.001)
         #expect(timer.pomodoro.restDuration == 600)
-        try session.scroll(angle: 90, delta: -1, after: 0.001)
+        try session.scroll(angle: 180, delta: -1, after: 0.001)
         #expect(timer.pomodoro.focusDuration == 1_500)
-        try session.scroll(angle: 315, delta: -1, after: 0.001)
+        try session.scroll(angle: 15, delta: -1, after: 0.001)
         #expect(timer.pomodoro.focusDuration == 1_500)
-        try session.scroll(angle: 90, delta: -1, after: 0.001)
+        try session.scroll(angle: 180, delta: -1, after: 0.001)
         #expect(timer.pomodoro.focusDuration == 1_200)
     }
 
     @Test
-    func modeAndFaceChangesResetTheScrollSpeedLimit() throws {
+    func modeChangesResetTheScrollSpeedLimit() throws {
         let session = Session()
         defer { session.close() }
         let timer = session.timer
@@ -179,8 +177,7 @@ struct ScrollTimeAdjusterTests {
         timer.selectMode(.timer)
         try session.scroll(angle: 90, delta: 1, option: true, after: 0.001)
         #expect(timer.timer.remaining == 600)
-        timer.features.setClockEnabled(true)
-        timer.features.setClockEnabled(false)
+        timer.selectMode(.countdown)
         try session.scroll(angle: 90, delta: 1, option: true, after: 0.001)
         #expect(timer.timer.remaining == 900)
         try session.scroll(angle: 90, delta: 1, after: 0.001)
@@ -198,7 +195,7 @@ struct ScrollTimeAdjusterTests {
             session.now += 5_400
             timer.update()
         }
-        let angle = phase == .focus ? 120.0 : 0
+        let angle = phase == .focus ? 150.0 : (phase == .longRest ? 105 : 285)
         let selected = {
             switch phase {
             case .focus: return timer.pomodoro.focusDuration
@@ -206,68 +203,18 @@ struct ScrollTimeAdjusterTests {
             case .longRest: return timer.pomodoro.longRestDuration
             }
         }
-        for _ in 0..<12 { try session.scroll(angle: angle, delta: 1_200, option: true) }
+        for _ in 0..<12 { try session.scroll(angle: angle, delta: 1_200, option: true, after: 0.16) }
         #expect(selected() == (phase == .focus ? 3_300 : (phase == .rest ? 2_100 : 3_600)))
-        try session.scroll(angle: angle, delta: 12)
+        try session.scroll(angle: angle, delta: 12, after: 0.16)
         #expect(selected() == (phase == .focus ? 3_300 : (phase == .rest ? 2_100 : 3_600)))
-        let minimumAngle = phase == .focus ? 45.0 : 0
-        for _ in 0..<12 { try session.scroll(angle: minimumAngle, delta: -1_200, option: true) }
+        for _ in 0..<12 { try session.scroll(angle: angle, delta: -1_200, option: true, after: 0.16) }
         #expect(selected() == 300)
-        try session.scroll(angle: minimumAngle, delta: -12)
+        try session.scroll(angle: angle, delta: -12, after: 0.16)
         #expect(selected() == 300)
-        try session.scroll(angle: minimumAngle, delta: 12)
+        try session.scroll(angle: angle, delta: 12, after: 0.16)
         #expect(selected() == 600)
         #expect(timer.pomodoro.status == .running)
         #expect(timer.timer.status == .empty)
-    }
-
-    @Test
-    func fullCircleSeamTargetsRestAndEditsRecomputeTheNextScrollTarget() throws {
-        let session = Session()
-        defer { session.close() }
-        let timer = session.timer
-        timer.selectMode(.pomodoro)
-        timer.adjustPomodoroDuration(.longRest, by: -600)
-        timer.adjustPomodoroDuration(.rest, by: 300)
-        timer.adjustPomodoroDuration(.focus, by: 1_500)
-        try session.scroll(angle: 0, delta: -12)
-        #expect(timer.pomodoro.restDuration == 300)
-        #expect(timer.pomodoro.focusDuration == 3_000)
-        timer.adjustPomodoroDuration(.rest, by: 300)
-        try session.scroll(angle: 45, delta: -19, option: true)
-        #expect(timer.pomodoro.restDuration == 300)
-        try session.scroll(angle: 45, delta: -1, option: true) // A new gesture now selects focus.
-        #expect(timer.pomodoro.focusDuration == 2_700)
-        try session.scroll(angle: 45, delta: -1, option: true)
-        #expect(timer.pomodoro.focusDuration == 2_400)
-    }
-
-    @Test(arguments: [false, true], [false, true])
-    func scrollEditsRunningAndPausedDurationsWithoutRefillingCompletedFocus(paused: Bool, isCompact: Bool) throws {
-        let session = Session(isCompact: isCompact)
-        defer { session.close() }
-        let timer = session.timer
-        timer.selectMode(.pomodoro)
-        session.now += 600
-        if paused {
-            timer.toggleRunning()
-            session.now += 1_200
-        }
-        try session.scroll(angle: 150, delta: -12) // Depleted green remains a focus target.
-        #expect(timer.pomodoro.focusDuration == 1_200)
-        #expect(timer.pomodoro.focusRemaining == 600)
-        for _ in 0..<2 { try session.scroll(angle: 90, delta: 1, option: true) }
-        #expect(timer.pomodoro.focusDuration == 1_800)
-        #expect(timer.pomodoro.focusRemaining == 1_200)
-        for _ in 0..<5 { try session.scroll(angle: 45, delta: -1, option: true) }
-        #expect(timer.pomodoro.focusDuration == 300)
-        #expect(timer.pomodoro.focusRemaining == 0)
-        try session.scroll(angle: 45, delta: 12)
-        #expect(timer.pomodoro.focusDuration == 600)
-        #expect(timer.pomodoro.focusRemaining == 0)
-        #expect(timer.pomodoro.restRemaining == 300)
-        #expect(timer.pomodoro.status == (paused ? .paused : .running))
-        #expect(session.sounds == 0)
     }
 
     @Test(arguments: [false, true])
@@ -277,7 +224,7 @@ struct ScrollTimeAdjusterTests {
         let timer = session.timer
         timer.selectMode(.pomodoro)
         session.now += 7_200
-        try session.scroll(angle: 45, delta: 12)
+        try session.scroll(angle: 120, delta: 12)
         #expect(timer.pomodoro.stage == 4)
         #expect(timer.pomodoro.longRestDuration == 1_200)
         #expect(timer.pomodoro.restRemaining == 900)
@@ -297,7 +244,6 @@ struct ScrollTimeAdjusterTests {
         let session = Session(isCompact: isCompact)
         defer { session.close() }
         let timer = session.timer
-        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         try session.scroll(angle: 150, delta: -12) // Focus ends at :40; rest moves to :45.
         #expect(timer.pomodoro.focusDuration == 1_200)
@@ -317,7 +263,6 @@ struct ScrollTimeAdjusterTests {
         defer { session.close() }
         session.now += 2_100 // :55, before controller creation.
         let timer = session.timer
-        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         let focus = angle < 120 || angle >= 330
         let rest = angle >= 120 && angle < 150
@@ -331,7 +276,6 @@ struct ScrollTimeAdjusterTests {
         let session = Session(isCompact: isCompact)
         defer { session.close() }
         let timer = session.timer
-        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         session.now += 600
         if paused {
@@ -352,7 +296,6 @@ struct ScrollTimeAdjusterTests {
         let session = Session(isCompact: isCompact)
         defer { session.close() }
         let timer = session.timer
-        timer.features.setClockEnabled(true)
         timer.selectMode(.pomodoro)
         session.now += 1_620 // :47, three minutes of rest remain.
         try session.scroll(angle: 288, delta: 12)
@@ -374,7 +317,7 @@ struct ScrollTimeAdjusterTests {
         lazy var timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
+            featureState: CountdownFeatureState(popupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now },
             saveEnablement: { _, _ in }
         )

@@ -1,10 +1,9 @@
 import Combine
 import Foundation
 
-/// App-wide display settings and interval notifications, shared by both modes.
+/// App-wide interval notifications, shared by all modes.
 @MainActor
 final class CountdownFeatures: ObservableObject {
-    @Published private(set) var isClockEnabled: Bool
     @Published private(set) var isPopupEnabled: Bool
     @Published private(set) var popupIntervalCount = 0
 
@@ -13,7 +12,6 @@ final class CountdownFeatures: ObservableObject {
     private let saveEnablement: (String, Bool) -> Void
     private let now: () -> Date
     private var nextPopup: Date?
-    var clockEnablementChanged: ((Bool) -> Void)?
 
     private var popupInterval: TimeInterval { TimeInterval(configuration.popupTime) * 60 }
 
@@ -28,15 +26,7 @@ final class CountdownFeatures: ObservableObject {
         self.configuration = configuration
         self.playSound = playSound
         self.saveEnablement = saveEnablement
-        isClockEnabled = state.clockEnabled
         isPopupEnabled = state.popupEnabled
-    }
-
-    func setClockEnabled(_ enabled: Bool) {
-        guard enabled != isClockEnabled else { return }
-        clockEnablementChanged?(enabled)
-        isClockEnabled = enabled
-        saveEnablement("clock_enabled", enabled)
     }
 
     func setPopupEnabled(_ enabled: Bool) {

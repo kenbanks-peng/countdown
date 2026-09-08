@@ -124,12 +124,12 @@ struct PomodoroLifecycleTests {
     @MainActor
     private final class Session {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         lazy var timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(clockEnabled: false, popupEnabled: false),
+            featureState: CountdownFeatureState(popupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
         func removeState() { try? FileManager.default.removeItem(at: directory) }

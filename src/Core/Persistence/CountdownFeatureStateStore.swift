@@ -2,7 +2,6 @@ import Foundation
 
 /// Persistent menu choices, separate from user configuration and timer progress.
 struct CountdownFeatureState {
-    var clockEnabled = true
     var currentTimeoutEnabled = true
     var autosetEnabled = false
     var popupEnabled = true
@@ -16,7 +15,6 @@ struct CountdownFeatureStateStore {
     func load() -> CountdownFeatureState {
         let values = readValues()
         return CountdownFeatureState(
-            clockEnabled: values["clock_enabled"] ?? true,
             currentTimeoutEnabled: values["current_timeout_enabled"] ?? true,
             autosetEnabled: values["autoset_enabled"] ?? false,
             popupEnabled: values["popup_enabled"] ?? true,

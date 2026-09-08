@@ -68,7 +68,7 @@ struct PopupTests {
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)
-        if mode == .timer { controller.adjustTimerDuration(by: 3_600) }
+        if mode.usesTimer { controller.adjustTimerDuration(by: 3_600) }
         now += 120 // Pause at 08:10.
         controller.toggleRunning()
         now += 31 * 60 // Resume at 08:41, without updates during the pause.

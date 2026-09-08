@@ -11,7 +11,7 @@ struct PomodoroPersistenceTests {
         let controller = session.makeController()
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, by: -300)
-        controller.adjustPomodoroDuration(.rest, by: 120)
+        controller.adjustPomodoroDuration(.rest, steps: 1)
         controller.adjustPomodoroDuration(.longRest, by: 300)
         session.now += 600
         controller.update()
@@ -22,14 +22,19 @@ struct PomodoroPersistenceTests {
         #expect(restored.mode == .pomodoro)
         #expect(restored.countdown.isPaused == paused)
         #expect(restored.pomodoro.status == (paused ? .paused : .running))
-        // Pomodoro allocations persist, but each launch creates a fresh cycle.
-        #expect(restored.pomodoro.stage == 1)
+        // The fixed schedule advances while closed, but a paused schedule stays frozen.
+        controller.update()
+        #expect(restored.pomodoro.clockSchedule?.focusEnd == controller.pomodoro.clockSchedule?.focusEnd)
+        #expect(restored.pomodoro.clockSchedule?.restEnd == controller.pomodoro.clockSchedule?.restEnd)
+        #expect(restored.pomodoro.stage == controller.pomodoro.stage)
         #expect(restored.pomodoro.longRestDuration == 1_200)
-        #expect(restored.pomodoro.focusRemaining == 1_200)
-        #expect(restored.pomodoro.restRemaining == 420)
+        #expect(restored.pomodoro.focusDuration == 1_200)
+        #expect(restored.pomodoro.restDuration == 600)
         session.now += 60
         restored.update()
-        #expect(restored.pomodoro.focusRemaining == (paused ? 1_200 : 1_140))
+        controller.update()
+        #expect(restored.pomodoro.focusRemaining == controller.pomodoro.focusRemaining)
+        #expect(restored.pomodoro.restRemaining == controller.pomodoro.restRemaining)
         restored.selectMode(.timer)
         #expect(restored.controlLabel == (paused ? "Resume" : "Pause"))
     }
@@ -128,7 +133,7 @@ struct PomodoroPersistenceTests {
         let controller = session.makeController()
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, by: -300)
-        controller.adjustPomodoroDuration(.rest, by: 120)
+        controller.adjustPomodoroDuration(.rest, steps: 1)
         session.now += 60
         controller.update()
         controller.save()
@@ -153,10 +158,10 @@ struct PomodoroPersistenceTests {
         try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: directory.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path) }
         #expect(!FileManager.default.isWritableFile(atPath: directory.path))
-        controller.adjustPomodoroDuration(.focus, by: 60)
+        controller.adjustPomodoroDuration(.focus, steps: 1)
         controller.selectMode(.timer)
         controller.save()
-        #expect(controller.pomodoro.focusDuration == 1_260)
+        #expect(controller.pomodoro.focusDuration == 1_500)
         let restored = session.makeController()
         #expect(restored.mode == .pomodoro)
         #expect(restored.pomodoro.focusDuration == 1_200)
@@ -167,7 +172,7 @@ struct PomodoroPersistenceTests {
         case active, prepared, staleActive, stalePrepared, expired, invalid
     }
 
-    @Test(arguments: CountdownRecord.allCases, ["missing", "invalid", "Timer", "Pomodoro"])
+    @Test(arguments: CountdownRecord.allCases, ["missing", "invalid", "Timer", "Pomodoro", "Countdown"])
     func timerRestorationDoesNotDependOnMode(record: CountdownRecord, selectedMode: String) throws {
         let session = Session()
         defer { session.removeState() }
@@ -184,19 +189,20 @@ struct PomodoroPersistenceTests {
             try Data(settings.utf8).write(to: session.settingsURL)
         }
         let restored = session.makeController()
-        #expect(restored.mode == (selectedMode == "Pomodoro" ? .pomodoro : .timer))
-        #expect(restored.pomodoro.status == (record == .prepared ? .paused : .running))
+        #expect(restored.mode == (CountdownMode(rawValue: selectedMode) ?? .timer))
+        let retainsPrepared = prepared && (record != .stalePrepared || restored.mode.isClockEnabled)
+        #expect(restored.pomodoro.status == (retainsPrepared ? .paused : .running))
         #expect(restored.timer.completionCount == 0)
         switch record {
         case .active:
             #expect(restored.timer.status == .active)
             #expect(restored.timer.remaining == 899)
             #expect(session.sounds == 0) // Restored elapsed time must not replay Popup.
-        case .prepared:
-            #expect(restored.timer.isPaused)
-            #expect(restored.timer.remaining == 1_200)
+        case .prepared, .stalePrepared:
+            #expect(restored.timer.isPaused == retainsPrepared)
+            #expect(restored.timer.remaining == (retainsPrepared ? 1_200 : 0))
             #expect(session.sounds == 0)
-        case .staleActive, .stalePrepared, .expired, .invalid:
+        case .staleActive, .expired, .invalid:
             #expect(restored.timer.status == .empty)
             #expect(session.sounds == 0)
         }
@@ -222,14 +228,14 @@ struct PomodoroPersistenceTests {
     @MainActor
     private final class Session {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         var store: TimerStateStore { TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]) }
         var settingsURL: URL { directory.appendingPathComponent("countdown/settings.json") }
         func makeController() -> CountdownController {
             CountdownController(
                 stateStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil),
-                featureState: CountdownFeatureState(clockEnabled: false),
+                featureState: CountdownFeatureState(),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }
