@@ -16,10 +16,12 @@ final class ScrollTimeAdjuster {
     private var monitor: Any?
     private var modeCancellable: AnyCancellable?
     private var lastEventAt: TimeInterval?
-    private var lastStepAt: TimeInterval?
     private var gesturePoint: NSPoint?
     private var lastDirection = 0
-    private let repeatInterval: TimeInterval = 0.15
+    private var accumulatedDistance = 0.0
+    private var previousPrecise: Bool?
+    private var previousOption: Bool?
+    private let preciseStepDistance = 12.0
     private let gestureTimeout: TimeInterval = 0.35
 
     init(countdown: CountdownController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false },
@@ -32,7 +34,7 @@ final class ScrollTimeAdjuster {
             self?.resetGesture()
         }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self?.handle(event)
             }
             return event
@@ -61,7 +63,7 @@ final class ScrollTimeAdjuster {
             ?? event.locationInWindow
         let pointerMoved = gesturePoint.map { hypot(point.x - $0.x, point.y - $0.y) > 3 } ?? false
         if event.phase.contains(.began) || pointerMoved
-            || lastEventAt.map({ now - $0 >= gestureTimeout }) == true {
+            || (event.phase.isEmpty && lastEventAt.map({ now - $0 >= gestureTimeout }) == true) {
             resetGesture()
         }
         defer {
@@ -78,20 +80,32 @@ final class ScrollTimeAdjuster {
         if gesturePoint == nil { gesturePoint = point }
         lastEventAt = now
         let direction = delta > 0 ? 1 : -1
-        // The first input and a direction reversal respond immediately. Do not queue
-        // distance or missed repeats: a large event must still move only one mark.
-        guard direction != lastDirection || lastStepAt.map({ now - $0 >= repeatInterval }) != false else { return }
+        let precise = event.hasPreciseScrollingDeltas
+        let option = event.modifierFlags.contains(.option)
+        if direction != lastDirection || precise != previousPrecise || option != previousOption {
+            accumulatedDistance = 0
+        }
         lastDirection = direction
-        lastStepAt = now
+        previousPrecise = precise
+        previousOption = option
+        // Wheel notches respond independently. Trackpads use distance, not event timing.
+        // Option requires three times the travel without changing the five-minute marks.
+        let threshold = (precise ? preciseStepDistance : 1) * (option ? 3 : 1)
+        accumulatedDistance += abs(delta)
+        guard accumulatedDistance >= threshold else { return }
+        // Limit accelerated events to one mark; never retain a backlog at a limit.
+        accumulatedDistance.formTruncatingRemainder(dividingBy: threshold)
         adjust(target, steps: direction, countdown: countdown)
     }
 
     private func resetGesture() {
         previousTarget = nil
         lastEventAt = nil
-        lastStepAt = nil
         gesturePoint = nil
         lastDirection = 0
+        accumulatedDistance = 0
+        previousPrecise = nil
+        previousOption = nil
     }
 
     private func adjust(_ target: Target, steps: Int, countdown: CountdownController) {
