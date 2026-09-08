@@ -134,9 +134,9 @@ struct PomodoroCycleTests {
         #expect(model.longRestDuration == 300)
         model.reset()
         #expect(model.stage == 1)
-        #expect(model.focusDuration == 1_560)
-        #expect(model.restDuration == 360)
-        #expect(model.longRestDuration == 300)
+        #expect(model.focusDuration == 1_500)
+        #expect(model.restDuration == 300)
+        #expect(model.longRestDuration == 900)
     }
 
     @Test

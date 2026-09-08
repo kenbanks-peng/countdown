@@ -8,6 +8,7 @@ struct PomodoroModel {
     enum DotState { case pending, current, completed }
 
     let cycles: Int
+    private let defaultDurations: (focus: TimeInterval, rest: TimeInterval, longRest: TimeInterval)
 
     static func validCycles(_ value: Int) -> Int {
         (1...12).contains(value) ? value : 4
@@ -26,7 +27,9 @@ struct PomodoroModel {
     private(set) var clockSchedule: PomodoroClockSchedule?
 
     init(focusDuration: TimeInterval = 25 * 60, restDuration: TimeInterval = 5 * 60,
-         longRestDuration: TimeInterval = 15 * 60, cycles: Int = 4) {
+         longRestDuration: TimeInterval = 15 * 60, cycles: Int = 4,
+         defaultDurations: (focus: TimeInterval, rest: TimeInterval, longRest: TimeInterval)? = nil) {
+        self.defaultDurations = defaultDurations ?? (focusDuration, restDuration, longRestDuration)
         self.cycles = Self.validCycles(cycles)
         self.focusDuration = focusDuration
         self.restDuration = restDuration
@@ -169,6 +172,9 @@ struct PomodoroModel {
     }
 
     mutating func reset() {
+        focusDuration = defaultDurations.focus
+        restDuration = defaultDurations.rest
+        longRestDuration = defaultDurations.longRest
         clockSchedule = nil
         status = .ready
         stage = 1

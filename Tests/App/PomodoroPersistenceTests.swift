@@ -39,6 +39,42 @@ struct PomodoroPersistenceTests {
         #expect(restored.controlLabel == (paused ? "Resume" : "Pause"))
     }
 
+    @Test(arguments: [false, true])
+    func resetAfterRestartUsesConfiguredDefaults(paused: Bool) {
+        let session = Session()
+        defer { session.removeState() }
+        let configuration = CountdownConfiguration(
+            alarmNotificationURL: nil, pomodoroFocusMinutes: 20,
+            pomodoroRestMinutes: 10, pomodoroLongRestMinutes: 20, pomodoroCycles: 3
+        )
+        let controller = session.makeController(configuration: configuration)
+        controller.selectMode(.pomodoro)
+        session.now += 3_600
+        controller.update()
+        #expect(controller.pomodoro.stage == 3)
+        controller.adjustPomodoroDuration(.focus, by: 300)
+        controller.adjustPomodoroDuration(.rest, by: 300)
+        controller.adjustPomodoroDuration(.longRest, by: 300)
+        if paused { controller.toggleRunning() }
+        controller.save()
+
+        let restored = session.makeController(configuration: configuration)
+        #expect(restored.pomodoro.focusDuration == 1_500)
+        #expect(restored.pomodoro.restDuration == 900)
+        #expect(restored.pomodoro.longRestDuration == 1_500)
+        restored.resetPomodoro()
+
+        // Reset saves the new schedule without a separate save command.
+        let reloaded = session.makeController(configuration: configuration)
+        #expect(reloaded.pomodoro.stage == 1)
+        #expect(reloaded.pomodoro.cycles == 3)
+        #expect(reloaded.pomodoro.completedFocusPeriods == 0)
+        #expect(reloaded.pomodoro.focusRemaining == 1_200)
+        #expect(reloaded.pomodoro.restRemaining == 600)
+        #expect(reloaded.pomodoro.longRestDuration == 1_200)
+        #expect(reloaded.countdown.isPaused == paused)
+    }
+
     @Test(arguments: [
         "not JSON", "{}",
         #"{"mode":"Other","focusDuration":1200,"restDuration":420}"#,
@@ -117,8 +153,9 @@ struct PomodoroPersistenceTests {
         restored.resetPomodoro()
         let reloaded = session.makeController()
         #expect(reloaded.pomodoro.status == .running)
-        #expect(reloaded.pomodoro.focusRemaining == (focusAtMinimum ? 300 : 3_300))
-        #expect(reloaded.pomodoro.restRemaining == (focusAtMinimum ? 3_300 : 300))
+        #expect(reloaded.pomodoro.stage == 1)
+        #expect(reloaded.pomodoro.focusRemaining == 1_500)
+        #expect(reloaded.pomodoro.restRemaining == 300)
     }
 
     @Test(arguments: [true, false])
@@ -232,9 +269,11 @@ struct PomodoroPersistenceTests {
         var sounds = 0
         var store: TimerStateStore { TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]) }
         var settingsURL: URL { directory.appendingPathComponent("countdown/settings.json") }
-        func makeController() -> CountdownController {
+        func makeController(
+            configuration: CountdownConfiguration = CountdownConfiguration(alarmNotificationURL: nil)
+        ) -> CountdownController {
             CountdownController(
-                stateStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil),
+                stateStore: store, configuration: configuration,
                 featureState: CountdownFeatureState(),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )

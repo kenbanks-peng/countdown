@@ -61,7 +61,12 @@ final class CountdownController: ObservableObject {
         )
         var pomodoro = PomodoroModel(
             focusDuration: settings.focusDuration, restDuration: settings.restDuration,
-            longRestDuration: settings.longRestDuration ?? 900, cycles: configuration.pomodoroCycles
+            longRestDuration: settings.longRestDuration ?? 900, cycles: configuration.pomodoroCycles,
+            defaultDurations: (
+                TimeInterval(configuration.pomodoroFocusMinutes * 60),
+                TimeInterval(configuration.pomodoroRestMinutes * 60),
+                TimeInterval(configuration.pomodoroLongRestMinutes * 60)
+            )
         )
         if let schedule = settings.pomodoroClockSchedule {
             pomodoro.restoreClockSchedule(schedule, at: now())
@@ -154,6 +159,7 @@ final class CountdownController: ObservableObject {
         guard mode == .pomodoro else { return }
         update()
         countdown.resetPomodoro()
+        saveSettings()
     }
 
     func update(at date: Date? = nil) {
