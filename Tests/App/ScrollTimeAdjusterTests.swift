@@ -4,6 +4,30 @@ import Testing
 
 @MainActor
 struct ScrollTimeAdjusterTests {
+    @Test
+    func focusScrollAtThreeTwentyFiveCanFillTheHourAhead() throws {
+        let session = Session()
+        defer { session.close() }
+        session.now = Calendar.current.startOfDay(for: session.now) + 3 * 3_600 + 10 * 60
+        let timer = session.timer
+        timer.features.setClockEnabled(true)
+        timer.selectMode(.pomodoro)
+        timer.adjustPomodoroDuration(.focus, steps: 100)
+        session.now += 15 * 60
+        timer.update()
+        #expect(timer.pomodoro.focusRemaining + timer.pomodoro.restRemaining == 45 * 60)
+        for minutes in [50, 55, 60] {
+            try session.scroll(angle: 270, delta: 1, after: 0.16)
+            #expect(timer.pomodoro.focusRemaining + timer.pomodoro.restRemaining == Double(minutes * 60))
+        }
+        #expect(timer.pomodoro.clockSchedule?.restEnd == session.now + 3_600)
+        try session.scroll(angle: 270, delta: 1, after: 0.16)
+        #expect(timer.pomodoro.focusRemaining + timer.pomodoro.restRemaining == 3_600)
+        try session.scroll(angle: 270, delta: -1, after: 0.001)
+        #expect(timer.pomodoro.focusRemaining + timer.pomodoro.restRemaining == 3_300)
+        #expect(timer.pomodoro.longRestDuration == 900)
+    }
+
     @Test(arguments: [-1, 1])
     func smallScrollRespondsImmediatelyAndBurstsAreRateLimited(direction: Int32) throws {
         let session = Session()

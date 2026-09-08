@@ -22,6 +22,7 @@ enum ClockBoundary {
 /// Both rest settings follow the same focus endpoint. Editing focus moves both
 /// rest endpoints by the same amount, so their durations stay constant.
 struct PomodoroClockSchedule: Codable {
+    // Allocation origin. An edit can move it forward to reuse elapsed clock space.
     var stageStart: Date
     var focusEnd: Date
     var restEnd: Date
@@ -60,10 +61,11 @@ struct PomodoroClockSchedule: Codable {
             // Completed focus edits only change the allocation for following stages.
             let reference = focusCompleted ? stageStart : max(stageStart, pausedAt ?? sampledAt)
             minimum = reference.addingTimeInterval(300)
-            maximum = stageStart.addingTimeInterval(3_600 - restDuration)
+            maximum = reference.addingTimeInterval(3_600 - restDuration)
         case .rest:
             minimum = focusEnd.addingTimeInterval(300)
-            maximum = stageStart.addingTimeInterval(3_600)
+            let reference = max(stageStart, pausedAt ?? sampledAt)
+            maximum = min(reference.addingTimeInterval(3_600), focusEnd.addingTimeInterval(3_300))
         case .longRest:
             minimum = focusEnd.addingTimeInterval(300)
             maximum = focusEnd.addingTimeInterval(3_600)
@@ -80,6 +82,9 @@ struct PomodoroClockSchedule: Codable {
         case .rest: restEnd = target
         case .longRest: longRestEnd = target
         }
+        // Keep future allocations within one hour without counting elapsed time
+        // against this edit. Do not move any selected endpoint during this rebase.
+        stageStart = max(stageStart, restEnd.addingTimeInterval(-3_600))
         if (pausedAt ?? sampledAt) >= focusEnd { focusCompleted = true }
     }
 
