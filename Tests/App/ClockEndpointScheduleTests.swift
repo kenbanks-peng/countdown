@@ -194,6 +194,36 @@ struct ClockEndpointScheduleTests {
         expectMark(try #require(controller.timer.endDate))
     }
 
+    @Test(arguments: [1, 4])
+    func endpointEditsRoundFocusForFollowingCycles(startMinute: Int) throws {
+        let session = Session()
+        defer { session.close() }
+        let four = Calendar.current.startOfDay(for: session.now) + 4 * 3_600
+        session.now = four + Double(startMinute) * 60
+        let controller = session.controller
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, steps: 1)
+        let selected = try #require(controller.pomodoro.clockSchedule)
+        #expect(selected.focusEnd == four + 30 * 60)
+        #expect(selected.restEnd == four + 35 * 60)
+        #expect(selected.focusDuration == Double(30 - startMinute) * 60)
+
+        let repeatedFocus: TimeInterval = startMinute == 1 ? 30 * 60 : 25 * 60
+        for expectedStage in [2, 3, 4, 1, 2] {
+            let previous = try #require(controller.pomodoro.clockSchedule)
+            let nextStart = previous.end(for: controller.pomodoro.restPhase)
+            session.now = nextStart
+            controller.update()
+            let next = try #require(controller.pomodoro.clockSchedule)
+            #expect(next.stage == expectedStage)
+            #expect(next.stageStart == nextStart)
+            #expect(next.focusEnd == nextStart + repeatedFocus)
+            #expect(next.restEnd == next.focusEnd + 5 * 60)
+            #expect(next.longRestEnd == next.focusEnd + 15 * 60)
+            #expect(controller.pomodoro.restPhase == (expectedStage == 4 ? .longRest : .rest))
+        }
+    }
+
     @Test
     func stageAndCycleRepeatsUseTheSelectedSpacing() throws {
         let session = Session()
