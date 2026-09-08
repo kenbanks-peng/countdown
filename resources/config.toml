@@ -1,7 +1,8 @@
 [pomodoro]
 # Defaults in minutes. Saved duration edits take priority.
-# Each value must be 1–59; focus + either rest must not exceed 60.
-# Invalid values use defaults; an invalid total resets all three defaults.
+# Focus and rest must be 1–59; long-rest must be 1–60.
+# Focus + rest must not exceed 60; long-rest has its own limit.
+# Invalid values use defaults; an invalid focus + rest total resets all three.
 focus = 25
 rest = 5
 long-rest = 15

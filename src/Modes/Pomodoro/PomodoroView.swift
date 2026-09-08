@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct PomodoroView: View {
-    static let circleInset: CGFloat = 6
     let model: PomodoroModel
     var isCompact = false
     var clockDate: Date? = nil
@@ -16,6 +15,8 @@ struct PomodoroView: View {
     }
 
     var body: some View {
+        let arcs = arcs
+        let dotStates = model.dotStates
         ZStack {
             Circle().fill(Color.countdownSurface)
             RadialSector(proportion: arcs.rest.proportion, startProportion: arcs.rest.startProportion)
@@ -29,13 +30,13 @@ struct PomodoroView: View {
                 .stroke(Color.countdownTrack.opacity(0.7), lineWidth: isCompact ? 1 : 3)
                 .padding(isCompact ? 0.5 : 2)
             if !isCompact && showsSessionDots {
-                HStack(spacing: model.cycles > 6 ? 2 : 6) {
-                    ForEach(0..<model.cycles, id: \.self) { index in
+                HStack(spacing: model.focusPeriodsPerCycle > 6 ? 2 : 6) {
+                    ForEach(0..<model.focusPeriodsPerCycle, id: \.self) { index in
                         ZStack {
                             Circle().strokeBorder(.white, lineWidth: 1)
-                            if model.dotStates[index] == .completed {
+                            if dotStates[index] == .completed {
                                 Circle().fill(.white)
-                            } else if model.dotStates[index] == .current {
+                            } else if dotStates[index] == .current {
                                 Circle().fill(.white).padding(2.5)
                             }
                         }
@@ -49,6 +50,6 @@ struct PomodoroView: View {
             }
         }
         .clipShape(Circle())
-        .padding(isCompact ? 0 : Self.circleInset)
+        .padding(isCompact ? 0 : CountdownAppearance.circleInset)
     }
 }

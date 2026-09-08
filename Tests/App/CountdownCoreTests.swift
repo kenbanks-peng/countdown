@@ -12,8 +12,8 @@ struct CountdownCoreTests {
         var sounds = 0
         var settings: [String: Bool] = [:]
         let timer = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now },
             saveEnablement: { settings[$0] = $1 }
         )
@@ -22,33 +22,33 @@ struct CountdownCoreTests {
         #expect(timer.controlLabel == "Pause")
         now += 300
         timer.update()
-        #expect(timer.features.popupIntervalCount == 1)
+        #expect(timer.popups.popupIntervalCount == 1)
         #expect(sounds == 1)
         timer.update()
-        #expect(timer.features.popupIntervalCount == 1)
+        #expect(timer.popups.popupIntervalCount == 1)
 
         timer.toggleRunning()
         #expect(timer.controlLabel == "Resume")
         now += 900
         timer.update()
-        #expect(timer.features.popupIntervalCount == 1)
+        #expect(timer.popups.popupIntervalCount == 1)
         timer.toggleRunning()
         now += 300
         timer.update()
-        #expect(timer.features.popupIntervalCount == 2)
+        #expect(timer.popups.popupIntervalCount == 2)
 
-        timer.features.setPopupEnabled(false)
+        timer.popups.setPopupEnabled(false)
         now += 300
         timer.update()
-        #expect(timer.features.popupIntervalCount == 2)
+        #expect(timer.popups.popupIntervalCount == 2)
         timer.selectMode(.countdown)
-        let features = timer.features
+        let popups = timer.popups
         timer.selectMode(mode.usesTimer ? .pomodoro : .timer)
-        #expect(timer.features === features)
-        #expect(!timer.features.isPopupEnabled)
+        #expect(timer.popups === popups)
+        #expect(!timer.popups.isPopupEnabled)
         now += 600
         timer.update()
-        #expect(timer.features.popupIntervalCount == 2)
+        #expect(timer.popups.popupIntervalCount == 2)
         #expect(sounds == 2)
         #expect(settings == ["popup_enabled": false])
     }
@@ -58,14 +58,14 @@ struct CountdownCoreTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
-        let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
+        let store = TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path])
         store.save(.init(status: .active, duration: 1_800, remaining: 1_800,
                          endDate: now.addingTimeInterval(1_800), savedAt: now))
         now += 360
         var sounds = 0
         let controller = CountdownController(
-            stateStore: store,
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
+            sessionStore: store,
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         #expect(controller.timer.remaining == 1_440)
@@ -85,8 +85,8 @@ struct CountdownCoreTests {
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)
@@ -111,8 +111,8 @@ struct CountdownCoreTests {
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.adjustTimerDuration(by: 610)
@@ -136,8 +136,8 @@ struct CountdownCoreTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         let timer = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupTime: 5),
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, popupIntervalMinutes: 5),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
@@ -147,19 +147,19 @@ struct CountdownCoreTests {
         } else {
             timer.adjustPomodoroDuration(.focus, by: -600)
         }
-        #expect(timer.features.popupIntervalCount == 0)
+        #expect(timer.popups.popupIntervalCount == 0)
         now += 299
         timer.update()
-        #expect(timer.features.popupIntervalCount == 0)
+        #expect(timer.popups.popupIntervalCount == 0)
         now += 1
         timer.update()
-        #expect(timer.features.popupIntervalCount == 1)
+        #expect(timer.popups.popupIntervalCount == 1)
         now += 361 // A delayed update reports one Popup, not a burst.
         timer.update()
-        #expect(timer.features.popupIntervalCount == 2)
+        #expect(timer.popups.popupIntervalCount == 2)
         now += 10_000
         timer.update()
         timer.update()
-        #expect(timer.features.popupIntervalCount == (mode == .pomodoro ? 3 : 2))
+        #expect(timer.popups.popupIntervalCount == (mode == .pomodoro ? 3 : 2))
     }
 }

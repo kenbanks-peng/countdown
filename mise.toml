@@ -1,6 +1,14 @@
 [env]
 BINDIR = "{{config_root}}/bin"
 
+[tasks.check]
+description = "Check source ownership and run all Countdown tests"
+run = '''
+set -eu
+tools/check-architecture
+tools/swift-test
+'''
+
 [tasks.release]
 description = "Build the Countdown release executable"
 run = '''

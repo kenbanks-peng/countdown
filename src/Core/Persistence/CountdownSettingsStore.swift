@@ -16,8 +16,7 @@ struct CountdownSettingsStore {
     let stateDirectory: URL
 
     func load(defaults: CountdownSettings = CountdownSettings()) -> CountdownSettings {
-        guard let data = try? Data(contentsOf: settingsURL),
-              var settings = try? JSONDecoder().decode(CountdownSettings.self, from: data),
+        guard var settings = settingsFile.load(),
               settings.focusDuration.isFinite, settings.restDuration.isFinite,
               settings.focusDuration >= 60, settings.restDuration >= 60,
               settings.focusDuration + settings.restDuration <= 3_600
@@ -30,16 +29,10 @@ struct CountdownSettingsStore {
     }
 
     func save(_ settings: CountdownSettings) {
-        do {
-            try fileManager.createDirectory(at: stateDirectory, withIntermediateDirectories: true)
-            let data = try JSONEncoder().encode(settings)
-            try data.write(to: settingsURL, options: .atomic)
-        } catch {
-            // In-memory use continues; a failed write does not promise persistence.
-        }
+        settingsFile.save(settings)
     }
 
-    private var settingsURL: URL {
-        stateDirectory.appendingPathComponent("settings.json", isDirectory: false)
+    private var settingsFile: JSONStateFile<CountdownSettings> {
+        JSONStateFile(fileManager: fileManager, directory: stateDirectory, name: "settings.json")
     }
 }

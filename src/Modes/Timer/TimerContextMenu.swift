@@ -5,8 +5,8 @@ struct TimerContextMenu: View {
     let setToNextHour: () -> Void
 
     var body: some View {
-        Toggle("Timeout", isOn: enablementBinding(\.isCurrentTimeoutEnabled, model.setCurrentTimeoutEnabled))
-        Toggle("Autoset", isOn: enablementBinding(\.isAutosetEnabled, model.setAutosetEnabled))
+        Toggle("Timeout", isOn: enablementBinding(\.showsRemainingMinutes, model.setRemainingMinutesVisible))
+        Toggle("Autoset", isOn: enablementBinding(\.isAutoSetToNextHourEnabled, model.setAutoSetToNextHourEnabled))
         Divider()
         Button("Set Timeout to Next Hour", action: setToNextHour)
     }

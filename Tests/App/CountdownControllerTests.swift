@@ -41,7 +41,7 @@ struct CountdownControllerTests {
         controller.update()
         #expect(controller.timer.completionCount == 1)
         #expect(session.sounds == 1)
-        #expect(!controller.countdown.isPaused)
+        #expect(!controller.engine.isPaused)
     }
 
     @Test
@@ -49,7 +49,7 @@ struct CountdownControllerTests {
         let session = Session()
         defer { session.removeState() }
         session.now = Calendar.current.date(from: DateComponents(year: 2025, month: 1, day: 6, hour: 10, minute: 30))!
-        let controller = session.makeController(autoset: true)
+        let controller = session.makeController(autoSetToNextHour: true)
         #expect(controller.timer.remaining == 1_800)
         session.now += 1_800
         controller.selectMode(.pomodoro) // The outgoing Timer mode handles this timeout.
@@ -65,7 +65,7 @@ struct CountdownControllerTests {
         controller.setTimerToNextHour()
         #expect(controller.timer.isPaused)
         #expect(controller.timer.remaining == 3_600)
-        #expect(controller.countdown.isPaused)
+        #expect(controller.engine.isPaused)
     }
 
     @MainActor
@@ -73,11 +73,11 @@ struct CountdownControllerTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
-        func makeController(autoset: Bool = false) -> CountdownController {
+        func makeController(autoSetToNextHour: Bool = false) -> CountdownController {
             CountdownController(
-                stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+                sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
                 configuration: CountdownConfiguration(alarmNotificationURL: nil),
-                featureState: CountdownFeatureState(autosetEnabled: autoset, popupEnabled: false),
+                preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, popupEnabled: false),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

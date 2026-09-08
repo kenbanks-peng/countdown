@@ -20,7 +20,7 @@ struct PomodoroPersistenceTests {
         session.now += closedTime
         let restored = session.makeController()
         #expect(restored.mode == .pomodoro)
-        #expect(restored.countdown.isPaused == paused)
+        #expect(restored.engine.isPaused == paused)
         #expect(restored.pomodoro.status == (paused ? .paused : .running))
         // The fixed schedule advances while closed, but a paused schedule stays frozen.
         controller.update()
@@ -45,7 +45,7 @@ struct PomodoroPersistenceTests {
         defer { session.removeState() }
         let configuration = CountdownConfiguration(
             alarmNotificationURL: nil, pomodoroFocusMinutes: 20,
-            pomodoroRestMinutes: 10, pomodoroLongRestMinutes: 20, pomodoroCycles: 3
+            pomodoroRestMinutes: 10, pomodoroLongRestMinutes: 20, pomodoroFocusPeriodsPerCycle: 3
         )
         let controller = session.makeController(configuration: configuration)
         controller.selectMode(.pomodoro)
@@ -67,12 +67,12 @@ struct PomodoroPersistenceTests {
         // Reset saves the new schedule without a separate save command.
         let reloaded = session.makeController(configuration: configuration)
         #expect(reloaded.pomodoro.stage == 1)
-        #expect(reloaded.pomodoro.cycles == 3)
+        #expect(reloaded.pomodoro.focusPeriodsPerCycle == 3)
         #expect(reloaded.pomodoro.completedFocusPeriods == 0)
         #expect(reloaded.pomodoro.focusRemaining == 1_200)
         #expect(reloaded.pomodoro.restRemaining == 600)
         #expect(reloaded.pomodoro.longRestDuration == 1_200)
-        #expect(reloaded.countdown.isPaused == paused)
+        #expect(reloaded.engine.isPaused == paused)
     }
 
     @Test(arguments: [
@@ -267,14 +267,14 @@ struct PomodoroPersistenceTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
-        var store: TimerStateStore { TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]) }
+        var store: TimerSessionStore { TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]) }
         var settingsURL: URL { directory.appendingPathComponent("countdown/settings.json") }
         func makeController(
             configuration: CountdownConfiguration = CountdownConfiguration(alarmNotificationURL: nil)
         ) -> CountdownController {
             CountdownController(
-                stateStore: store, configuration: configuration,
-                featureState: CountdownFeatureState(),
+                sessionStore: store, configuration: configuration,
+                preferences: CountdownPreferences(),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

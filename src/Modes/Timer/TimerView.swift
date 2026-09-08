@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TimerView: View {
     @ObservedObject var model: TimerModel
+    var isCompact = false
     var clockDate: Date? = nil
     var showsLabels = true
 
@@ -19,16 +20,21 @@ struct TimerView: View {
             }
 
             Circle()
-                .stroke(Color.countdownTrack.opacity(isHovering ? 0.95 : 0.7), lineWidth: 3)
-                .padding(2)
+                .stroke(Color.countdownTrack.opacity(trackOpacity), lineWidth: isCompact ? 1 : 3)
+                .padding(isCompact ? 0.5 : 2)
                 .animation(arcAnimation, value: isHovering)
 
-            if showsLabels { countdownLabel }
+            if !isCompact && showsLabels { countdownLabel }
+            if isCompact && model.isPaused {
+                Image(systemName: "pause.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.65))
+            }
         }
         .contentShape(Circle())
         .onHover { isHovering = $0 }
         .accessibilityLabel(accessibilityLabel)
-        .padding(6)
+        .padding(isCompact ? 0 : CountdownAppearance.circleInset)
     }
 
     @ViewBuilder
@@ -38,7 +44,7 @@ struct TimerView: View {
                 .fill(indicatorColor)
                 .animation(arcAnimation, value: model.hourProportion)
 
-            if showsLabels && (model.isCurrentTimeoutEnabled || model.isPaused) {
+            if !isCompact && showsLabels && (model.showsRemainingMinutes || model.isPaused) {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .frame(width: 50, height: model.isPaused ? 46 : 34)
                     .offset(y: 32)
@@ -52,7 +58,7 @@ struct TimerView: View {
     private var countdownLabel: some View {
         if model.status != .empty {
             VStack(spacing: 1) {
-                if model.isCurrentTimeoutEnabled {
+                if model.showsRemainingMinutes {
                     Text("\(model.remainingMinutes)")
                         .font(Font(NSFont.systemFont(ofSize: 22, weight: .semibold)).monospacedDigit())
                         .foregroundStyle(indicatorColor)
@@ -89,8 +95,14 @@ struct TimerView: View {
         TimerAppearance.indicatorColor(for: model.remaining)
     }
 
+    private var trackOpacity: Double {
+        isCompact ? (isHovering ? 1 : 0.8) : (isHovering ? 0.95 : 0.7)
+    }
+
     private var accessibilityLabel: String {
-        model.status == .empty ? "Empty Countdown" : "\(model.remainingMinutes) minutes remaining"
+        model.status == .empty
+            ? (isCompact ? "Countdown complete" : "Empty Countdown")
+            : "\(model.remainingMinutes) minutes remaining"
     }
 
 }

@@ -8,24 +8,24 @@ final class CountdownEngine: ObservableObject {
     let timer: TimerModel
     @Published private(set) var pomodoro: PomodoroModel
     private let now: () -> Date
-    private var timerChanges: AnyCancellable?
+    private var timerSubscription: AnyCancellable?
 
     init(timer: TimerModel, pomodoro: PomodoroModel, isPaused: Bool, now: @escaping () -> Date) {
         self.timer = timer
         self.pomodoro = pomodoro
         self.isPaused = isPaused
         self.now = now
-        timer.isPausedByCore = isPaused
+        timer.isEnginePaused = isPaused
         if self.pomodoro.status == .ready { self.pomodoro.toggleRunning(at: now()) }
         if isPaused {
-            timer.stop()
+            timer.pause()
             self.pomodoro.pause(at: now())
         } else {
-            timer.start()
+            timer.resume()
         }
         // Pomodoro keeps its clock schedule while either timer presentation is selected.
         self.pomodoro.setClockEnabled(true, at: now())
-        timerChanges = timer.objectWillChange.sink { [weak self] in
+        timerSubscription = timer.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
         }
     }
@@ -39,12 +39,12 @@ final class CountdownEngine: ObservableObject {
     func toggleRunning() {
         update()
         isPaused.toggle()
-        timer.isPausedByCore = isPaused
+        timer.isEnginePaused = isPaused
         if isPaused {
-            timer.stop()
+            timer.pause()
             pomodoro.pause(at: now())
         } else {
-            timer.start()
+            timer.resume()
             if pomodoro.status == .paused { pomodoro.toggleRunning(at: now()) }
         }
     }

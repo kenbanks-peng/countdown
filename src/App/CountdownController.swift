@@ -5,13 +5,13 @@ import Combine
 @MainActor
 final class CountdownController: ObservableObject {
     @Published private(set) var mode: CountdownMode = .timer
-    let features: CountdownFeatures
-    let countdown: CountdownEngine
-    var timer: TimerModel { countdown.timer }
-    var pomodoro: PomodoroModel { countdown.pomodoro }
+    let popups: PopupScheduler
+    let engine: CountdownEngine
+    var timer: TimerModel { engine.timer }
+    var pomodoro: PomodoroModel { engine.pomodoro }
     private let settingsStore: CountdownSettingsStore
     private let timeoutPolicy: TimeoutPolicy
-    private var countdownChanges: AnyCancellable?
+    private var engineSubscription: AnyCancellable?
     private let now: () -> Date
     var currentTime: Date { now() }
 
@@ -21,16 +21,16 @@ final class CountdownController: ObservableObject {
     }
 
     init(
-        stateStore: TimerStateStore = .default,
+        sessionStore: TimerSessionStore = .default,
         configuration: CountdownConfiguration = .default,
-        featureState: CountdownFeatureState? = nil,
+        preferences: CountdownPreferences? = nil,
         playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
         saveEnablement: ((String, Bool) -> Void)? = nil
     ) {
         self.now = now
         settingsStore = CountdownSettingsStore(
-            fileManager: stateStore.fileManager, stateDirectory: stateStore.stateDirectory
+            fileManager: sessionStore.fileManager, stateDirectory: sessionStore.stateDirectory
         )
         let settings = settingsStore.load(defaults: CountdownSettings(
             focusDuration: TimeInterval(configuration.pomodoroFocusMinutes * 60),
@@ -40,28 +40,28 @@ final class CountdownController: ObservableObject {
         mode = settings.mode
         let policy = TimeoutPolicy(mode: settings.mode)
         timeoutPolicy = policy
-        let featureStateStore = CountdownFeatureStateStore(
-            fileManager: stateStore.fileManager, stateDirectory: stateStore.stateDirectory
+        let preferencesStore = CountdownPreferencesStore(
+            fileManager: sessionStore.fileManager, stateDirectory: sessionStore.stateDirectory
         )
-        let state = featureState ?? featureStateStore.load()
-        let features = CountdownFeatures(
+        let state = preferences ?? preferencesStore.load()
+        let popups = PopupScheduler(
             configuration: configuration, state: state, playSound: playSound, now: now,
-            saveEnablement: saveEnablement ?? { featureStateStore.saveEnablement($0, enabled: $1) }
+            saveEnablement: saveEnablement ?? { preferencesStore.saveEnablement($0, enabled: $1) }
         )
-        self.features = features
+        self.popups = popups
         let timer = TimerModel(
-            stateStore: stateStore, configuration: configuration, featureState: state,
+            sessionStore: sessionStore, configuration: configuration, preferences: state,
             isClockEnabled: settings.mode.isClockEnabled, playSound: playSound, now: now,
             reportElapsed: { previous, remaining in
                 if policy.mode.usesTimer {
-                    features.reportElapsed(previousRemaining: previous, remaining: remaining)
+                    popups.reportElapsed(previousRemaining: previous, remaining: remaining)
                 }
             },
             timeoutActionsEnabled: { policy.mode.usesTimer }
         )
         var pomodoro = PomodoroModel(
             focusDuration: settings.focusDuration, restDuration: settings.restDuration,
-            longRestDuration: settings.longRestDuration ?? 900, cycles: configuration.pomodoroCycles,
+            longRestDuration: settings.longRestDuration ?? 900, focusPeriodsPerCycle: configuration.pomodoroFocusPeriodsPerCycle,
             defaultDurations: (
                 TimeInterval(configuration.pomodoroFocusMinutes * 60),
                 TimeInterval(configuration.pomodoroRestMinutes * 60),
@@ -71,22 +71,21 @@ final class CountdownController: ObservableObject {
         if let schedule = settings.pomodoroClockSchedule {
             pomodoro.restoreClockSchedule(schedule, at: now())
         }
-        countdown = CountdownEngine(
+        engine = CountdownEngine(
             timer: timer, pomodoro: pomodoro,
             isPaused: settings.isPaused ?? timer.isPaused, now: now
         )
-        countdownChanges = countdown.objectWillChange.sink { [weak self] in
+        engineSubscription = engine.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
         }
     }
 
-    var controlLabel: String { countdown.isPaused ? "Resume" : "Pause" }
-    var canToggleRunning: Bool { true }
+    var controlLabel: String { engine.isPaused ? "Resume" : "Pause" }
 
     func toggleRunning() {
         update()
-        if countdown.isPaused { features.skipPausedPopups() }
-        countdown.toggleRunning()
+        if engine.isPaused { popups.skipPausedPopups() }
+        engine.toggleRunning()
         saveSettings()
     }
 
@@ -138,7 +137,7 @@ final class CountdownController: ObservableObject {
     func adjustPomodoroDuration(_ phase: PomodoroModel.Phase, by amount: TimeInterval) {
         guard mode == .pomodoro else { return }
         update()
-        countdown.adjustPomodoroDuration(phase, by: amount)
+        engine.adjustPomodoroDuration(phase, by: amount)
         saveSettings()
     }
 
@@ -146,7 +145,7 @@ final class CountdownController: ObservableObject {
         guard mode == .pomodoro, steps != 0 else { return }
         let date = currentTime
         update(at: date)
-        countdown.adjustPomodoroEndpoint(phase, steps: steps, at: date)
+        engine.adjustPomodoroEndpoint(phase, steps: steps, at: date)
         saveSettings()
     }
 
@@ -158,18 +157,18 @@ final class CountdownController: ObservableObject {
     func resetPomodoro() {
         guard mode == .pomodoro else { return }
         update()
-        countdown.resetPomodoro()
+        engine.resetPomodoro()
         saveSettings()
     }
 
     func update(at date: Date? = nil) {
         let previousElapsed = pomodoro.elapsedTime
-        countdown.update(at: date)
+        engine.update(at: date)
         if mode == .pomodoro {
             let remaining = pomodoro.focusRemaining + pomodoro.restRemaining
-            features.reportElapsed(previousRemaining: remaining + pomodoro.elapsedTime - previousElapsed, remaining: remaining)
+            popups.reportElapsed(previousRemaining: remaining + pomodoro.elapsedTime - previousElapsed, remaining: remaining)
         } else if timer.remaining == 0 {
-            features.reportElapsed(previousRemaining: 0, remaining: 0)
+            popups.reportElapsed(previousRemaining: 0, remaining: 0)
         }
     }
 
@@ -182,7 +181,7 @@ final class CountdownController: ObservableObject {
     private func saveSettings() {
         settingsStore.save(CountdownSettings(
             mode: mode, focusDuration: pomodoro.focusDuration, restDuration: pomodoro.restDuration,
-            isPaused: countdown.isPaused, longRestDuration: pomodoro.longRestDuration,
+            isPaused: engine.isPaused, longRestDuration: pomodoro.longRestDuration,
             pomodoroClockSchedule: pomodoro.clockSchedule
         ))
     }

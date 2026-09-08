@@ -16,8 +16,7 @@ let package = Package(
         .testTarget(
             name: "CountdownTests",
             dependencies: ["Countdown"],
-            path: "Tests",
-            exclude: ["CircleTransitionCheck.swift"]
+            path: "Tests"
         )
     ]
 )

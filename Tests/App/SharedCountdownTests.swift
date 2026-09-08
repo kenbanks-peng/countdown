@@ -9,12 +9,11 @@ struct SharedCountdownTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
-        let store = TimerStateStore(environment: ["XDG_STATE_HOME": directory.path])
+        let store = TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path])
         let configuration = CountdownConfiguration(alarmNotificationURL: nil)
-        let featureState = CountdownFeatureState(popupEnabled: false)
-        let controller = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in }, now: { now })
+        let preferences = CountdownPreferences(popupEnabled: false)
+        let controller = CountdownController(sessionStore: store, configuration: configuration, preferences: preferences, playSound: { _ in }, now: { now })
         controller.selectMode(mode)
-        #expect(controller.canToggleRunning)
         #expect(controller.controlLabel == "Pause")
         controller.toggleRunning()
         now += 300
@@ -25,7 +24,7 @@ struct SharedCountdownTests {
         controller.selectMode(.pomodoro)
         controller.save()
         now += 300
-        let restored = CountdownController(stateStore: store, configuration: configuration, featureState: featureState, playSound: { _ in }, now: { now })
+        let restored = CountdownController(sessionStore: store, configuration: configuration, preferences: preferences, playSound: { _ in }, now: { now })
         #expect(restored.controlLabel == "Resume")
         #expect(restored.timer.remaining == 600)
         #expect(restored.pomodoro.status == .paused)
@@ -44,9 +43,9 @@ struct SharedCountdownTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         let controller = CountdownController(
-            stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            featureState: CountdownFeatureState(popupEnabled: false),
+            preferences: CountdownPreferences(popupEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.adjustTimerDuration(by: 1_200)

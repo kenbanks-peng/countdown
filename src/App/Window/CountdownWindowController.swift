@@ -1,0 +1,201 @@
+import AppKit
+import Combine
+import SwiftUI
+
+@MainActor
+final class CountdownWindowController {
+    private typealias Presentation = CountdownWindowStateStore.Presentation
+
+    private let panel: CountdownPanel
+    private let countdown: CountdownController
+    private var scrollTimeAdjuster: ScrollTimeAdjuster?
+    private var normalFrame: NSRect?
+    private var presentation: Presentation = .normal
+    private var isTransitioning = false
+    private var popupSubscription: AnyCancellable?
+    private var popupDismissalTask: Task<Void, Never>?
+
+    private let windowState = CountdownWindowStateStore()
+    private let transition = CountdownPanelTransition()
+    private let normalSize = NSSize(width: CountdownAppearance.normalSize, height: CountdownAppearance.normalSize)
+    private let compactSize = NSSize(width: CountdownAppearance.compactSize, height: CountdownAppearance.compactSize)
+
+    init(countdown: CountdownController) {
+        self.countdown = countdown
+        presentation = windowState.presentation
+        let initialSize = presentation == .compact ? compactSize : normalSize
+        panel = Self.makePanel(size: initialSize, hasShadow: presentation == .normal)
+        panel.contentView = contentView(isCompact: presentation == .compact)
+        restoreOrPosition(panel, for: presentation, size: initialSize)
+        normalFrame = windowState.restoredFrame(for: .normal, size: normalSize)
+        panel.makeKeyAndOrderFront(nil)
+
+        observePopupIntervals(from: countdown.popups)
+        scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, isCompact: { [weak self] in
+            self?.presentation == .compact
+        })
+    }
+
+    func save() {
+        popupDismissalTask?.cancel()
+        countdown.save()
+        savePanelState()
+    }
+
+    private static func makePanel(size: NSSize, hasShadow: Bool) -> CountdownPanel {
+        let panel = CountdownPanel(
+            contentRect: NSRect(origin: NSPoint(x: 100, y: 120), size: size),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = hasShadow
+        panel.isMovableByWindowBackground = true
+        panel.hidesOnDeactivate = false
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        return panel
+    }
+
+    private func observePopupIntervals(from model: PopupScheduler) {
+        popupSubscription = model.$popupIntervalCount
+            .dropFirst()
+            .sink { [weak self] _ in
+                self?.handlePopupInterval()
+            }
+    }
+
+    private func handlePopupInterval() {
+        guard presentation == .compact else { return }
+
+        showNormalWindow(requestKeyboardFocus: false, isPopup: true)
+        popupDismissalTask?.cancel()
+        popupDismissalTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            self?.showCompactWindow()
+        }
+    }
+
+    private func contentView(isCompact: Bool, isPopup: Bool = false) -> NSView {
+        NSHostingView(rootView: CountdownView(
+            countdown: countdown, isCompact: isCompact, isPopup: isPopup,
+            allowsClick: { [weak self] in self?.panel.allowsClick ?? true },
+            changePresentation: { [weak self] in
+                if isCompact { self?.showNormalWindow() } else { self?.showCompactWindow() }
+            }
+        ))
+    }
+
+    private func restoreOrPosition(_ panel: NSPanel, for mode: Presentation, size: NSSize) {
+        if let frame = windowState.restoredFrame(for: mode, size: size)
+            ?? windowState.topTrailingFrame(for: size) {
+            panel.setFrame(frame, display: false)
+        }
+    }
+
+    private func savePanelState(frame: NSRect? = nil) {
+        windowState.save(frame: frame ?? panel.frame, presentation: presentation)
+    }
+
+    private func showCompactWindow() {
+        guard presentation == .normal, !isTransitioning else { return }
+        let panel = panel
+
+        isTransitioning = true
+        normalFrame = panel.frame
+        savePanelState(frame: normalFrame)
+        presentation = .compact
+        panel.hasShadow = false
+        let compactFrame = windowState.restoredFrame(for: .compact, size: compactSize)
+            ?? windowState.topTrailingFrame(for: compactSize)
+            ?? NSRect(origin: panel.frame.origin, size: compactSize)
+
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            panel.contentView = contentView(isCompact: true)
+            panel.setFrame(compactFrame, display: true)
+            savePanelState(frame: compactFrame)
+            isTransitioning = false
+            return
+        }
+
+        // Cross-fade the content while the panel shrinks and travels, so the
+        // clock face and hands fade out with the circle instead of vanishing
+        // the moment the transition starts.
+        let incoming = transition.crossFadeTo(contentView(isCompact: true), in: panel)
+
+        let slideWaypoint = transition.waypoint(from: compactFrame, to: panel.frame)
+        transition.animate(panel, to: slideWaypoint, duration: transition.resizeDuration, timingFunction: .easeIn) { [weak self] in
+            guard let self else { return }
+            self.transition.animate(
+                panel,
+                to: compactFrame,
+                duration: self.transition.slideDuration,
+                timingFunction: .easeOut
+            ) { [weak self] in
+                guard let self else { return }
+                self.transition.replaceContent(of: panel, with: incoming)
+                self.savePanelState(frame: compactFrame)
+                self.isTransitioning = false
+            }
+        }
+    }
+
+    private func showNormalWindow(requestKeyboardFocus: Bool = true, isPopup: Bool = false) {
+        guard presentation == .compact, !isTransitioning else { return }
+        let panel = panel
+
+        isTransitioning = true
+        savePanelState()
+        presentation = .normal
+        let fullFrame = normalFrame
+            ?? windowState.restoredFrame(for: .normal, size: normalSize)
+            ?? windowState.topTrailingFrame(for: normalSize)
+            ?? NSRect(origin: panel.frame.origin, size: normalSize)
+
+        let finishTransition = { [weak self] in
+            guard let self else { return }
+            panel.hasShadow = true
+            self.savePanelState(frame: fullFrame)
+            self.normalFrame = nil
+            self.isTransitioning = false
+            if requestKeyboardFocus {
+                panel.makeKeyAndOrderFront(nil)
+            } else {
+                // Automatic reminders must not interrupt typing in another app.
+                panel.orderFront(nil)
+            }
+        }
+
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            panel.contentView = contentView(isCompact: false, isPopup: isPopup)
+            panel.setFrame(fullFrame, display: true)
+            finishTransition()
+            return
+        }
+
+        // Cross-fade the content while the panel slides and grows, so the clock
+        // face and hands fade in with the circle instead of popping in after it
+        // lands. Keeping the panel square and compact-sized while it travels
+        // still prevents the growing circle from being clipped into a square.
+        let incoming = transition.crossFadeTo(contentView(isCompact: false, isPopup: isPopup), in: panel)
+
+        let slideWaypoint = transition.waypoint(from: panel.frame, to: fullFrame)
+        transition.animate(panel, to: slideWaypoint, duration: transition.slideDuration, timingFunction: .easeIn) { [weak self] in
+            guard let self else { return }
+            self.transition.animate(
+                panel,
+                to: fullFrame,
+                duration: self.transition.resizeDuration,
+                timingFunction: .easeOut
+            ) { [weak self] in
+                guard let self else { return }
+                self.transition.replaceContent(of: panel, with: incoming)
+                finishTransition()
+            }
+        }
+    }
+
+}
