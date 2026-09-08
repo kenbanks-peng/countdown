@@ -71,6 +71,12 @@ final class ScrollTimeAdjuster {
         }
         let delta = event.scrollingDeltaY
         guard delta.isFinite, delta != 0 else { return }
+        // Timer modes have one setting: every point in the circle is a target,
+        // regardless of the remaining sector. Do not capture input outside the circle.
+        if countdown.mode.usesTimer && circleOffset(for: event) == nil {
+            resetGesture()
+            return
+        }
         countdown.update()
         // Hold the target while the pointer stays still, even when its sector shrinks.
         let target = previousTarget ?? (countdown.mode.usesTimer
@@ -115,8 +121,7 @@ final class ScrollTimeAdjuster {
         }
     }
 
-    private func pomodoroTarget(for event: NSEvent, countdown: CountdownController) -> Target? {
-        let model = countdown.pomodoro
+    private func circleOffset(for event: NSEvent) -> NSPoint? {
         guard let window, let content = window.contentView,
               event.window == nil || event.window === window else { return nil }
         // AppKit uses screen coordinates when an event has no associated window.
@@ -129,8 +134,14 @@ final class ScrollTimeAdjuster {
         let radius = min(content.bounds.width, content.bounds.height) / 2 - inset
         let distance = hypot(x, y)
         // Coordinate conversion can put a perimeter point a few ULPs outside.
-        guard radius > 0, distance > 0, distance <= radius + 1e-9 else { return nil }
-        var degrees = atan2(x, y) * 180 / .pi
+        guard radius > 0, distance <= radius + 1e-9 else { return nil }
+        return NSPoint(x: x, y: y)
+    }
+
+    private func pomodoroTarget(for event: NSEvent, countdown: CountdownController) -> Target? {
+        let model = countdown.pomodoro
+        guard let offset = circleOffset(for: event), hypot(offset.x, offset.y) > 0 else { return nil }
+        var degrees = atan2(offset.x, offset.y) * 180 / .pi
         if degrees < 0 { degrees += 360 }
         // Remove floating-point noise at exact shared boundaries, not a visible hit margin.
         degrees = ((degrees * 1_000_000_000).rounded() / 1_000_000_000).truncatingRemainder(dividingBy: 360)

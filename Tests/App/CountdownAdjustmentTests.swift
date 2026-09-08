@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct CountdownAdjustmentTests {
     @Test(arguments: [false, true], [false, true])
-    func timerEndsOnMarksAfterElapsedTimeAndPause(clock: Bool, paused: Bool) {
+    func timerUsesClockMarksOrRelativeStepsAfterElapsedTimeAndPause(clock: Bool, paused: Bool) {
         let session = Session(clock: clock)
         defer { session.close() }
         let controller = session.controller
@@ -16,7 +16,11 @@ struct CountdownAdjustmentTests {
             session.now += 47.25
         }
         controller.adjustTimerDuration(steps: 1)
-        expectMark(timerEnd(controller))
+        if clock {
+            expectMark(timerEnd(controller))
+        } else {
+            #expect(abs(controller.timer.remaining - 1_426.5) < 1e-6)
+        }
         let firstEnd = timerEnd(controller)
         controller.adjustTimerDuration(steps: 1)
         #expect(abs(timerEnd(controller) - firstEnd - 300) < 1e-6)

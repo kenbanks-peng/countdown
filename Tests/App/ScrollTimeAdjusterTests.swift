@@ -4,6 +4,46 @@ import Testing
 
 @MainActor
 struct ScrollTimeAdjusterTests {
+    @Test(arguments: [false, true])
+    func countdownScrollAddsTimeWhileTheClockAdvances(precise: Bool) throws {
+        let session = Session()
+        defer { session.close() }
+        session.timer.selectMode(.countdown)
+        for step in 1...4 {
+            session.now += 0.1
+            try session.scroll(angle: 270, delta: precise ? 12 : 1, after: 0.1, precise: precise)
+            #expect(abs(session.timer.timer.remaining - (Double(step) * 300 - Double(step - 1) * 0.1)) < 1e-6)
+        }
+        session.now += 0.1
+        try session.scroll(angle: 270, delta: precise ? -12 : -1, after: 0.1, precise: precise)
+        #expect(abs(session.timer.timer.remaining - 899.6) < 1e-6)
+    }
+
+    @Test(arguments: [CountdownMode.timer, .countdown], [false, true])
+    func singleTimerAcceptsTheFullCircleButNotOutside(mode: CountdownMode, isCompact: Bool) throws {
+        let session = Session(isCompact: isCompact)
+        defer { session.close() }
+        session.timer.selectMode(mode)
+        let radius = isCompact ? 16.0 : 88
+        // Includes the center, the unused sector, and the full perimeter.
+        for distance in [0.0, radius / 2, radius] {
+            for angle in stride(from: 0.0, to: 360, by: 30) {
+                session.timer.timer.clear()
+                try session.scroll(angle: angle, radius: distance, delta: 1)
+                #expect(session.timer.timer.remaining == 300)
+                try session.scroll(angle: angle, radius: distance, delta: 1)
+                #expect(session.timer.timer.remaining == 600)
+                try session.scroll(angle: angle, radius: distance, delta: -1)
+                #expect(session.timer.timer.remaining == 300)
+            }
+        }
+        for angle in stride(from: 0.0, to: 360, by: 30) {
+            session.timer.timer.clear()
+            try session.scroll(angle: angle, radius: radius + 0.01, delta: 1)
+            #expect(session.timer.timer.remaining == 0)
+        }
+    }
+
     @Test
     func wheelNotchesAreNotDroppedWhenTheyArriveQuickly() throws {
         let session = Session()
