@@ -85,8 +85,8 @@ struct CountdownView: View {
 
     private func durationMenu(_ label: String, phase: PomodoroModel.Phase, duration: TimeInterval) -> some View {
         Menu("\(label): \(Int(duration / 60)) min") {
-            Button("Increase by 1 minute") { countdown.adjustPomodoroDuration(phase, by: 60) }
-            Button("Decrease by 1 minute") { countdown.adjustPomodoroDuration(phase, by: -60) }
+            Button("Increase to next 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: 1) }
+            Button("Decrease to previous 5-minute mark") { countdown.adjustPomodoroDuration(phase, steps: -1) }
         }
     }
 

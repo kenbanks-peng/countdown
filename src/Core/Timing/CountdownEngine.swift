@@ -28,9 +28,10 @@ final class CountdownEngine: ObservableObject {
         }
     }
 
-    func update() {
-        timer.update()
-        pomodoro.update(at: now())
+    func update(at date: Date? = nil) {
+        let date = date ?? now()
+        timer.update(at: date)
+        pomodoro.update(at: date)
     }
 
     func toggleRunning() {
@@ -46,8 +47,8 @@ final class CountdownEngine: ObservableObject {
         }
     }
 
-    func adjustPomodoroDuration(_ phase: PomodoroModel.Phase, by amount: TimeInterval) {
-        pomodoro.adjustDuration(phase, by: amount, at: now())
+    func adjustPomodoroDuration(_ phase: PomodoroModel.Phase, by amount: TimeInterval, at date: Date? = nil) {
+        pomodoro.adjustDuration(phase, by: amount, at: date ?? now())
     }
 
     /// Reset the cycle without changing the shared run state.

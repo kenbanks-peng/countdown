@@ -59,22 +59,22 @@ final class ScrollTimeAdjuster {
 
         guard event.modifierFlags.contains(.option) else {
             optionScrollDelta = 0
-            adjust(target, by: delta > 0 ? 60 : -60, countdown: countdown)
+            adjust(target, steps: delta > 0 ? 1 : -1, countdown: countdown)
             return
         }
 
         optionScrollDelta += delta
         guard abs(optionScrollDelta) >= preciseScrollThreshold else { return }
 
-        let minutes = Int(optionScrollDelta / preciseScrollThreshold)
-        optionScrollDelta -= CGFloat(minutes) * preciseScrollThreshold
-        adjust(target, by: TimeInterval(minutes * 60), countdown: countdown)
+        let steps = Int(optionScrollDelta / preciseScrollThreshold)
+        optionScrollDelta -= CGFloat(steps) * preciseScrollThreshold
+        adjust(target, steps: steps, countdown: countdown)
     }
 
-    private func adjust(_ target: Target, by amount: TimeInterval, countdown: CountdownController) {
+    private func adjust(_ target: Target, steps: Int, countdown: CountdownController) {
         switch target {
-        case .timer: countdown.adjustTimerDuration(by: amount)
-        case .pomodoro(let phase): countdown.adjustPomodoroDuration(phase, by: amount)
+        case .timer: countdown.adjustTimerDuration(steps: steps)
+        case .pomodoro(let phase): countdown.adjustPomodoroDuration(phase, steps: steps)
         }
     }
 

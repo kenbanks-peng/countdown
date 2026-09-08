@@ -129,11 +129,12 @@ final class TimerModel: ObservableObject {
         save()
     }
 
-    func adjustDuration(by amount: TimeInterval) {
-        guard amount != 0 else { return }
+    func adjustDuration(by amount: TimeInterval, at date: Date? = nil) {
+        guard amount.isFinite, amount != 0 else { return }
 
-        update()
-        let adjustedRemaining = min(Self.maximumDuration, max(0, remaining + amount)).rounded()
+        let date = date ?? now()
+        update(at: date)
+        let adjustedRemaining = min(Self.maximumDuration, max(0, remaining + amount))
         guard adjustedRemaining != remaining else { return }
 
         if adjustedRemaining == 0 {
@@ -145,7 +146,7 @@ final class TimerModel: ObservableObject {
         case .active:
             duration = min(Self.maximumDuration, max(0, duration + amount))
             remaining = adjustedRemaining
-            endDate = now().addingTimeInterval(adjustedRemaining)
+            endDate = date.addingTimeInterval(adjustedRemaining)
         case .prepared:
             duration = adjustedRemaining
             remaining = adjustedRemaining
@@ -153,7 +154,7 @@ final class TimerModel: ObservableObject {
         case .empty:
             duration = adjustedRemaining
             remaining = adjustedRemaining
-            endDate = isPausedByCore ? nil : now().addingTimeInterval(remaining)
+            endDate = isPausedByCore ? nil : date.addingTimeInterval(remaining)
             status = isPausedByCore ? .prepared : .active
         }
         completionWasReported = false
@@ -187,11 +188,11 @@ final class TimerModel: ObservableObject {
         stateStore.remove()
     }
 
-    func update(reportEvents: Bool = true) {
+    func update(reportEvents: Bool = true, at date: Date? = nil) {
         guard status == .active, let endDate else { return }
 
         let previousRemaining = remaining
-        remaining = max(0, endDate.timeIntervalSince(now()))
+        remaining = max(0, endDate.timeIntervalSince(date ?? now()))
         if reportEvents { reportElapsed(previousRemaining, remaining) }
 
         if remaining == 0 {
