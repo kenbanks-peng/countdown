@@ -11,24 +11,29 @@ final class ScrollTimeAdjuster {
     private weak var countdown: CountdownController?
     private weak var window: NSWindow?
     private let isCompact: () -> Bool
+    private let uptime: () -> TimeInterval
     private var previousTarget: Target?
     private var monitor: Any?
     private var modeCancellable: AnyCancellable?
     private var clockCancellable: AnyCancellable?
-    private var scrollDelta: CGFloat = 0
-    private let scrollThreshold: CGFloat = 12
+    private var lastEventAt: TimeInterval?
+    private var lastStepAt: TimeInterval?
+    private var gesturePoint: NSPoint?
+    private var lastDirection = 0
+    private let repeatInterval: TimeInterval = 0.15
+    private let gestureTimeout: TimeInterval = 0.35
 
-    init(countdown: CountdownController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false }) {
+    init(countdown: CountdownController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false },
+         uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
         self.countdown = countdown
         self.window = window
         self.isCompact = isCompact
+        self.uptime = uptime
         modeCancellable = countdown.$mode.sink { [weak self] _ in
-            self?.scrollDelta = 0
-            self?.previousTarget = nil
+            self?.resetGesture()
         }
         clockCancellable = countdown.features.$isClockEnabled.sink { [weak self] _ in
-            self?.scrollDelta = 0
-            self?.previousTarget = nil
+            self?.resetGesture()
         }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             Task { @MainActor in
@@ -46,23 +51,51 @@ final class ScrollTimeAdjuster {
 
     func handle(_ event: NSEvent) {
         guard let countdown else { return }
-        countdown.update()
-        let target: Target? = countdown.mode == .timer
-            ? .timer : pomodoroTarget(for: event, countdown: countdown)
-        if target != previousTarget {
-            scrollDelta = 0
-            previousTarget = target
+        // Inertial scrolling must not keep changing a setting after the fingers stop.
+        guard event.momentumPhase.isEmpty else {
+            resetGesture()
+            return
         }
-        guard let target else { return }
+        if let window, let eventWindow = event.window, eventWindow !== window {
+            resetGesture()
+            return
+        }
+        let now = uptime()
+        let point = event.window.map { $0.convertPoint(toScreen: event.locationInWindow) }
+            ?? event.locationInWindow
+        let pointerMoved = gesturePoint.map { hypot(point.x - $0.x, point.y - $0.y) > 3 } ?? false
+        if event.phase.contains(.began) || pointerMoved
+            || lastEventAt.map({ now - $0 >= gestureTimeout }) == true {
+            resetGesture()
+        }
+        defer {
+            if event.phase.contains(.ended) || event.phase.contains(.cancelled) { resetGesture() }
+        }
         let delta = event.scrollingDeltaY
-        guard delta != 0 else { return }
+        guard delta.isFinite, delta != 0 else { return }
+        countdown.update()
+        // Hold the target while the pointer stays still, even when its sector shrinks.
+        let target = previousTarget ?? (countdown.mode == .timer
+            ? .timer : pomodoroTarget(for: event, countdown: countdown))
+        guard let target else { return }
+        previousTarget = target
+        if gesturePoint == nil { gesturePoint = point }
+        lastEventAt = now
+        let direction = delta > 0 ? 1 : -1
+        // The first input and a direction reversal respond immediately. Do not queue
+        // distance or missed repeats: a large event must still move only one mark.
+        guard direction != lastDirection || lastStepAt.map({ now - $0 >= repeatInterval }) != false else { return }
+        lastDirection = direction
+        lastStepAt = now
+        adjust(target, steps: direction, countdown: countdown)
+    }
 
-        scrollDelta += delta
-        guard abs(scrollDelta) >= scrollThreshold else { return }
-
-        let steps = Int(scrollDelta / scrollThreshold)
-        scrollDelta -= CGFloat(steps) * scrollThreshold
-        adjust(target, steps: steps, countdown: countdown)
+    private func resetGesture() {
+        previousTarget = nil
+        lastEventAt = nil
+        lastStepAt = nil
+        gesturePoint = nil
+        lastDirection = 0
     }
 
     private func adjust(_ target: Target, steps: Int, countdown: CountdownController) {

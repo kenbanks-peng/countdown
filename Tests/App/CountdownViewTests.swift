@@ -293,7 +293,8 @@ struct CountdownViewTests {
         window.isReleasedWhenClosed = false
         window.contentView = hosting
         defer { window.close() }
-        let adapter = ScrollTimeAdjuster(countdown: timer, window: window)
+        var scrollTime: TimeInterval = 0
+        let adapter = ScrollTimeAdjuster(countdown: timer, window: window, uptime: { scrollTime })
         let blue = NSPoint(x: 110, y: 158)
         let green = NSPoint(x: 160, y: 94)
         adapter.handle(try scrollEvent(in: window, at: blue, delta: 12))
@@ -332,7 +333,10 @@ struct CountdownViewTests {
         #expect(try sample(paused, angle: 147).greenComponent > 0.6)
         #expect(try sample(paused, angle: 153).greenComponent < 0.2)
         #expect(accessibilityLabels(hosting).contains("Pomodoro paused. Focus: 15 minutes remaining. Rest: 10 minutes remaining."))
-        adapter.handle(try scrollEvent(in: window, at: green, delta: -180, option: true))
+        for _ in 0..<3 {
+            scrollTime += 0.5
+            adapter.handle(try scrollEvent(in: window, at: green, delta: -1, option: true))
+        }
         let rest = try render(hosting)
         #expect(try sample(rest, angle: 33).blueComponent > 0.8)
         #expect(try sample(rest, angle: 63).greenComponent < 0.2)
@@ -407,7 +411,7 @@ struct CountdownViewTests {
         window.isReleasedWhenClosed = false
         window.contentView = hosting
         defer { window.close() }
-        let adapter = ScrollTimeAdjuster(countdown: timer, window: window, isCompact: { isCompact })
+        let adapter = ScrollTimeAdjuster(countdown: timer, window: window, isCompact: { isCompact }, uptime: { 0 })
         let radius = isCompact ? 14.0 : 80
         let blue = NSPoint(x: side / 2 + radius * sin(.pi / 12), y: side / 2 + radius * cos(.pi / 12))
         let green = NSPoint(x: side / 2 + radius, y: side / 2)
@@ -415,7 +419,7 @@ struct CountdownViewTests {
         #expect(timer.pomodoro.restDuration == 600)
         #expect(timer.pomodoro.focusDuration == 1_500)
         adapter.handle(try scrollEvent(in: window, at: green, delta: 7, option: true))
-        #expect(timer.pomodoro.focusDuration == 1_500)
+        #expect(timer.pomodoro.focusDuration == 1_800)
         adapter.handle(try scrollEvent(in: window, at: green, delta: 5, option: true))
         #expect(timer.pomodoro.focusDuration == 1_800)
         let edited = try render(hosting, side: side)
