@@ -19,8 +19,8 @@ enum ClockBoundary {
     }
 }
 
-/// Both rest settings follow the same focus endpoint. Editing focus changes their
-/// spacing, not their absolute endpoints. The spacing repeats at the next stage.
+/// Both rest settings follow the same focus endpoint. Editing focus moves both
+/// rest endpoints by the same amount, so their durations stay constant.
 struct PomodoroClockSchedule: Codable {
     var stageStart: Date
     var focusEnd: Date
@@ -57,7 +57,7 @@ struct PomodoroClockSchedule: Codable {
         switch phase {
         case .focus:
             minimum = stageStart.addingTimeInterval(60)
-            maximum = min(restEnd, longRestEnd).addingTimeInterval(-60)
+            maximum = stageStart.addingTimeInterval(3_600 - max(restDuration, longRestDuration))
         case .rest, .longRest:
             minimum = focusEnd.addingTimeInterval(60)
             maximum = stageStart.addingTimeInterval(3_600)
@@ -66,7 +66,11 @@ struct PomodoroClockSchedule: Codable {
         let target = steps.map { ClockBoundary.move(end, steps: $0, minimum: minimum, maximum: maximum) }
             ?? ClockBoundary.nearest(end.addingTimeInterval(amount), minimum: minimum, maximum: maximum)
         switch phase {
-        case .focus: focusEnd = target
+        case .focus:
+            let shift = target.timeIntervalSince(focusEnd)
+            focusEnd = target
+            restEnd += shift
+            longRestEnd += shift
         case .rest: restEnd = target
         case .longRest: longRestEnd = target
         }

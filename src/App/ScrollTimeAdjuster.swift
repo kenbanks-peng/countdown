@@ -15,19 +15,19 @@ final class ScrollTimeAdjuster {
     private var monitor: Any?
     private var modeCancellable: AnyCancellable?
     private var clockCancellable: AnyCancellable?
-    private var optionScrollDelta: CGFloat = 0
-    private let preciseScrollThreshold: CGFloat = 12
+    private var scrollDelta: CGFloat = 0
+    private let scrollThreshold: CGFloat = 12
 
     init(countdown: CountdownController, window: NSWindow? = nil, isCompact: @escaping () -> Bool = { false }) {
         self.countdown = countdown
         self.window = window
         self.isCompact = isCompact
         modeCancellable = countdown.$mode.sink { [weak self] _ in
-            self?.optionScrollDelta = 0
+            self?.scrollDelta = 0
             self?.previousTarget = nil
         }
         clockCancellable = countdown.features.$isClockEnabled.sink { [weak self] _ in
-            self?.optionScrollDelta = 0
+            self?.scrollDelta = 0
             self?.previousTarget = nil
         }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
@@ -50,24 +50,18 @@ final class ScrollTimeAdjuster {
         let target: Target? = countdown.mode == .timer
             ? .timer : pomodoroTarget(for: event, countdown: countdown)
         if target != previousTarget {
-            optionScrollDelta = 0
+            scrollDelta = 0
             previousTarget = target
         }
         guard let target else { return }
         let delta = event.scrollingDeltaY
         guard delta != 0 else { return }
 
-        guard event.modifierFlags.contains(.option) else {
-            optionScrollDelta = 0
-            adjust(target, steps: delta > 0 ? 1 : -1, countdown: countdown)
-            return
-        }
+        scrollDelta += delta
+        guard abs(scrollDelta) >= scrollThreshold else { return }
 
-        optionScrollDelta += delta
-        guard abs(optionScrollDelta) >= preciseScrollThreshold else { return }
-
-        let steps = Int(optionScrollDelta / preciseScrollThreshold)
-        optionScrollDelta -= CGFloat(steps) * preciseScrollThreshold
+        let steps = Int(scrollDelta / scrollThreshold)
+        scrollDelta -= CGFloat(steps) * scrollThreshold
         adjust(target, steps: steps, countdown: countdown)
     }
 
