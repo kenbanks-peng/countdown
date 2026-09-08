@@ -59,9 +59,9 @@ final class CountdownEngine: ObservableObject {
 
     /// Reset the cycle without changing the shared run state.
     func resetPomodoro() {
-        pomodoro.reset()
-        pomodoro.toggleRunning(at: now())
-        if isPaused { pomodoro.pause(at: now()) }
-        pomodoro.setClockEnabled(true, at: now())
+        let date = now()
+        pomodoro.reset(at: date)
+        pomodoro.toggleRunning(at: date)
+        if isPaused { pomodoro.pause(at: date) }
     }
 }

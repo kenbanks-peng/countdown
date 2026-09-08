@@ -183,6 +183,20 @@ struct PomodoroModel {
         lastUpdate = nil
     }
 
+    /// Start from minimum allocations, then apply defaults through clock edits.
+    /// This reserves at least five minutes for rest even with a large focus default.
+    mutating func reset(at now: Date) {
+        reset()
+        clockSchedule = PomodoroClockSchedule(
+            stageStart: now, focusEnd: now + 300,
+            restEnd: now + 600, longRestEnd: now + 600,
+            sampledAt: now, pausedAt: now, stage: 1, focusCompleted: false
+        )
+        adjustDuration(.focus, by: defaultDurations.focus - 300, at: now)
+        adjustDuration(.rest, by: defaultDurations.rest - 300, at: now)
+        adjustDuration(.longRest, by: defaultDurations.longRest - 300, at: now)
+    }
+
     mutating func pause(at now: Date) {
         update(at: now)
         guard status == .running else { return }

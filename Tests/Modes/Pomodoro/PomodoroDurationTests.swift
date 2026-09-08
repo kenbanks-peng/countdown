@@ -36,6 +36,40 @@ struct PomodoroDurationTests {
         #expect(session.sounds == 0)
     }
 
+    @Test(arguments: [false, true], [25, 1, 59])
+    func resetAlignsDefaultsAndEnforcesMinimum(paused: Bool, focusMinutes: Int) throws {
+        let session = Session()
+        defer { session.removeState() }
+        session.configuration = CountdownConfiguration(
+            alarmNotificationURL: nil, pomodoroFocusMinutes: focusMinutes,
+            pomodoroRestMinutes: focusMinutes == 25 ? 5 : 1,
+            pomodoroLongRestMinutes: focusMinutes == 25 ? 15 : 1
+        )
+        let timer = session.timer
+        timer.selectMode(.pomodoro)
+        if paused { timer.toggleRunning() }
+        session.now += 137.5
+        timer.resetPomodoro()
+        let schedule = try #require(timer.pomodoro.clockSchedule)
+        let origin = Calendar.current.startOfDay(for: session.now)
+        for end in [schedule.focusEnd, schedule.restEnd, schedule.longRestEnd] {
+            #expect(end.timeIntervalSince(origin).truncatingRemainder(dividingBy: 300) == 0)
+        }
+        let expectedFocus: TimeInterval = focusMinutes == 25 ? 1_362.5 : (focusMinutes == 1 ? 462.5 : 3_162.5)
+        #expect(schedule.focusDuration == expectedFocus)
+        #expect(schedule.restDuration == 300)
+        #expect(schedule.longRestDuration == (focusMinutes == 25 ? 900 : 300))
+        #expect(schedule.focusDuration >= 300)
+        #expect(schedule.restDuration >= 300)
+        #expect(schedule.longRestDuration >= 300)
+        #expect(schedule.focusDuration + schedule.restDuration <= 3_600)
+        #expect(schedule.stageStart == session.now)
+        #expect(timer.pomodoro.stage == 1)
+        #expect(timer.pomodoro.completedFocusPeriods == 0)
+        #expect(timer.countdown.isPaused == paused)
+        #expect(timer.pomodoro.status == (paused ? .paused : .running))
+    }
+
     @Test(arguments: [false, true])
     func clockEditsKeepCompletedFocusEmpty(paused: Bool) throws {
         let session = Session()
@@ -57,9 +91,10 @@ struct PomodoroDurationTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
+        var configuration = CountdownConfiguration(alarmNotificationURL: nil)
         lazy var timer = CountdownController(
             stateStore: TimerStateStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: configuration,
             featureState: CountdownFeatureState(popupEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )

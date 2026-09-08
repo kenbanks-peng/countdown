@@ -112,12 +112,14 @@ struct PomodoroLifecycleTests {
         if pause { timer.toggleRunning() }
         timer.resetPomodoro()
         #expect(timer.pomodoro.status == (pause ? .paused : .running))
-        #expect(timer.pomodoro.focusRemaining == 1_500)
+        // Reset uses the nearest clock mark, not an exact 25-minute duration.
+        let resetFocus: TimeInterval = elapsed == 1_620 ? 1_380 : 1_500
+        #expect(timer.pomodoro.focusRemaining == resetFocus)
         #expect(timer.pomodoro.restRemaining == 300)
         #expect(timer.countdown.isPaused == pause)
         session.now += 60
         timer.update()
-        #expect(timer.pomodoro.focusRemaining == (pause ? 1_500 : 1_440))
+        #expect(timer.pomodoro.focusRemaining == (pause ? resetFocus : resetFocus - 60))
         #expect(session.sounds == 0)
     }
 
