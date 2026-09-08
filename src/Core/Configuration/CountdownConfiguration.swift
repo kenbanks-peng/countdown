@@ -13,6 +13,8 @@ struct CountdownConfiguration {
     let alarmNotificationURL: URL?
     static let defaultReminderFontSizePt: Double = 144
     let reminderFontSizePt: Double
+    static let defaultReminderFadeTimeSeconds: Double = 1.5
+    let reminderFadeTimeSeconds: Double
     let reminderTimeSeconds: Int
     let reminderIntervalMinutes: Int
     let pomodoroFocusPeriodsPerCycle: Int
@@ -26,6 +28,7 @@ struct CountdownConfiguration {
         yellowNotificationURL: URL? = nil,
         redNotificationURL: URL? = nil,
         reminderTimeSeconds: Int = 5,
+        reminderFadeTimeSeconds: Double = CountdownConfiguration.defaultReminderFadeTimeSeconds,
         reminderFontSizePt: Double = CountdownConfiguration.defaultReminderFontSizePt,
         reminderIntervalMinutes: Int = 15,
         pomodoroFocusMinutes: Int = 25,
@@ -52,6 +55,8 @@ struct CountdownConfiguration {
         self.alarmNotificationURL = alarmNotificationURL
         self.reminderFontSizePt = reminderFontSizePt.isFinite && reminderFontSizePt > 0
             ? reminderFontSizePt : Self.defaultReminderFontSizePt
+        self.reminderFadeTimeSeconds = reminderFadeTimeSeconds.isFinite && reminderFadeTimeSeconds >= 0
+            ? reminderFadeTimeSeconds : Self.defaultReminderFadeTimeSeconds
         self.reminderTimeSeconds = reminderTimeSeconds > 0 ? reminderTimeSeconds : 5
         let interval = max(5, reminderIntervalMinutes)
         let roundedDown = interval - interval % 5
@@ -78,9 +83,10 @@ struct CountdownConfiguration {
             greenNotificationURL: configurationFile.soundURL(for: "green_audio", defaultName: "green.mp3"),
             yellowNotificationURL: configurationFile.soundURL(for: "yellow_audio", defaultName: "yellow.mp3"),
             redNotificationURL: configurationFile.soundURL(for: "red_audio", defaultName: "red.mp3"),
-            reminderTimeSeconds: configurationFile.intValue(for: "notification_time_in_seconds", section: "notifications") ?? 5,
+            reminderTimeSeconds: configurationFile.intValue(for: "notification_time_seconds", section: "notifications") ?? 5,
+            reminderFadeTimeSeconds: configurationFile.doubleValue(for: "reminder_fade_time_seconds", section: "notifications") ?? Self.defaultReminderFadeTimeSeconds,
             reminderFontSizePt: configurationFile.doubleValue(for: "reminder_font_size_pt", section: "notifications") ?? Self.defaultReminderFontSizePt,
-            reminderIntervalMinutes: configurationFile.intValue(for: "notification_interval_in_minutes", section: "notifications") ?? 15,
+            reminderIntervalMinutes: configurationFile.intValue(for: "notification_interval_minutes", section: "notifications") ?? 15,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,
             pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", section: "pomodoro") ?? 20,

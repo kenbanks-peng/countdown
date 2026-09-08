@@ -6,12 +6,14 @@ compact_size = 1
 notification_enabled = true
 # Rounded to the nearest multiple of 5 minutes, with a minimum of 5.
 # Notifications count backwards from the active end time, including zero.
-notification_interval_in_minutes = 15
+notification_interval_minutes = 15
 # Seconds the centered minutes stay visible between fades.
-notification_time_in_seconds = 5
+notification_time_seconds = 5
 
 reminder_notification_enabled = true
-# Font size in points, independent of the circle scale. Each fade takes 1.5 seconds.
+# Duration of each fade, in seconds. Zero disables fades.
+reminder_fade_time_seconds = 1.5
+# Font size in points, independent of the circle scale.
 reminder_font_size_pt = 144
 
 audio_notification_enabled = true

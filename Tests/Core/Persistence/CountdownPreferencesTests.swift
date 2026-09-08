@@ -28,8 +28,8 @@ struct CountdownPreferencesTests {
         reminder_notification_enabled = true
         audio_notification_enabled = false
         alarm_enabled = true
-        notification_time_in_seconds = 5
-        notification_interval_in_minutes = 15
+        notification_time_seconds = 5
+        notification_interval_minutes = 15
         alarm_audio = "alarm.mp3"
         """
         try contents.write(to: configURL, atomically: true, encoding: .utf8)

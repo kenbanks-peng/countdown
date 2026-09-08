@@ -13,7 +13,7 @@ final class CountdownWindowController {
     private var presentation: Presentation = .normal
     private var isTransitioning = false
     private var reminderSubscription: AnyCancellable?
-    private let reminder = CountdownReminderController()
+    private let reminder: CountdownReminderController
 
     private let windowState = CountdownWindowStateStore()
     private let transition = CountdownPanelTransition()
@@ -24,6 +24,7 @@ final class CountdownWindowController {
     init(countdown: CountdownController, configuration: CountdownConfiguration = .default) {
         self.countdown = countdown
         self.configuration = configuration
+        reminder = CountdownReminderController(fadeDuration: configuration.reminderFadeTimeSeconds)
         let normalSide = CountdownAppearance.normalSize * configuration.size
         let compactSide = CountdownAppearance.compactSize * configuration.compactSize
         normalSize = NSSize(width: normalSide, height: normalSide)

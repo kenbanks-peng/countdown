@@ -38,6 +38,46 @@ struct ReminderConfigurationTests {
         #expect(try load("[pomodoro]\nreminder_font_size_pt = 12").reminderFontSizePt == 144)
     }
 
+    @Test
+    func defaultFadeTimeIsOneAndAHalfSeconds() throws {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil).reminderFadeTimeSeconds == 1.5)
+        #expect(try load("").reminderFadeTimeSeconds == 1.5)
+    }
+
+    @Test(arguments: ["", "invalid", "-1", "nan", "inf", "1e999", "\"2\""])
+    func invalidFadeTimeUsesDefault(value: String) throws {
+        #expect(try load("[notifications]\nreminder_fade_time_seconds = \(value)").reminderFadeTimeSeconds == 1.5)
+    }
+
+    @Test(arguments: [-1.0, Double.nan, Double.infinity, -Double.infinity])
+    func initializerRejectsInvalidFadeTime(value: Double) {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, reminderFadeTimeSeconds: value).reminderFadeTimeSeconds == 1.5)
+    }
+
+    @Test(arguments: [0.0, 0.25, 2.0])
+    func fadeTimeAcceptsNonnegativeSeconds(value: Double) throws {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, reminderFadeTimeSeconds: value).reminderFadeTimeSeconds == value)
+        let config = try load("""
+        reminder_fade_time_seconds = 99
+        [notifications]
+        reminder_fade_time_seconds = \(value)
+        reminder_fade_time_seconds = 99
+        [pomodoro]
+        reminder_fade_time_seconds = 99
+        """)
+        #expect(config.reminderFadeTimeSeconds == value)
+        #expect(try load("[pomodoro]\nreminder_fade_time_seconds = 99").reminderFadeTimeSeconds == 1.5)
+    }
+
+    @Test
+    func invalidFirstFadeTimeDoesNotFallThrough() throws {
+        #expect(try load("""
+        [notifications]
+        reminder_fade_time_seconds = invalid
+        reminder_fade_time_seconds = 2
+        """).reminderFadeTimeSeconds == 1.5)
+    }
+
     private func load(_ contents: String) throws -> CountdownConfiguration {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

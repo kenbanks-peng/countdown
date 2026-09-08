@@ -14,7 +14,7 @@ struct CountdownConfigurationFileTests {
         return CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
     }
 
-    @Test(arguments: [nil, "", "[notifications]\nnotification_enabled = invalid\nreminder_notification_enabled = 0\naudio_notification_enabled = \"false\"\nalarm_enabled = FALSE\nnotification_time_in_seconds = invalid\nnotification_interval_in_minutes = invalid"] as [String?])
+    @Test(arguments: [nil, "", "[notifications]\nnotification_enabled = invalid\nreminder_notification_enabled = 0\naudio_notification_enabled = \"false\"\nalarm_enabled = FALSE\nnotification_time_seconds = invalid\nnotification_interval_minutes = invalid"] as [String?])
     func missingAndInvalidValuesUseDefaults(contents: String?) throws {
         let config = try load(contents)
         #expect(config.size == 1)
@@ -42,7 +42,7 @@ struct CountdownConfigurationFileTests {
         compact_size = 0.8
         [unrelated]
         notification_enabled = true
-        notification_time_in_seconds = 99
+        notification_time_seconds = 99
         green_audio = "wrong.mp3"
         focus = 59
         [notifications]
@@ -51,8 +51,8 @@ struct CountdownConfigurationFileTests {
         reminder_notification_enabled = false
         audio_notification_enabled = false
         alarm_enabled = false
-        notification_time_in_seconds = 7
-        notification_interval_in_minutes = 8
+        notification_time_seconds = 7
+        notification_interval_minutes = 8
         alarm_audio = "/tmp/alarm.mp3"
         green_audio = "sounds/green.mp3" # Relative path
         red_audio = invalid
@@ -84,10 +84,10 @@ struct CountdownConfigurationFileTests {
         [notifications]
         notification_enabled = invalid
         notification_enabled = false
-        notification_time_in_seconds = invalid
-        notification_time_in_seconds = 9
-        notification_interval_in_minutes = invalid
-        notification_interval_in_minutes = 30
+        notification_time_seconds = invalid
+        notification_time_seconds = 9
+        notification_interval_minutes = invalid
+        notification_interval_minutes = 30
         alarm_audio = "first.mp3"
         alarm_audio = "second.mp3"
         """)
