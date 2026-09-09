@@ -51,9 +51,13 @@ struct CountdownViewLayoutTests {
     func transitionUsesScaledCompactFrame() {
         let compact = NSRect(x: 10, y: 20, width: 25.6, height: 25.6)
         let normal = NSRect(x: 200, y: 300, width: 282, height: 282)
-        let waypoint = CountdownPanelTransition().waypoint(from: compact, to: normal)
-        #expect(waypoint.size == compact.size)
-        #expect(abs(waypoint.midX - (compact.midX + (normal.midX - compact.midX) * 0.18)) < 1e-9)
-        #expect(abs(waypoint.midY - (compact.midY + (normal.midY - compact.midY) * 0.18)) < 1e-9)
+        let transition = CountdownPanelTransition()
+        let anchor = transition.scaleAnchor(compactFrame: compact,
+                                            screenFrame: NSRect(x: 0, y: 0, width: 1_000, height: 800))
+        let frame = transition.frame(from: compact, to: normal, anchor: anchor, progress: 0.5)
+        #expect(abs(frame.width - (compact.width + normal.width) / 2) < 1e-9)
+        #expect(frame.width == frame.height)
+        #expect(abs(frame.midX - (compact.midX + normal.midX) / 2) < 1e-9)
+        #expect(abs(frame.midY - (compact.midY + normal.midY) / 2) < 1e-9)
     }
 }

@@ -122,6 +122,14 @@ final class CountdownWindowController {
         windowState.save(frame: frame ?? panel.frame, presentation: presentation)
     }
 
+    private func scaleAnchor(for compactFrame: NSRect) -> NSPoint {
+        let center = NSPoint(x: compactFrame.midX, y: compactFrame.midY)
+        let screen = NSScreen.screens.first { $0.frame.contains(center) }
+            ?? NSScreen.screens.first { $0.frame.intersects(compactFrame) }
+            ?? panel.screen ?? NSScreen.main
+        return transition.scaleAnchor(compactFrame: compactFrame, screenFrame: screen?.frame ?? .zero)
+    }
+
     private func showCompactWindow() {
         guard presentation == .normal, !isTransitioning else { return }
         let panel = panel
@@ -148,20 +156,11 @@ final class CountdownWindowController {
         // the moment the transition starts.
         let incoming = transition.crossFadeTo(contentView(isCompact: true), in: panel)
 
-        let slideWaypoint = transition.waypoint(from: compactFrame, to: panel.frame)
-        transition.animate(panel, to: slideWaypoint, duration: transition.resizeDuration, timingFunction: .easeIn) { [weak self] in
+        transition.animate(panel, to: compactFrame, anchor: scaleAnchor(for: compactFrame)) { [weak self] in
             guard let self else { return }
-            self.transition.animate(
-                panel,
-                to: compactFrame,
-                duration: self.transition.slideDuration,
-                timingFunction: .easeOut
-            ) { [weak self] in
-                guard let self else { return }
-                self.transition.replaceContent(of: panel, with: incoming)
-                self.savePanelState(frame: compactFrame)
-                self.isTransitioning = false
-            }
+            self.transition.replaceContent(of: panel, with: incoming)
+            self.savePanelState(frame: compactFrame)
+            self.isTransitioning = false
         }
     }
 
@@ -194,25 +193,14 @@ final class CountdownWindowController {
             return
         }
 
-        // Cross-fade the content while the panel slides and grows, so the clock
-        // face and hands fade in with the circle instead of popping in after it
-        // lands. Keeping the panel square and compact-sized while it travels
-        // still prevents the growing circle from being clipped into a square.
+        // Cross-fade while moving and growing around the compact position's
+        // canvas-edge anchor. The reverse transition uses the same anchor.
         let incoming = transition.crossFadeTo(contentView(isCompact: false), in: panel)
 
-        let slideWaypoint = transition.waypoint(from: panel.frame, to: fullFrame)
-        transition.animate(panel, to: slideWaypoint, duration: transition.slideDuration, timingFunction: .easeIn) { [weak self] in
+        transition.animate(panel, to: fullFrame, anchor: scaleAnchor(for: panel.frame)) { [weak self] in
             guard let self else { return }
-            self.transition.animate(
-                panel,
-                to: fullFrame,
-                duration: self.transition.resizeDuration,
-                timingFunction: .easeOut
-            ) { [weak self] in
-                guard let self else { return }
-                self.transition.replaceContent(of: panel, with: incoming)
-                finishTransition()
-            }
+            self.transition.replaceContent(of: panel, with: incoming)
+            finishTransition()
         }
     }
 
