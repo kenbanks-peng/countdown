@@ -48,6 +48,9 @@ struct PomodoroView: View {
                 .accessibilityHidden(true)
                 .offset(y: 32)
             }
+            if model.status == .paused {
+                CountdownPauseIndicator(isCompact: isCompact)
+            }
         }
         .clipShape(Circle())
         .padding(isCompact ? 0 : CountdownAppearance.circleInset)

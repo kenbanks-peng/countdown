@@ -140,7 +140,8 @@ struct ScrollTargetTests {
             timer.toggleRunning()
             session.now += 600
         }
-        try session.scroll(angle: 282, delta: 12) // Paused sectors retain their fixed endpoints.
+        // Paused sectors rotate ten minutes (60 degrees) with the clock.
+        try session.scroll(angle: paused ? 342 : 282, delta: 12)
         #expect(timer.pomodoro.restDuration == 600)
         #expect(timer.pomodoro.focusDuration == 1_500)
         try session.scroll(angle: 150, delta: 12) // Completed focus area is background.

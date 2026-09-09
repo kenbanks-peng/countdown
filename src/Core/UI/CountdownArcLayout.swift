@@ -26,9 +26,9 @@ struct CountdownArcLayout {
 
     static func timer(remaining: TimeInterval, at date: Date?, endDate: Date? = nil, pausedAt: Date? = nil) -> Self {
         if let date, let endDate {
-            let start = pausedAt ?? date
-            return Self(startProportion: minuteProportion(at: start),
-                        proportion: min(1, max(0, endDate.timeIntervalSince(start) / 3_600)))
+            let reference = pausedAt ?? date
+            return Self(startProportion: minuteProportion(at: date),
+                        proportion: min(1, max(0, endDate.timeIntervalSince(reference) / 3_600)))
         }
         return Self(startProportion: date.map { minuteProportion(at: $0) } ?? 0,
                     proportion: min(1, max(0, remaining / 3_600)))
@@ -39,8 +39,10 @@ struct CountdownArcLayout {
         restDuration: TimeInterval, at date: Date?,
         schedule: PomodoroClockSchedule? = nil, restPhase: PomodoroModel.Phase = .rest
     ) -> (focus: Self, rest: Self) {
-        if let date, let schedule {
-            let start = schedule.pausedAt ?? date
+        if let date, var schedule {
+            // Shift only the drawing copy. Paused durations and stored endpoints stay unchanged.
+            schedule.resume(at: date)
+            let start = date
             let focusEnd = schedule.focusCompleted ? start : max(start, schedule.focusEnd)
             return (
                 focus: Self(startProportion: minuteProportion(at: start),

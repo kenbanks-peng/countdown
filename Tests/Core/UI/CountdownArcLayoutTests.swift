@@ -62,6 +62,54 @@ struct CountdownArcLayoutTests {
         #expect(close(adjusted.startProportion + adjusted.proportion, 40.0 / 60))
     }
 
+    @Test func pausedClockTimerRotatesWithoutShrinkingAfterSeveralHours() {
+        let pausedAt = date(minute: 55, second: 30)
+        let now = pausedAt + 7_813
+        let end = pausedAt + 600
+        let initial = CountdownArcLayout.timer(remaining: 600, at: pausedAt, endDate: end, pausedAt: pausedAt)
+        let paused = CountdownArcLayout.timer(remaining: 600, at: now, endDate: end, pausedAt: pausedAt)
+        let resumed = CountdownArcLayout.timer(remaining: 600, at: now, endDate: now + 600)
+        #expect(close(paused.startProportion, CountdownArcLayout.minuteProportion(at: now)))
+        #expect(close(paused.proportion, initial.proportion))
+        #expect(close(paused.startProportion, resumed.startProportion))
+        #expect(close(paused.proportion, resumed.proportion))
+        let running = CountdownArcLayout.timer(remaining: 540, at: now + 60, endDate: now + 600)
+        #expect(close(running.proportion, paused.proportion - 60.0 / 3_600))
+    }
+
+    @Test(arguments: [false, true], [PomodoroModel.Phase.rest, .longRest])
+    func pausedPomodoroRotatesWithoutChangingPhaseSizes(inRest: Bool, restPhase: PomodoroModel.Phase) {
+        let start = date(minute: 40)
+        let pausedAt = start + (inRest ? 1_260 : 300)
+        let now = pausedAt + 7_813
+        var schedule = PomodoroClockSchedule(
+            stageStart: start, focusEnd: start + 1_200,
+            restEnd: start + 1_800, longRestEnd: start + 2_100,
+            sampledAt: pausedAt, pausedAt: pausedAt, stage: 1, focusCompleted: inRest
+        )
+        func arcs(at date: Date) -> (focus: CountdownArcLayout, rest: CountdownArcLayout) {
+            CountdownArcLayout.pomodoro(
+                focusRemaining: inRest ? 0 : 900, restRemaining: 600,
+                restDuration: 600, at: date, schedule: schedule, restPhase: restPhase
+            )
+        }
+        let initial = arcs(at: pausedAt)
+        let paused = arcs(at: now)
+        #expect(close(paused.focus.startProportion, CountdownArcLayout.minuteProportion(at: now)))
+        #expect(close(paused.focus.proportion, initial.focus.proportion))
+        #expect(close(paused.rest.proportion, initial.rest.proportion))
+        #expect(close(paused.rest.startProportion,
+                      CountdownArcLayout.minuteProportion(at: now + paused.focus.proportion * 3_600)))
+        #expect(schedule.pausedAt == pausedAt)
+        #expect(schedule.focusEnd == start + 1_200)
+        schedule.resume(at: now)
+        let resumed = arcs(at: now)
+        #expect(close(paused.focus.startProportion, resumed.focus.startProportion))
+        #expect(close(paused.rest.startProportion, resumed.rest.startProportion))
+        #expect(close(paused.focus.proportion, resumed.focus.proportion))
+        #expect(close(paused.rest.proportion, resumed.rest.proportion))
+    }
+
     @Test func secondsAndHourRollover() {
         let initial = CountdownArcLayout.timer(remaining: 600, at: date(minute: 55, second: 30))
         let later = CountdownArcLayout.timer(remaining: 270, at: date(minute: 1))

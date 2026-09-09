@@ -26,7 +26,8 @@ struct PomodoroFocusScrollTests {
         #expect(controller.pomodoro.focusRemaining == 0)
         #expect(controller.pomodoro.restRemaining == 180)
         // Start just beyond rest. The first edit moves blue under this pointer.
-        let endMinute = Calendar.current.component(.minute, from: initial.end(for: restPhase))
+        let visibleEnd = initial.end(for: restPhase) + (paused ? 120 : 0)
+        let endMinute = Calendar.current.component(.minute, from: visibleEnd)
         let angle = Double((endMinute + 1) % 60) * 6
 
         try session.scroll(angle: angle, delta: 12, option: option, phase: .began, precise: true)

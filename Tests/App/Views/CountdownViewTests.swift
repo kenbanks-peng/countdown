@@ -6,6 +6,35 @@ import Vision
 
 @MainActor
 struct CountdownViewTests {
+    @Test(arguments: CountdownMode.allCases, [false, true])
+    func pauseIconAppearsAndDisappearsInEveryMode(mode: CountdownMode, isCompact: Bool) throws {
+        let session = ClockTestSession()
+        defer { session.close() }
+        let controller = session.controller
+        controller.adjustTimerDuration(by: 1_800)
+        controller.selectMode(mode)
+        let side = isCompact ? 32.0 : 188
+        let hosting = NSHostingView(rootView: CountdownView(
+            countdown: controller, isCompact: isCompact, changePresentation: {}
+        ))
+        let running = try render(hosting, side: side)
+        controller.toggleRunning()
+        let paused = try render(hosting, side: side)
+        var changedPixels = 0
+        // Inspect the center only, away from the labels and session dots.
+        for x in Int(Double(paused.pixelsWide) * 0.38)..<Int(Double(paused.pixelsWide) * 0.62) {
+            for y in Int(Double(paused.pixelsHigh) * 0.38)..<Int(Double(paused.pixelsHigh) * 0.62) {
+                if paused.colorAt(x: x, y: y) != running.colorAt(x: x, y: y) {
+                    changedPixels += 1
+                }
+            }
+        }
+        #expect(changedPixels > 0)
+        controller.toggleRunning()
+        let resumed = try render(hosting, side: side)
+        #expect(resumed.representation(using: .png, properties: [:]) == running.representation(using: .png, properties: [:]))
+    }
+
     @Test(arguments: [false, true], [false, true])
     func editedClockPresentationAndRestartKeepTheSchedule(paused: Bool, isCompact: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

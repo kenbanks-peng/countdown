@@ -17,7 +17,8 @@ struct CountdownAdjustmentTests {
         }
         controller.adjustTimerDuration(steps: 1)
         if clock {
-            expectMark(timerEnd(controller))
+            // Edits retain the pause-time reference; the drawing rotates with current time.
+            expectMark(timerEnd(controller) - (paused ? 47.25 : 0))
         } else {
             #expect(controller.timer.remaining == 1_200)
         }
@@ -71,7 +72,8 @@ struct CountdownAdjustmentTests {
         }
         controller.adjustPomodoroDuration(phase, steps: 1)
         #expect(controller.pomodoro.focusRemaining == 0)
-        expectMark(pomodoroEnd(controller, phase: phase))
+        // The visible endpoint includes the time spent paused after the edit reference.
+        expectMark(pomodoroEnd(controller, phase: phase) - (paused ? 38.25 : 0))
         #expect(controller.engine.isPaused == paused)
     }
 

@@ -25,10 +25,8 @@ struct TimerView: View {
                 .animation(arcAnimation, value: isHovering)
 
             if !isCompact && showsLabels { countdownLabel }
-            if isCompact && model.isPaused {
-                Image(systemName: "pause.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.65))
+            if model.isPaused || model.isEnginePaused {
+                CountdownPauseIndicator(isCompact: isCompact)
             }
         }
         .contentShape(Circle())
@@ -74,12 +72,6 @@ struct TimerView: View {
             .allowsHitTesting(false)
             .offset(y: 32)
 
-            if model.isPaused {
-                Image(systemName: "pause.fill")
-                    .font(.system(size: 56, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.34))
-                    .allowsHitTesting(false)
-            }
         }
     }
 
