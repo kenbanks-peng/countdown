@@ -20,8 +20,8 @@ final class ClockTestSession {
     func makeController() -> CountdownController {
         CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false),
-            preferences: CountdownPreferences(reminderEnabled: false),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, notificationAudioEnabled: false),
+            preferences: CountdownPreferences(notificationEnabled: false),
             playSound: { _ in }, now: { [unowned self] in now }, saveEnablement: { _, _ in }
         )
     }

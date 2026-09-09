@@ -1,6 +1,6 @@
 import Foundation
 
-/// Shared time bands for timer colors and reminder sounds.
+/// Shared time bands for timer colors and notification sounds.
 enum CountdownUrgency {
     case normal, warning, urgent
 

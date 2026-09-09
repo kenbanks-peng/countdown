@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// A separate, stationary reminder. It never changes the countdown window.
+/// A separate, stationary notification. It never changes the countdown window.
 @MainActor
-final class CountdownReminderController {
+final class CountdownNotificationController {
     private(set) var panel: NSPanel?
     private var dismissalTask: Task<Void, Never>?
     private let fadeDuration: TimeInterval

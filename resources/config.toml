@@ -10,15 +10,14 @@ notification_interval_minutes = 15
 # Seconds the centered minutes stay visible between fades.
 notification_time_seconds = 5
 
-reminder_notification_enabled = true
 # Duration of each fade, in seconds. Zero disables fades.
-reminder_fade_time_seconds = 1.5
+notification_fade_time_seconds = 1.5
 # Installed font name, for example "Impact". Empty uses the system font.
-reminder_font = ""
+notification_font = ""
 # Font size in points, independent of the circle scale.
-reminder_font_size_pt = 144
+notification_font_size_pt = 144
 
-audio_notification_enabled = true
+notification_audio_enabled = true
 # Paths are relative to this file.
 green_audio = "green.mp3"
 yellow_audio = "yellow.mp3"

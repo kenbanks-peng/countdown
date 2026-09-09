@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct CountdownCoreTests {
     @Test(arguments: CountdownMode.allCases)
-    func sharedControlsAndReminderFollowTheActiveMode(mode: CountdownMode) {
+    func sharedControlsAndNotificationFollowTheActiveMode(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
@@ -13,7 +13,7 @@ struct CountdownCoreTests {
         var settings: [String: Bool] = [:]
         let timer = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderIntervalMinutes: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now },
             saveEnablement: { settings[$0] = $1 }
         )
@@ -22,39 +22,39 @@ struct CountdownCoreTests {
         #expect(timer.controlLabel == "Pause")
         now += 300
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 1)
+        #expect(timer.notifications.notificationIntervalCount == 1)
         #expect(sounds == 1)
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 1)
+        #expect(timer.notifications.notificationIntervalCount == 1)
 
         timer.toggleRunning()
         #expect(timer.controlLabel == "Resume")
         now += 900
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 1)
+        #expect(timer.notifications.notificationIntervalCount == 1)
         timer.toggleRunning()
         now += 300
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 2)
+        #expect(timer.notifications.notificationIntervalCount == 2)
 
-        timer.reminders.setReminderEnabled(false)
+        timer.notifications.setNotificationEnabled(false)
         now += 300
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 2)
+        #expect(timer.notifications.notificationIntervalCount == 2)
         timer.selectMode(.countdown)
-        let reminders = timer.reminders
+        let notifications = timer.notifications
         timer.selectMode(mode.usesTimer ? .pomodoro : .timer)
-        #expect(timer.reminders === reminders)
-        #expect(!timer.reminders.isReminderEnabled)
+        #expect(timer.notifications === notifications)
+        #expect(!timer.notifications.isNotificationEnabled)
         now += 600
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 2)
-        #expect(sounds == (mode.usesTimer ? 4 : 3)) // Disabling reminders does not disable audio.
-        #expect(settings == ["reminder_enabled": false])
+        #expect(timer.notifications.notificationIntervalCount == 2)
+        #expect(sounds == 2) // Disabling notifications also disables notification audio.
+        #expect(settings == ["notification_enabled": false])
     }
 
     @Test
-    func restoringTimerDoesNotReplayRemindersFromTimeWhileClosed() {
+    func restoringTimerDoesNotReplayNotificationsFromTimeWhileClosed() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
@@ -65,12 +65,12 @@ struct CountdownCoreTests {
         var sounds = 0
         let controller = CountdownController(
             sessionStore: store,
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderIntervalMinutes: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         #expect(controller.timer.remaining == 1_440)
         #expect(sounds == 0)
-        now += 239 // One second before the next end-anchored reminder.
+        now += 239 // One second before the next end-anchored notification.
         controller.update()
         #expect(sounds == 0)
         now += 1
@@ -79,14 +79,14 @@ struct CountdownCoreTests {
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func durationIncreaseDoesNotRepeatReminderAfterOnlyOneMinute(mode: CountdownMode) {
+    func durationIncreaseDoesNotRepeatNotificationAfterOnlyOneMinute(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderIntervalMinutes: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)
@@ -105,14 +105,14 @@ struct CountdownCoreTests {
     }
 
     @Test
-    func hiddenModeIsSilentAndSwitchingDoesNotCauseAnEarlyReminder() {
+    func hiddenModeIsSilentAndSwitchingDoesNotCauseAnEarlyNotification() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderIntervalMinutes: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationIntervalMinutes: 5),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.adjustTimerDuration(by: 610)
@@ -131,13 +131,13 @@ struct CountdownCoreTests {
     }
 
     @Test(arguments: CountdownMode.allCases)
-    func durationEditsDoNotCauseReminderAndCompletionDoesNotRepeatIt(mode: CountdownMode) {
+    func durationEditsDoNotCauseNotificationAndCompletionDoesNotRepeatIt(mode: CountdownMode) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         let timer = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, reminderIntervalMinutes: 5),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationIntervalMinutes: 5),
             playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
         )
         timer.selectMode(mode)
@@ -147,19 +147,19 @@ struct CountdownCoreTests {
         } else {
             timer.adjustPomodoroDuration(.focus, by: -600)
         }
-        #expect(timer.reminders.reminderIntervalCount == 0)
+        #expect(timer.notifications.notificationIntervalCount == 0)
         now += 299
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 0)
+        #expect(timer.notifications.notificationIntervalCount == 0)
         now += 1
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 1)
-        now += 361 // A delayed update reports one Reminder, not a burst.
+        #expect(timer.notifications.notificationIntervalCount == 1)
+        now += 361 // A delayed update reports one notification, not a burst.
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 2)
+        #expect(timer.notifications.notificationIntervalCount == 2)
         now += 10_000
         timer.update()
         timer.update()
-        #expect(timer.reminders.reminderIntervalCount == 3) // Includes the endpoint reminder.
+        #expect(timer.notifications.notificationIntervalCount == 3) // Includes the endpoint notification.
     }
 }

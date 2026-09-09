@@ -91,11 +91,11 @@ struct PomodoroDurationTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
-        var configuration = CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, audioNotificationEnabled: false)
+        var configuration = CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, notificationAudioEnabled: false)
         lazy var timer = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: configuration,
-            preferences: CountdownPreferences(reminderEnabled: false),
+            preferences: CountdownPreferences(notificationEnabled: false),
             playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
         )
         func removeState() { try? FileManager.default.removeItem(at: directory) }

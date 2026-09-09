@@ -5,21 +5,21 @@ import SwiftUI
 struct CountdownView: View {
     @ObservedObject var countdown: CountdownController
     var isCompact = false
-    var isReminder = false
+    var isNotification = false
     let scale: CGFloat
-    let reminderFontSizePt: CGFloat
-    let reminderFont: String
+    let notificationFontSizePt: CGFloat
+    let notificationFont: String
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, isReminder: Bool = false, scale: CGFloat = 1, reminderFontSizePt: CGFloat = CountdownConfiguration.defaultReminderFontSizePt, reminderFont: String = "", allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
-        self.isReminder = isReminder
+        self.isNotification = isNotification
         self.scale = scale
-        self.reminderFontSizePt = reminderFontSizePt
-        self.reminderFont = reminderFont
+        self.notificationFontSizePt = notificationFontSizePt
+        self.notificationFont = notificationFont
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
         self._currentTime = State(initialValue: countdown.currentTime)
@@ -27,8 +27,8 @@ struct CountdownView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            if isReminder {
-                reminderOverlay
+            if isNotification {
+                notificationOverlay
             } else {
                 controls
                     .frame(width: geometry.size.width / scale, height: geometry.size.height / scale)
@@ -65,7 +65,7 @@ struct CountdownView: View {
             }
             .pickerStyle(.inline)
             Divider()
-            Toggle("Reminders", isOn: Binding(get: { countdown.reminders.isReminderEnabled }, set: countdown.reminders.setReminderEnabled))
+            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
             Button(countdown.controlLabel, action: countdown.toggleRunning)
             Button(isCompact ? "Normal" : "Compact", action: changePresentation)
             Divider()
@@ -89,17 +89,17 @@ struct CountdownView: View {
         }
     }
 
-    private var reminderOverlay: CountdownReminderOverlay {
+    private var notificationOverlay: CountdownNotificationOverlay {
         if countdown.mode.usesTimer {
-            return CountdownReminderOverlay(
-                remaining: countdown.timer.remaining, fontSizePt: reminderFontSizePt, fontName: reminderFont
+            return CountdownNotificationOverlay(
+                remaining: countdown.timer.remaining, fontSizePt: notificationFontSizePt, fontName: notificationFont
             )
         }
         let model = countdown.pomodoro
-        return CountdownReminderOverlay(
+        return CountdownNotificationOverlay(
             remaining: model.focusRemaining,
             isRest: model.focusRemaining == 0,
-            fontSizePt: reminderFontSizePt, fontName: reminderFont
+            fontSizePt: notificationFontSizePt, fontName: notificationFont
         )
     }
 

@@ -12,8 +12,8 @@ final class CountdownWindowController {
     private var normalFrame: NSRect?
     private var presentation: Presentation = .normal
     private var isTransitioning = false
-    private var reminderSubscription: AnyCancellable?
-    private let reminder: CountdownReminderController
+    private var notificationSubscription: AnyCancellable?
+    private let notification: CountdownNotificationController
 
     private let windowState = CountdownWindowStateStore()
     private let transition = CountdownPanelTransition()
@@ -24,7 +24,7 @@ final class CountdownWindowController {
     init(countdown: CountdownController, configuration: CountdownConfiguration = .default) {
         self.countdown = countdown
         self.configuration = configuration
-        reminder = CountdownReminderController(fadeDuration: configuration.reminderFadeTimeSeconds)
+        notification = CountdownNotificationController(fadeDuration: configuration.notificationFadeTimeSeconds)
         let normalSide = CountdownAppearance.normalSize * configuration.size
         let compactSide = CountdownAppearance.compactSize * configuration.compactSize
         normalSize = NSSize(width: normalSide, height: normalSide)
@@ -37,14 +37,14 @@ final class CountdownWindowController {
         normalFrame = windowState.restoredFrame(for: .normal, size: normalSize)
         panel.makeKeyAndOrderFront(nil)
 
-        observeReminderIntervals(from: countdown.reminders)
+        observeNotificationIntervals(from: countdown.notifications)
         scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, normalScale: configuration.size, isCompact: { [weak self] in
             self?.presentation == .compact
         })
     }
 
     func save() {
-        reminder.dismiss()
+        notification.dismiss()
         countdown.save()
         savePanelState()
     }
@@ -66,25 +66,25 @@ final class CountdownWindowController {
         return panel
     }
 
-    private func observeReminderIntervals(from model: ReminderScheduler) {
-        reminderSubscription = model.$reminderIntervalCount
+    private func observeNotificationIntervals(from model: NotificationScheduler) {
+        notificationSubscription = model.$notificationIntervalCount
             .dropFirst()
             .sink { [weak self] _ in
-                self?.handleReminderInterval()
+                self?.handleNotificationInterval()
             }
     }
 
-    private func handleReminderInterval() {
+    private func handleNotificationInterval() {
         guard presentation == .compact else { return }
 
         guard let screen = panel.screen ?? NSScreen.main else { return }
-        reminder.show(
+        notification.show(
             content: NSHostingView(rootView: CountdownView(
-                countdown: countdown, isReminder: true, reminderFontSizePt: configuration.reminderFontSizePt,
-                reminderFont: configuration.reminderFont, changePresentation: {}
+                countdown: countdown, isNotification: true, notificationFontSizePt: configuration.notificationFontSizePt,
+                notificationFont: configuration.notificationFont, changePresentation: {}
             )),
             screenFrame: screen.frame, size: screen.frame.size,
-            duration: TimeInterval(configuration.reminderTimeSeconds)
+            duration: TimeInterval(configuration.notificationTimeSeconds)
         )
     }
 
@@ -157,7 +157,7 @@ final class CountdownWindowController {
         guard presentation == .compact, !isTransitioning else { return }
         let panel = panel
 
-        reminder.dismiss()
+        notification.dismiss()
         isTransitioning = true
         savePanelState()
         presentation = .normal

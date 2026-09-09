@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// Remaining focus/timer minutes or REST, centered on a transparent surface.
-struct CountdownReminderOverlay: View {
+struct CountdownNotificationOverlay: View {
     let remaining: TimeInterval
     var isRest = false
-    var fontSizePt: CGFloat = CountdownConfiguration.defaultReminderFontSizePt
+    var fontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt
     var fontName = ""
 
     private var font: Font {

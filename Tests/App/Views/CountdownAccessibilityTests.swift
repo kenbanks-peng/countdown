@@ -15,7 +15,7 @@ struct CountdownAccessibilityTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(reminderEnabled: false),
+            preferences: CountdownPreferences(notificationEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.selectMode(.countdown)

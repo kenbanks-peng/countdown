@@ -10,13 +10,13 @@ The Swift build checks types and call sites.
 | --- | --- |
 | `src/App/AppDelegate.swift` | Start the app and save state at shutdown. |
 | `src/App/CountdownController.swift` | Select a mode, apply controls, route notifications, and save settings. |
-| `src/App/Window/` | Own the floating panel, saved placement, reminder display, and transitions. |
+| `src/App/Window/` | Own the floating panel, saved placement, notification display, and transitions. |
 | `src/App/Input/` | Convert scroll gestures and pointer locations into time edits. |
-| `src/App/Views/` | Combine mode views, the clock, reminder details, menus, and the update task. |
+| `src/App/Views/` | Combine mode views, the clock, notification details, menus, and the update task. |
 | `src/Core/Timing/` | Share run state, five-minute clock rounding, and notification time bands. |
 | `src/Core/Timer/` | Own timer progress, pause/resume, timeout actions, and `session.json`. |
 | `src/Core/Pomodoro/` | Own focus/rest cycles, duration edits, and absolute clock schedules. |
-| `src/Core/Notifications/` | Schedule reminders and play notification sounds. |
+| `src/Core/Notifications/` | Schedule notifications and play notification sounds. |
 | `src/Core/Configuration/` | Read supported configuration fields and apply defaults. |
 | `src/Core/Persistence/` | Store app settings and menu preferences with shared atomic JSON writes. |
 | `src/Core/UI/` | Share colors, circle geometry, clock drawing, and sector layout. |
@@ -30,18 +30,18 @@ Mode folders contain presentation code, not separate countdown engines.
 ## Ownership and data flow
 
 `AppDelegate` owns `CountdownWindowController`. The window controller owns the
-panel, countdown controller, scroll monitor, reminder subscription, and
-`CountdownReminderController`. The reminder uses a separate, non-interactive panel. It
+panel, countdown controller, scroll monitor, notification subscription, and
+`CountdownNotificationController`. The notification uses a separate, non-interactive panel. It
 starts transparent at the center of the countdown window's screen, fades in,
 waits for the configured duration, then fades out. It does not move, change the
 main window's mode, or save window placement. It shows whole minutes for the
 current timer or Pomodoro Focus period. At the start of Rest, it shows `REST`.
-No interval reminders occur during Rest. Reminders resume at the next Focus period.
+No interval notifications occur during Rest. Notifications resume at the next Focus period.
 `CountdownPanelTransition` contains manual mode animation operations; it does not own
 countdown state. `CountdownWindowStateStore` contains placement rules and saved
 window keys.
 
-`CountdownController` owns `CountdownEngine` and `ReminderScheduler`. The engine owns
+`CountdownController` owns `CountdownEngine` and `NotificationScheduler`. The engine owns
 the Timer and Pomodoro models and their shared pause state. A mode change changes
 the display and timeout policy, not that shared run state. Model change signals
 pass through the engine and controller to the view.
@@ -75,7 +75,6 @@ the private state across extensions would weaken this ownership.
   stop the in-memory countdown. Menu changes do not rewrite user configuration.
 - Window placement uses separate `UserDefaults` keys.
 
-Existing configuration keys, JSON fields, mode names, window keys, and launch
-commands remain unchanged. Internal names describe their purpose: for example,
+Internal names describe their purpose: for example,
 `focusPeriodsPerCycle`, `showsRemainingMinutes`, `isAutoSetToNextHourEnabled`,
-`reminderIntervalMinutes`, and `sessionStore`.
+`notificationIntervalMinutes`, and `sessionStore`.

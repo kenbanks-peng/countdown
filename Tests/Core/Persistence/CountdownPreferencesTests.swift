@@ -25,8 +25,8 @@ struct CountdownPreferencesTests {
         [display]
         current_timeout_enabled = true
         [notifications]
-        reminder_notification_enabled = true
-        audio_notification_enabled = false
+        notification_enabled = true
+        notification_audio_enabled = false
         alarm_enabled = true
         notification_time_seconds = 5
         notification_interval_minutes = 15
@@ -36,7 +36,7 @@ struct CountdownPreferencesTests {
         let configuration = CountdownConfiguration.load(environment: [
             "XDG_CONFIG_HOME": directory.appendingPathComponent("config").path
         ])
-        #expect(configuration.reminderIntervalMinutes == 15)
+        #expect(configuration.notificationIntervalMinutes == 15)
         #expect(configuration.alarmNotificationURL?.standardizedFileURL
             == configDirectory.appendingPathComponent("alarm.mp3"))
         let timerStore = TimerSessionStore(environment: ["XDG_STATE_HOME": directory.appendingPathComponent("state").path])
@@ -52,7 +52,7 @@ struct CountdownPreferencesTests {
         }
         let original = controller()
         original.selectMode(.countdown)
-        original.reminders.setReminderEnabled(false)
+        original.notifications.setNotificationEnabled(false)
         original.timer.setRemainingMinutesVisible(false)
         original.timer.setAutoSetToNextHourEnabled(true)
         original.save()
@@ -60,10 +60,10 @@ struct CountdownPreferencesTests {
             [String: Bool].self,
             from: Data(contentsOf: timerStore.stateDirectory.appendingPathComponent("features.json"))
         )
-        #expect(savedFeatures["reminder_enabled"] == false)
+        #expect(savedFeatures["notification_enabled"] == false)
         let restored = controller()
         #expect(!restored.mode.isClockEnabled)
-        #expect(!restored.reminders.isReminderEnabled)
+        #expect(!restored.notifications.isNotificationEnabled)
         #expect(!restored.timer.showsRemainingMinutes)
         #expect(restored.timer.isAutoSetToNextHourEnabled)
         #expect(stateStore.load().alarmEnabled == alarmEnabled)
@@ -87,7 +87,7 @@ struct CountdownPreferencesTests {
         }
         let state = CountdownPreferencesStore(stateDirectory: directory).load()
         #expect(state.showsRemainingMinutes)
-        #expect(state.reminderEnabled)
+        #expect(state.notificationEnabled)
         #expect(state.alarmEnabled == (contents != "{\"alarm_enabled\":false}"))
         #expect(!state.autoSetToNextHourEnabled)
     }
@@ -102,11 +102,11 @@ struct CountdownPreferencesTests {
             configuration: CountdownConfiguration(alarmNotificationURL: nil), playSound: { _ in }
         )
         controller.selectMode(.countdown)
-        controller.reminders.setReminderEnabled(false)
+        controller.notifications.setNotificationEnabled(false)
         controller.timer.setRemainingMinutesVisible(false)
         controller.timer.setAutoSetToNextHourEnabled(true)
         #expect(!controller.mode.isClockEnabled)
-        #expect(!controller.reminders.isReminderEnabled)
+        #expect(!controller.notifications.isNotificationEnabled)
         #expect(!controller.timer.showsRemainingMinutes)
         #expect(controller.timer.isAutoSetToNextHourEnabled)
         #expect(try String(contentsOf: directory, encoding: .utf8) == "blocked")
@@ -119,12 +119,12 @@ struct CountdownPreferencesTests {
         let store = CountdownPreferencesStore(stateDirectory: directory)
         store.saveEnablement("unknown_preference", enabled: true)
         store.saveEnablement("alarm_enabled", enabled: false)
-        store.saveEnablement("reminder_enabled", enabled: false)
+        store.saveEnablement("notification_enabled", enabled: false)
         store.saveEnablement("current_timeout_enabled", enabled: false)
         let values = try JSONDecoder().decode([String: Bool].self,
             from: Data(contentsOf: directory.appendingPathComponent("features.json")))
         #expect(values == ["unknown_preference": true, "alarm_enabled": false,
-                           "reminder_enabled": false, "current_timeout_enabled": false])
+                           "notification_enabled": false, "current_timeout_enabled": false])
     }
 
     @Test
@@ -134,14 +134,14 @@ struct CountdownPreferencesTests {
         let timerStore = TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path])
         let stateStore = CountdownPreferencesStore(stateDirectory: timerStore.stateDirectory)
         stateStore.saveEnablement("current_timeout_enabled", enabled: false)
-        stateStore.saveEnablement("reminder_enabled", enabled: false)
+        stateStore.saveEnablement("notification_enabled", enabled: false)
         let controller = CountdownController(
             sessionStore: timerStore,
             configuration: CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path]),
             playSound: { _ in }
         )
         #expect(controller.mode == .timer)
-        #expect(!controller.reminders.isReminderEnabled)
+        #expect(!controller.notifications.isNotificationEnabled)
         #expect(!controller.timer.showsRemainingMinutes)
     }
 }

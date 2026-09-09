@@ -5,9 +5,9 @@ import Vision
 @testable import Countdown
 
 @MainActor
-struct CountdownReminderViewTests {
+struct CountdownNotificationViewTests {
     @Test(arguments: [0.0, 1_500, 1_560, 1_800, 6_900, 7_200, 8_100])
-    func pomodoroReminderShowsFocusMinutesOrRest(elapsed: TimeInterval) throws {
+    func pomodoroNotificationShowsFocusMinutesOrRest(elapsed: TimeInterval) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         // Start on a clock mark so both displays have the same phase times.
@@ -15,18 +15,18 @@ struct CountdownReminderViewTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(reminderEnabled: false),
+            preferences: CountdownPreferences(notificationEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.selectMode(.pomodoro)
         now += elapsed
         controller.update()
-        let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isReminder: true, changePresentation: {}))
+        let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isNotification: true, changePresentation: {}))
         let bitmap = try render(hosting, side: 512)
         let text = try recognizedText(bitmap).joined(separator: " ")
         let model = controller.pomodoro
         if model.focusRemaining > 0 {
-            try expectReminderMinutes(bitmap, remaining: model.focusRemaining)
+            try expectNotificationMinutes(bitmap, remaining: model.focusRemaining)
         } else {
             #expect(text == "REST")
         }
@@ -42,28 +42,28 @@ struct CountdownReminderViewTests {
     }
 
     @Test(arguments: [false, true])
-    func timerReminderShowsWholeMinutesEvenWithLabelsDisabled(clockEnabled: Bool) throws {
+    func timerNotificationShowsWholeMinutesEvenWithLabelsDisabled(clockEnabled: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(showsRemainingMinutes: false, reminderEnabled: false),
+            preferences: CountdownPreferences(showsRemainingMinutes: false, notificationEnabled: false),
             playSound: { _ in }, now: { now }
         )
         controller.selectMode(clockEnabled ? .timer : .countdown)
         controller.adjustTimerDuration(by: 600)
-        let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isReminder: true, changePresentation: {}))
+        let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isNotification: true, changePresentation: {}))
         #expect(try recognizedText(render(hosting, side: 512)) == ["10"])
         now += 78
         controller.update()
         let text = try recognizedText(render(hosting, side: 512)).joined(separator: " ")
         #expect(!text.contains(":"))
         #expect(!text.contains(controller.mode.label))
-        try expectReminderMinutes(render(hosting, side: 512), remaining: 540)
+        try expectNotificationMinutes(render(hosting, side: 512), remaining: 540)
         controller.toggleRunning()
-        try expectReminderMinutes(render(hosting, side: 512), remaining: 540)
+        try expectNotificationMinutes(render(hosting, side: 512), remaining: 540)
         #expect(try !recognizedText(render(hosting, side: 512)).contains("Paused"))
     }
 
@@ -79,14 +79,14 @@ struct CountdownReminderViewTests {
         controller.selectMode(.countdown)
         controller.adjustTimerDuration(by: 600)
         let hosting = NSHostingView(rootView: CountdownView(
-            countdown: controller, isReminder: true, scale: scale,
-            reminderFontSizePt: fontSize, changePresentation: {}
+            countdown: controller, isNotification: true, scale: scale,
+            notificationFontSizePt: fontSize, changePresentation: {}
         ))
-        try expectReminderMinutes(render(hosting, side: 512), remaining: 600, fontSize: fontSize)
+        try expectNotificationMinutes(render(hosting, side: 512), remaining: 600, fontSize: fontSize)
     }
 
     @Test(arguments: [CountdownMode.countdown, .pomodoro])
-    func configuredFontReachesReminder(mode: CountdownMode) throws {
+    func configuredFontReachesNotification(mode: CountdownMode) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let controller = CountdownController(
@@ -97,16 +97,16 @@ struct CountdownReminderViewTests {
         controller.selectMode(mode)
         if mode.usesTimer { controller.adjustTimerDuration(by: 600) }
         let hosting = NSHostingView(rootView: CountdownView(
-            countdown: controller, isReminder: true, reminderFont: "Impact", changePresentation: {}
+            countdown: controller, isNotification: true, notificationFont: "Impact", changePresentation: {}
         ))
         let remaining = mode.usesTimer ? controller.timer.remaining : controller.pomodoro.focusRemaining
-        try expectReminderMinutes(render(hosting, side: 512), remaining: remaining, fontName: "Impact")
+        try expectNotificationMinutes(render(hosting, side: 512), remaining: remaining, fontName: "Impact")
     }
 
     // Vision can omit isolated single digits. Compare the complete rendered image instead.
-    private func expectReminderMinutes(_ bitmap: NSBitmapImageRep, remaining: TimeInterval,
+    private func expectNotificationMinutes(_ bitmap: NSBitmapImageRep, remaining: TimeInterval,
                                        fontSize: Double = 144, fontName: String = "") throws {
-        let expected = try render(NSHostingView(rootView: CountdownReminderOverlay(remaining: remaining, fontSizePt: fontSize, fontName: fontName)), side: 512)
+        let expected = try render(NSHostingView(rootView: CountdownNotificationOverlay(remaining: remaining, fontSizePt: fontSize, fontName: fontName)), side: 512)
         for y in 0..<bitmap.pixelsHigh {
             for x in 0..<bitmap.pixelsWide {
                 let actualColor = try #require(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))
@@ -121,13 +121,13 @@ struct CountdownReminderViewTests {
     }
 
     @Test
-    func reminderTimeRoundsUpWithoutShowingZeroEarly() {
-        #expect(CountdownReminderOverlay.timeLabel(0) == "0")
-        #expect(CountdownReminderOverlay.timeLabel(-1) == "0")
-        #expect(CountdownReminderOverlay.timeLabel(0.1) == "1")
-        #expect(CountdownReminderOverlay.timeLabel(59.1) == "1")
-        #expect(CountdownReminderOverlay.timeLabel(60) == "1")
-        #expect(CountdownReminderOverlay.timeLabel(60.1) == "2")
-        #expect(CountdownReminderOverlay.timeLabel(3_600) == "60")
+    func notificationTimeRoundsUpWithoutShowingZeroEarly() {
+        #expect(CountdownNotificationOverlay.timeLabel(0) == "0")
+        #expect(CountdownNotificationOverlay.timeLabel(-1) == "0")
+        #expect(CountdownNotificationOverlay.timeLabel(0.1) == "1")
+        #expect(CountdownNotificationOverlay.timeLabel(59.1) == "1")
+        #expect(CountdownNotificationOverlay.timeLabel(60) == "1")
+        #expect(CountdownNotificationOverlay.timeLabel(60.1) == "2")
+        #expect(CountdownNotificationOverlay.timeLabel(3_600) == "60")
     }
 }

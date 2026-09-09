@@ -3,15 +3,15 @@ import Foundation
 
 /// Interval notifications counted backwards from the active countdown endpoint.
 @MainActor
-final class ReminderScheduler: ObservableObject {
-    @Published private(set) var isReminderEnabled: Bool
-    @Published private(set) var reminderIntervalCount = 0
+final class NotificationScheduler: ObservableObject {
+    @Published private(set) var isNotificationEnabled: Bool
+    @Published private(set) var notificationIntervalCount = 0
 
     private let configuration: CountdownConfiguration
     private let playSound: @MainActor (URL?) -> Void
     private let saveEnablement: (String, Bool) -> Void
 
-    private var reminderInterval: TimeInterval { TimeInterval(configuration.reminderIntervalMinutes) * 60 }
+    private var notificationInterval: TimeInterval { TimeInterval(configuration.notificationIntervalMinutes) * 60 }
 
     init(
         configuration: CountdownConfiguration,
@@ -22,21 +22,21 @@ final class ReminderScheduler: ObservableObject {
         self.configuration = configuration
         self.playSound = playSound
         self.saveEnablement = saveEnablement
-        isReminderEnabled = configuration.reminderNotificationEnabled && state.reminderEnabled
+        isNotificationEnabled = configuration.notificationEnabled && state.notificationEnabled
     }
 
-    func setReminderEnabled(_ enabled: Bool) {
-        isReminderEnabled = enabled
-        saveEnablement("reminder_enabled", enabled)
+    func setNotificationEnabled(_ enabled: Bool) {
+        isNotificationEnabled = enabled
+        saveEnablement("notification_enabled", enabled)
     }
 
     /// Call only for elapsed time, not duration edits. Late updates emit at most once.
-    /// Remaining-time multiples place every reminder on the endpoint's clock schedule,
+    /// Remaining-time multiples place every notification on the endpoint's clock schedule,
     /// including zero. No stored schedule can become stale after an endpoint edit.
     func reportElapsed(previousRemaining: TimeInterval, remaining: TimeInterval) {
         guard configuration.notificationEnabled, previousRemaining.isFinite, remaining.isFinite,
               previousRemaining > remaining, previousRemaining > 0,
-              ceil(previousRemaining / reminderInterval) > ceil(max(0, remaining) / reminderInterval) else { return }
+              ceil(previousRemaining / notificationInterval) > ceil(max(0, remaining) / notificationInterval) else { return }
         notify(remaining: remaining)
     }
 
@@ -47,8 +47,9 @@ final class ReminderScheduler: ObservableObject {
     }
 
     private func notify(remaining: TimeInterval) {
-        if isReminderEnabled { reminderIntervalCount += 1 }
-        guard configuration.audioNotificationEnabled else { return }
+        guard isNotificationEnabled else { return }
+        notificationIntervalCount += 1
+        guard configuration.notificationAudioEnabled else { return }
         let sound: URL?
         switch CountdownUrgency(remaining: remaining) {
         case .normal: sound = configuration.greenNotificationURL

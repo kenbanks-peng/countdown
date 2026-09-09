@@ -5,7 +5,7 @@ import Combine
 @MainActor
 final class CountdownController: ObservableObject {
     @Published private(set) var mode: CountdownMode = .timer
-    let reminders: ReminderScheduler
+    let notifications: NotificationScheduler
     let engine: CountdownEngine
     var timer: TimerModel { engine.timer }
     var pomodoro: PomodoroModel { engine.pomodoro }
@@ -44,17 +44,17 @@ final class CountdownController: ObservableObject {
             fileManager: sessionStore.fileManager, stateDirectory: sessionStore.stateDirectory
         )
         let state = preferences ?? preferencesStore.load()
-        let reminders = ReminderScheduler(
+        let notifications = NotificationScheduler(
             configuration: configuration, state: state, playSound: playSound,
             saveEnablement: saveEnablement ?? { preferencesStore.saveEnablement($0, enabled: $1) }
         )
-        self.reminders = reminders
+        self.notifications = notifications
         let timer = TimerModel(
             sessionStore: sessionStore, configuration: configuration, preferences: state,
             isClockEnabled: settings.mode.isClockEnabled, playSound: playSound, now: now,
             reportElapsed: { previous, remaining in
                 if policy.mode.usesTimer {
-                    reminders.reportElapsed(previousRemaining: previous, remaining: remaining)
+                    notifications.reportElapsed(previousRemaining: previous, remaining: remaining)
                 }
             },
             timeoutActionsEnabled: { policy.mode.usesTimer }
@@ -173,9 +173,9 @@ final class CountdownController: ObservableObject {
         // for the current phase, never replay the phases that were missed.
         let crossedStage = elapsed >= previousFocus + previousRest
         if crossedStage || (previousFocus > 0 && pomodoro.focusRemaining == 0) {
-            reminders.reportPhaseChange(remaining: pomodoro.focusRemaining)
+            notifications.reportPhaseChange(remaining: pomodoro.focusRemaining)
         } else if previousFocus > 0 {
-            reminders.reportElapsed(previousRemaining: previousFocus, remaining: pomodoro.focusRemaining)
+            notifications.reportElapsed(previousRemaining: previousFocus, remaining: pomodoro.focusRemaining)
         }
     }
 
