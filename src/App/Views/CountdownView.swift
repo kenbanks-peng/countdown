@@ -95,7 +95,8 @@ struct CountdownView: View {
         }
         let model = countdown.pomodoro
         return CountdownReminderOverlay(
-            remaining: model.focusRemaining > 0 ? model.focusRemaining : model.restRemaining,
+            remaining: model.focusRemaining,
+            isRest: model.focusRemaining == 0,
             fontSizePt: reminderFontSizePt
         )
     }

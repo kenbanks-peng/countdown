@@ -6,8 +6,8 @@ import Vision
 
 @MainActor
 struct CountdownReminderViewTests {
-    @Test(arguments: [0.0, 1_500, 1_800, 6_900])
-    func pomodoroReminderShowsMinutesForCurrentPhase(elapsed: TimeInterval) throws {
+    @Test(arguments: [0.0, 1_500, 1_560, 1_800, 6_900, 7_200, 8_100])
+    func pomodoroReminderShowsFocusMinutesOrRest(elapsed: TimeInterval) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         // Start on a clock mark so both displays have the same phase times.
@@ -25,7 +25,11 @@ struct CountdownReminderViewTests {
         let bitmap = try render(hosting, side: 512)
         let text = try recognizedText(bitmap).joined(separator: " ")
         let model = controller.pomodoro
-        try expectReminderMinutes(bitmap, remaining: model.focusRemaining > 0 ? model.focusRemaining : model.restRemaining)
+        if model.focusRemaining > 0 {
+            try expectReminderMinutes(bitmap, remaining: model.focusRemaining)
+        } else {
+            #expect(text == "REST")
+        }
         #expect(!text.contains(":"))
         #expect(!text.contains("Session"))
         #expect(!text.contains(controller.pomodoro.phaseLabel))

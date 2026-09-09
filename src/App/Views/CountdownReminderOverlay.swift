@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Only the remaining minutes, centered on a transparent surface.
+/// Remaining focus/timer minutes or REST, centered on a transparent surface.
 struct CountdownReminderOverlay: View {
     let remaining: TimeInterval
+    var isRest = false
     var fontSizePt: CGFloat = CountdownConfiguration.defaultReminderFontSizePt
 
     static func timeLabel(_ remaining: TimeInterval) -> String {
@@ -11,7 +12,7 @@ struct CountdownReminderOverlay: View {
 
     var body: some View {
         GeometryReader { geometry in
-            Text(Self.timeLabel(remaining))
+            Text(isRest ? "REST" : Self.timeLabel(remaining))
                 .font(.system(size: fontSizePt, weight: .semibold).monospacedDigit())
                 .tracking(-1)
                 .foregroundStyle(.white)
@@ -21,6 +22,6 @@ struct CountdownReminderOverlay: View {
                 .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
         }
         .allowsHitTesting(false)
-        .accessibilityLabel("\(Self.timeLabel(remaining)) minutes remaining")
+        .accessibilityLabel(isRest ? "REST" : "\(Self.timeLabel(remaining)) minutes remaining")
     }
 }

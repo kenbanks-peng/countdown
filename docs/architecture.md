@@ -35,7 +35,8 @@ panel, countdown controller, scroll monitor, reminder subscription, and
 starts transparent at the center of the countdown window's screen, fades in,
 waits for the configured duration, then fades out. It does not move, change the
 main window's mode, or save window placement. It shows whole minutes for the
-current timer or Pomodoro phase.
+current timer or Pomodoro Focus period. At the start of Rest, it shows `REST`.
+No interval reminders occur during Rest. Reminders resume at the next Focus period.
 `CountdownPanelTransition` contains manual mode animation operations; it does not own
 countdown state. `CountdownWindowStateStore` contains placement rules and saved
 window keys.
