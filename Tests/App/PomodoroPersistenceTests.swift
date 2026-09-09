@@ -81,11 +81,11 @@ struct PomodoroPersistenceTests {
         #"{"mode":"Pomodoro","focusDuration":1200}"#,
         #"{"mode":"Pomodoro","restDuration":420}"#,
         #"{"focusDuration":1200,"restDuration":420}"#,
-        #"{"mode":"Pomodoro","focusDuration":0,"restDuration":420}"#,
+        #"{"mode":"Pomodoro","focusDuration":3601,"restDuration":420}"#,
         #"{"mode":"Pomodoro","focusDuration":1200,"restDuration":59}"#,
         #"{"mode":"Pomodoro","focusDuration":-60,"restDuration":420}"#,
         #"{"mode":"Pomodoro","focusDuration":1200,"restDuration":-60}"#,
-        #"{"mode":"Pomodoro","focusDuration":3300,"restDuration":301}"#,
+        #"{"mode":"Pomodoro","focusDuration":3300,"restDuration":3601}"#,
         #"{"mode":"Pomodoro","focusDuration":1e309,"restDuration":420}"#,
         #"{"mode":"Pomodoro","focusDuration":1200,"restDuration":"NaN"}"#,
         #"{"mode":"Pomodoro","focusDuration":null,"restDuration":420}"#
@@ -101,7 +101,7 @@ struct PomodoroPersistenceTests {
         session.now += 60
         let restored = session.makeController()
         #expect(restored.mode == .timer)
-        #expect(restored.pomodoro.focusDuration == 1_500)
+        #expect(restored.pomodoro.focusRemaining == 900)
         #expect(restored.pomodoro.restDuration == 300)
         #expect(restored.pomodoro.status == .paused)
         #expect(restored.timer.isPaused)
@@ -180,7 +180,7 @@ struct PomodoroPersistenceTests {
         let restored = session.makeController()
         #expect(restored.mode == .timer)
         #expect(restored.pomodoro.status == .running)
-        #expect(restored.pomodoro.focusDuration == 1_500)
+        #expect(restored.pomodoro.focusRemaining + restored.pomodoro.restRemaining == restored.timer.remaining)
         #expect(restored.pomodoro.restDuration == 300)
     }
 
@@ -211,7 +211,7 @@ struct PomodoroPersistenceTests {
     }
 
     @Test(arguments: CountdownRecord.allCases, ["missing", "invalid", "Timer", "Pomodoro", "Countdown"])
-    func timerRestorationDoesNotDependOnMode(record: CountdownRecord, selectedMode: String) throws {
+    func restorationUsesTheSelectedViewsSavedTime(record: CountdownRecord, selectedMode: String) throws {
         let session = Session()
         defer { session.removeState() }
         let prepared = record == .prepared || record == .stalePrepared
@@ -231,6 +231,12 @@ struct PomodoroPersistenceTests {
         let retainsPrepared = prepared && (record != .stalePrepared || restored.mode.isClockEnabled)
         #expect(restored.pomodoro.status == (retainsPrepared ? .paused : .running))
         #expect(restored.timer.completionCount == 0)
+        if restored.mode == .pomodoro {
+            #expect(restored.timer.remaining == 1_620)
+            #expect(restored.timer.remaining == restored.pomodoro.focusRemaining + restored.pomodoro.restRemaining)
+            #expect(session.sounds == 0)
+            return
+        }
         switch record {
         case .active:
             #expect(restored.timer.status == .active)

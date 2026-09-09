@@ -60,7 +60,7 @@ struct CountdownView: View {
         .accessibilityHint("Click to use \(isCompact ? "normal" : "compact") view. Use the right-click menu to \(countdown.controlLabel.lowercased()).")
         .help("Click to change view. Use the right-click menu for timer controls. Scroll to adjust time; hold Option for slower adjustment.")
         .contextMenu {
-            Picker("Timer mode", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
+            Picker("View", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
                 ForEach(CountdownMode.allCases, id: \.self) { mode in
                     Text(mode.label).tag(mode)
                 }

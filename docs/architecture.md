@@ -24,8 +24,8 @@ The Swift build checks types and call sites.
 | `src/Modes/Pomodoro/` | Draw Pomodoro focus/rest sectors and progress dots. |
 
 Core must not reference App or Modes. A mode must not reference App or another
-mode. Both timing models remain in Core because they keep running when hidden.
-Mode folders contain presentation code, not separate countdown engines.
+mode. Both timing models remain in Core. Only the selected view advances the
+shared time. Mode folders contain presentation code, not separate countdown engines.
 
 ## Ownership and data flow
 
@@ -42,9 +42,18 @@ countdown state. `CountdownWindowStateStore` contains placement rules and saved
 window keys.
 
 `CountdownController` owns `CountdownEngine` and `NotificationScheduler`. The engine owns
-the Timer and Pomodoro models and their shared pause state. A mode change changes
-the display and timeout policy, not that shared run state. Model change signals
-pass through the engine and controller to the view.
+the Timer and Pomodoro representations and their shared pause state. The active
+view owns progress and completion; the inactive representation follows its remaining
+time without completion actions. Timer and Countdown show focus remaining plus
+active rest remaining. Their edits change focus first and can remove it. An increase
+during rest can restore focus without restoring spent rest. The schedule records
+spent rest separately so future stages retain the rest allocation.
+
+Pomodoro repeats only while selected. Selecting Pomodoro with an empty timer starts
+a new cycle. Selecting Timer or Countdown caps the total at 60 minutes by reducing
+focus and preserving the active rest. This reduction remains after switching back.
+A view change otherwise preserves remaining time and pause state. Model change
+signals pass through the engine and controller to the view.
 
 The view update task samples time every 100 ms. Timer and Pomodoro updates use
 absolute dates. Scroll input uses uptime for gesture timing. Timer and Countdown

@@ -161,6 +161,6 @@ struct ScrollGestureTests {
         timer.selectMode(.countdown)
         try session.scroll(angle: 90, delta: 1, after: 0.001)
         #expect(timer.timer.remaining == 900)
-        #expect(timer.pomodoro.focusDuration == 1_500)
+        #expect(timer.pomodoro.focusRemaining == 600)
     }
 }

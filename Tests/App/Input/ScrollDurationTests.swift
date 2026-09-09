@@ -89,7 +89,7 @@ struct ScrollDurationTests {
         try session.scroll(angle: angle, delta: 12, after: 0.16)
         #expect(selected() == 600)
         #expect(timer.pomodoro.status == .running)
-        #expect(timer.timer.status == .empty)
+        #expect(timer.timer.remaining == timer.pomodoro.focusRemaining + timer.pomodoro.restRemaining)
     }
 
     @Test(arguments: [false, true])

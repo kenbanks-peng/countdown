@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct CountdownControllerTests {
     @Test
-    func modeChangesKeepAllocationsSeparateAndBothCountdownsRunning() {
+    func viewChangesKeepOneSharedRemainingTime() {
         let session = Session()
         defer { session.removeState() }
         let controller = session.makeController()
@@ -13,18 +13,18 @@ struct CountdownControllerTests {
         session.now += 75
         controller.selectMode(.pomodoro)
         #expect(controller.timer.remaining == 1_125)
-        #expect(controller.pomodoro.focusRemaining == 1_425)
+        #expect(controller.pomodoro.focusRemaining == 825)
         #expect(controller.pomodoro.restDuration == 300)
         session.now += 600
         controller.selectMode(.timer)
         #expect(controller.timer.remaining == 525)
         #expect(controller.timer.status == .active)
-        #expect(controller.pomodoro.focusRemaining == 825)
+        #expect(controller.pomodoro.focusRemaining == 225)
         #expect(session.sounds == 0)
     }
 
     @Test
-    func hiddenTimerExpiresSilentlyAndDoesNotReplayOnSelection() {
+    func pomodoroRepeatsWithoutATimerAlarm() {
         let session = Session()
         defer { session.removeState() }
         let controller = session.makeController()
@@ -32,7 +32,9 @@ struct CountdownControllerTests {
         controller.selectMode(.pomodoro)
         session.now += 301
         controller.selectMode(.timer)
-        #expect(controller.timer.status == .empty)
+        #expect(controller.timer.status == .active)
+        #expect(controller.pomodoro.stage == 2)
+        #expect(controller.timer.remaining == controller.pomodoro.focusRemaining + controller.pomodoro.restRemaining)
         #expect(controller.timer.completionCount == 0)
         #expect(session.sounds == 0)
         controller.adjustTimerDuration(by: 300)
@@ -56,11 +58,12 @@ struct CountdownControllerTests {
         #expect(controller.timer.remaining == 3_600)
         #expect(controller.timer.status == .active)
         session.now += 3_600
-        controller.update() // Hidden timeout: no alarm and no Autoset.
-        #expect(controller.timer.status == .empty)
+        controller.update() // Pomodoro repeats; Timer alarm and Autoset do not run.
+        #expect(controller.timer.status == .active)
+        #expect(controller.pomodoro.stage == 2)
         #expect(session.sounds == 1)
         controller.selectMode(.timer)
-        #expect(controller.timer.status == .empty)
+        #expect(controller.timer.status == .active)
         controller.toggleRunning()
         controller.setTimerToNextHour()
         #expect(controller.timer.isPaused)

@@ -116,7 +116,7 @@ struct CountdownViewTests {
         #expect(try sample(edited, angle: 252).greenComponent < 0.2)
         // OCR can read the four rings as punctuation; there must be no phase label.
         #expect(try recognizedText(edited).allSatisfy { $0 != "Focus" && $0 != "Rest" })
-        #expect(controller.timer.status == .empty)
+        #expect(controller.timer.remaining == 2_400)
     }
 
     @Test
@@ -190,6 +190,7 @@ struct CountdownViewTests {
             preferences: CountdownPreferences(),
             playSound: { _ in }, now: { Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))! }, saveEnablement: { _, _ in }
         )
+        controller.adjustTimerDuration(by: 1_800)
         controller.selectMode(mode)
         let hosting = NSHostingView(rootView: CountdownView(countdown: controller, changePresentation: {}))
         func image() throws -> Data? {

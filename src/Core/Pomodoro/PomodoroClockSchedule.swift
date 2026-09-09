@@ -12,17 +12,23 @@ struct PomodoroClockSchedule: Codable {
     var pausedAt: Date?
     var stage: Int
     var focusCompleted: Bool
+    // Rest already spent before focus was restored from another view.
+    var restCarry: TimeInterval?
+    var longRestCarry: TimeInterval?
 
     var focusDuration: TimeInterval { focusEnd.timeIntervalSince(stageStart) }
-    var restDuration: TimeInterval { restEnd.timeIntervalSince(focusEnd) }
-    var longRestDuration: TimeInterval { longRestEnd.timeIntervalSince(focusEnd) }
+    var restDuration: TimeInterval { restEnd.timeIntervalSince(focusEnd) + (restCarry ?? 0) }
+    var longRestDuration: TimeInterval { longRestEnd.timeIntervalSince(focusEnd) + (longRestCarry ?? 0) }
 
     func isValid(focusPeriodsPerCycle: Int) -> Bool {
         let values = [stageStart, focusEnd, restEnd, longRestEnd, sampledAt] + [pausedAt].compactMap { $0 }
         return values.allSatisfy { $0.timeIntervalSinceReferenceDate.isFinite }
             && (1...focusPeriodsPerCycle).contains(stage)
-            && focusDuration >= 60 && restDuration >= 60 && longRestDuration >= 60
-            && focusDuration + restDuration <= 3_600 && longRestDuration <= 3_600
+            && focusDuration >= 0 && focusDuration <= 3_600
+            && restDuration >= 60 && restDuration <= 3_600
+            && longRestDuration >= 60 && longRestDuration <= 3_600
+            && [restCarry ?? 0, longRestCarry ?? 0].allSatisfy { $0.isFinite && $0 >= 0 }
+            && restEnd >= focusEnd && longRestEnd >= focusEnd
     }
 
     func end(for phase: PomodoroModel.Phase) -> Date {
@@ -46,10 +52,10 @@ struct PomodoroClockSchedule: Codable {
         case .rest:
             minimum = focusEnd.addingTimeInterval(300)
             let reference = max(stageStart, pausedAt ?? sampledAt)
-            maximum = min(reference.addingTimeInterval(3_600), focusEnd.addingTimeInterval(3_300))
+            maximum = min(reference.addingTimeInterval(3_600), focusEnd.addingTimeInterval(3_300 - (restCarry ?? 0)))
         case .longRest:
             minimum = focusEnd.addingTimeInterval(300)
-            maximum = focusEnd.addingTimeInterval(3_600)
+            maximum = focusEnd.addingTimeInterval(3_600 - (longRestCarry ?? 0))
         }
         let end = end(for: phase)
         let target = steps.map { ClockBoundary.move(end, steps: $0, minimum: minimum, maximum: maximum) }
@@ -111,6 +117,10 @@ struct PomodoroClockSchedule: Codable {
     }
 
     private mutating func moveStage(to start: Date) {
+        restEnd += restCarry ?? 0
+        longRestEnd += longRestCarry ?? 0
+        restCarry = nil
+        longRestCarry = nil
         let shift = start.timeIntervalSince(stageStart)
         stageStart = start
         focusEnd += shift

@@ -26,13 +26,14 @@ struct SharedCountdownTests {
         now += 300
         let restored = CountdownController(sessionStore: store, configuration: configuration, preferences: preferences, playSound: { _ in }, now: { now })
         #expect(restored.controlLabel == "Resume")
-        #expect(restored.timer.remaining == 600)
+        let total: TimeInterval = mode == .pomodoro ? 2_400 : 600
+        #expect(restored.timer.remaining == total)
         #expect(restored.pomodoro.status == .paused)
         restored.toggleRunning()
         now += 60
         restored.update()
-        #expect(restored.timer.remaining == 540)
-        #expect(restored.pomodoro.focusRemaining == 1_440)
+        #expect(restored.timer.remaining == total - 60)
+        #expect(restored.pomodoro.focusRemaining == total - 360)
         restored.selectMode(.timer)
         #expect(restored.controlLabel == "Pause")
     }

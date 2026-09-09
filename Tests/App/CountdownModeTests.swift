@@ -65,7 +65,9 @@ struct CountdownModeTests {
                 controller.update() // Also settles a no-op selection.
                 #expect(controller.timer.completionCount == (outgoing.usesTimer ? 1 : 0))
                 #expect(session.sounds == (outgoing.usesTimer && alarm ? 1 : 0))
-                #expect(controller.timer.remaining == (outgoing.usesTimer && autoSetToNextHour ? 3_600 : 0))
+                let expected: TimeInterval = !outgoing.usesTimer || autoSetToNextHour
+                    ? 3_600 : (incoming == .pomodoro ? 1_800 : 0)
+                #expect(controller.timer.remaining == expected)
                 #expect(!controller.engine.isPaused)
                 controller.update()
                 #expect(controller.timer.completionCount == (outgoing.usesTimer ? 1 : 0))

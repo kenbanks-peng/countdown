@@ -18,8 +18,8 @@ struct CountdownSettingsStore {
     func load(defaults: CountdownSettings = CountdownSettings()) -> CountdownSettings {
         guard var settings = settingsFile.load(),
               settings.focusDuration.isFinite, settings.restDuration.isFinite,
-              settings.focusDuration >= 60, settings.restDuration >= 60,
-              settings.focusDuration + settings.restDuration <= 3_600
+              settings.focusDuration >= 0, settings.focusDuration <= 3_600,
+              settings.restDuration >= 60, settings.restDuration <= 3_600
         else { return defaults }
         let longRest = settings.longRestDuration ?? defaults.longRestDuration ?? 1_200
         guard longRest.isFinite, longRest >= 60,

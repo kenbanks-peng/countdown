@@ -32,11 +32,11 @@ struct PomodoroConfigurationTests {
                                 preferences: CountdownPreferences(), playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_699_999_800) })
         }
         let original = controller(configuration)
+        original.selectMode(.pomodoro)
         #expect(original.pomodoro.focusPeriodsPerCycle == 3)
         #expect(original.pomodoro.focusDuration == 1_200)
         #expect(original.pomodoro.restDuration == 420)
         #expect(original.pomodoro.longRestDuration == 1_320)
-        original.selectMode(.pomodoro)
         original.adjustPomodoroDuration(.focus, steps: 1)
         original.adjustPomodoroDuration(.rest, steps: 1)
         original.adjustPomodoroDuration(.longRest, steps: 1)

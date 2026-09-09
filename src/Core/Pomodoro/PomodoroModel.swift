@@ -104,12 +104,29 @@ struct PomodoroModel {
         }
     }
 
-    mutating func restoreClockSchedule(_ schedule: PomodoroClockSchedule, at now: Date) {
+    mutating func restoreClockSchedule(_ schedule: PomodoroClockSchedule, at now: Date, advance: Bool = true) {
         guard schedule.isValid(focusPeriodsPerCycle: focusPeriodsPerCycle) else { return }
         clockSchedule = schedule
         status = schedule.pausedAt == nil ? .running : .paused
         lastUpdate = schedule.sampledAt
-        update(at: now)
+        if advance { update(at: now) }
+        syncClockProgress()
+    }
+
+    /// Change the shared run state without rounding or repeating an inactive schedule.
+    mutating func setSharedPaused(_ paused: Bool, at now: Date) {
+        if paused && status == .paused { return }
+        if let reference = clockSchedule?.pausedAt {
+            let shift = max(0, now.timeIntervalSince(reference))
+            clockSchedule?.stageStart += shift
+            clockSchedule?.focusEnd += shift
+            clockSchedule?.restEnd += shift
+            clockSchedule?.longRestEnd += shift
+        }
+        clockSchedule?.pausedAt = paused ? now : nil
+        clockSchedule?.sampledAt = now
+        status = paused ? .paused : .running
+        lastUpdate = paused ? nil : now
         syncClockProgress()
     }
 
@@ -135,6 +152,46 @@ struct PomodoroModel {
         let date = schedule.pausedAt ?? schedule.sampledAt
         focusElapsed = min(focusDuration, max(0, date.timeIntervalSince(schedule.stageStart)))
         restElapsed = activeRestDuration - restRemaining
+    }
+
+    /// Follow the shared timer without starting another Pomodoro stage.
+    mutating func followTimer(remaining: TimeInterval, at now: Date) {
+        guard var schedule = clockSchedule else { return }
+        if status == .running {
+            elapsedTime += max(0, now.timeIntervalSince(lastUpdate ?? now))
+            lastUpdate = now
+            schedule.sampledAt = now
+        }
+        let reference = schedule.pausedAt ?? now
+        if reference >= schedule.focusEnd { schedule.focusCompleted = true }
+        clockSchedule = schedule
+        syncClockProgress()
+        let total = focusRemaining + restRemaining
+        guard abs(total - remaining) > 0.000_001 else { return }
+
+        // Keep the rest that is still available. A new timer reserves the configured rest.
+        let rest = min(remaining, total > 0 ? restRemaining : activeRestDuration)
+        let focus = max(0, remaining - rest)
+        if focus > 0 {
+            schedule.stageStart = reference
+            schedule.focusEnd = reference + focus
+            schedule.restEnd = schedule.focusEnd + (restPhase == .rest ? rest : restDuration)
+            schedule.longRestEnd = schedule.focusEnd + (restPhase == .longRest ? rest : longRestDuration)
+            schedule.restCarry = restPhase == .rest ? restDuration - rest : nil
+            schedule.longRestCarry = restPhase == .longRest ? longRestDuration - rest : nil
+            schedule.focusCompleted = false
+        } else {
+            // Retain the rest allocation and represent its spent part with a past focus endpoint.
+            schedule.focusEnd = reference + rest - activeRestDuration
+            schedule.stageStart = schedule.focusEnd
+            schedule.restEnd = schedule.focusEnd + restDuration
+            schedule.longRestEnd = schedule.focusEnd + longRestDuration
+            schedule.restCarry = nil
+            schedule.longRestCarry = nil
+            schedule.focusCompleted = true
+        }
+        clockSchedule = schedule
+        syncClockProgress()
     }
 
     mutating func adjustDuration(_ phase: Phase, by amount: TimeInterval, at now: Date) {

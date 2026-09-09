@@ -75,11 +75,11 @@ final class CountdownController: ObservableObject {
             )
         )
         if let schedule = settings.pomodoroClockSchedule {
-            pomodoro.restoreClockSchedule(schedule, at: now())
+            pomodoro.restoreClockSchedule(schedule, at: now(), advance: settings.mode == .pomodoro)
         }
         engine = CountdownEngine(
             timer: timer, pomodoro: pomodoro,
-            isPaused: settings.isPaused ?? timer.isPaused, now: now
+            isPaused: settings.isPaused ?? timer.isPaused, mode: settings.mode, now: now
         )
         engineSubscription = engine.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
@@ -108,7 +108,7 @@ final class CountdownController: ObservableObject {
         update()
         self.mode = mode
         timeoutPolicy.mode = mode
-        timer.setClockEnabled(mode.isClockEnabled)
+        engine.selectMode(mode)
         saveSettings()
     }
 
@@ -116,12 +116,18 @@ final class CountdownController: ObservableObject {
         guard mode.usesTimer else { return }
         update()
         timer.adjustDuration(by: amount)
+        engine.timerDidChange()
+        saveSettings()
     }
 
     func adjustTimerDuration(steps: Int) {
         guard mode.usesTimer, steps != 0 else { return }
         let date = currentTime
         update(at: date)
+        defer {
+            engine.timerDidChange(at: date)
+            saveSettings()
+        }
         if mode.isClockEnabled {
             timer.adjustClockEndpoint(steps: steps, at: date)
             return
@@ -145,6 +151,8 @@ final class CountdownController: ObservableObject {
         guard mode.usesTimer else { return }
         update()
         timer.setDurationToNextHour()
+        engine.timerDidChange()
+        saveSettings()
     }
 
     func adjustPomodoroDuration(_ phase: PomodoroModel.Phase, by amount: TimeInterval) {

@@ -19,7 +19,7 @@ struct PomodoroLifecycleTests {
         timer.setTimerToNextHour()
         timer.adjustTimerDuration(by: 60)
         timer.toggleTimerRunning() // A command for a hidden UI mode is ignored.
-        #expect(timer.timer.status == .empty)
+        #expect(timer.timer.remaining == 1_200)
         #expect(timer.pomodoro.status == .running)
         session.now += 900
         timer.update()
@@ -45,7 +45,7 @@ struct PomodoroLifecycleTests {
     }
 
     @Test(arguments: [600.0, 1_500, 1_620, 1_800, 3_900])
-    func switchingModesKeepsHiddenPomodoroAdvancing(elapsed: TimeInterval) {
+    func switchingViewsConsumesSharedTimeWithoutHiddenRepetition(elapsed: TimeInterval) {
         let session = Session()
         defer { session.removeState() }
         let timer = session.timer
@@ -60,13 +60,16 @@ struct PomodoroLifecycleTests {
         session.now += 1_200
         timer.togglePomodoroRunning()
         timer.resetPomodoro() // Hidden UI commands do not change the core.
+        timer.update()
+        let expired = stageElapsed + 1_200 >= 1_800
+        #expect(timer.pomodoro.stage == Int(elapsed / 1_800) + 1)
+        #expect(timer.timer.remaining == max(0, 600 - stageElapsed))
+        #expect(session.sounds == (expired ? 1 : 0))
         timer.selectMode(.pomodoro)
-        let laterStageElapsed = (elapsed + 1_200).truncatingRemainder(dividingBy: 1_800)
         #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.stage == Int((elapsed + 1_200) / 1_800) + 1)
-        #expect(timer.pomodoro.focusRemaining == max(0, 1_500 - laterStageElapsed))
-        #expect(timer.pomodoro.restRemaining == max(0, 300 - max(0, laterStageElapsed - 1_500)))
-        #expect(session.sounds == 0)
+        #expect(timer.pomodoro.stage == (expired ? 1 : Int(elapsed / 1_800) + 1))
+        #expect(timer.pomodoro.focusRemaining == (expired ? 1_500 : max(0, 300 - stageElapsed)))
+        #expect(timer.pomodoro.restRemaining == 300)
     }
 
     @Test(arguments: [600.0, 1_620])

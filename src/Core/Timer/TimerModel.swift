@@ -173,8 +173,17 @@ final class TimerModel: ObservableObject {
         save()
     }
 
-    func setClockEnabled(_ enabled: Bool) {
-        update()
+    /// Replace the presentation from the engine without timeout actions or rounding.
+    func setSharedRemaining(_ value: TimeInterval, at date: Date) {
+        remaining = max(0, value)
+        duration = remaining
+        status = remaining == 0 ? .empty : (isEnginePaused ? .prepared : .active)
+        pausedAt = isEnginePaused && isClockEnabled ? date : nil
+        endDate = remaining > 0 && (!isEnginePaused || isClockEnabled) ? date + remaining : nil
+    }
+
+    func setClockEnabled(_ enabled: Bool, settle: Bool = true) {
+        if settle { update() }
         guard enabled != isClockEnabled else { return }
         isClockEnabled = enabled
         if status == .prepared {
