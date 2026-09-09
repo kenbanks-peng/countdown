@@ -59,7 +59,7 @@ struct PomodoroClockSchedule: Codable {
         }
         let end = end(for: phase)
         let target = steps.map { ClockBoundary.move(end, steps: $0, minimum: minimum, maximum: maximum) }
-            ?? ClockBoundary.nearest(end.addingTimeInterval(amount), minimum: minimum, maximum: maximum)
+            ?? min(maximum, max(minimum, end.addingTimeInterval(amount)))
         switch phase {
         case .focus:
             let shift = target.timeIntervalSince(focusEnd)
@@ -82,7 +82,6 @@ struct PomodoroClockSchedule: Codable {
         focusEnd += shift
         restEnd += shift
         longRestEnd += shift
-        snapEndpointsToClockMarks()
         self.pausedAt = nil
         sampledAt = now
     }
@@ -94,26 +93,15 @@ struct PomodoroClockSchedule: Codable {
             let start = stage == focusPeriodsPerCycle ? longRestEnd : restEnd
             stage = stage == focusPeriodsPerCycle ? 1 : stage + 1
             moveStage(to: start)
-            // The first stage can start between marks. Snap newly created settings,
-            // not the previous stage's selected endpoints, before repeating spacing.
-            snapEndpointsToClockMarks()
-            // Once the new endpoints are aligned, whole cycles preserve alignment.
+            // Whole cycles preserve the selected durations, including off-mark values.
             let cycle = Double(focusPeriodsPerCycle) * focusDuration
                 + Double(focusPeriodsPerCycle - 1) * restDuration + longRestDuration
             let completeCycles = max(0, floor(sampledAt.timeIntervalSince(stageStart) / cycle))
-            let alignedStart = ClockBoundary.nearest(start, minimum: start - 300, maximum: start + 300)
-            if completeCycles > 0 && start == alignedStart {
+            if completeCycles > 0 {
                 moveStage(to: stageStart + completeCycles * cycle)
             }
         }
         if sampledAt >= focusEnd { focusCompleted = true }
-    }
-
-    /// Snap in dependency order. Long rest can extend beyond the visible hour.
-    private mutating func snapEndpointsToClockMarks() {
-        focusEnd = ClockBoundary.nearest(focusEnd, minimum: stageStart + 300, maximum: stageStart + 3_300)
-        restEnd = ClockBoundary.nearest(restEnd, minimum: focusEnd + 300, maximum: stageStart + 3_600)
-        longRestEnd = ClockBoundary.nearest(longRestEnd, minimum: focusEnd + 300, maximum: focusEnd + 3_600)
     }
 
     private mutating func moveStage(to start: Date) {

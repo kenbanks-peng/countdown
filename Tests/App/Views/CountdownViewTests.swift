@@ -106,17 +106,17 @@ struct CountdownViewTests {
         #expect(controller.pomodoro.restDuration == 600)
         #expect(controller.pomodoro.focusDuration == 1_500)
         adapter.handle(try scrollEvent(in: window, at: green, delta: 36, option: true, precise: true))
-        #expect(controller.pomodoro.focusDuration == 1_800)
+        #expect(controller.pomodoro.focusDuration == 1_560)
         adapter.handle(try scrollEvent(in: window, at: green, delta: 5, option: true, precise: true))
-        #expect(controller.pomodoro.focusDuration == 1_800)
+        #expect(controller.pomodoro.focusDuration == 1_560)
         let edited = try render(hosting, side: side)
-        #expect(try sample(edited, angle: 210).blueComponent > 0.8)
+        #expect(try sample(edited, angle: 180).blueComponent > 0.8)
         #expect(try sample(edited, angle: 72).greenComponent > 0.6)
-        #expect(try sample(edited, angle: 174).greenComponent > 0.6)
+        #expect(try sample(edited, angle: 144).greenComponent > 0.6)
         #expect(try sample(edited, angle: 252).greenComponent < 0.2)
         // OCR can read the four rings as punctuation; there must be no phase label.
         #expect(try recognizedText(edited).allSatisfy { $0 != "Focus" && $0 != "Rest" })
-        #expect(controller.timer.remaining == 2_400)
+        #expect(controller.timer.remaining == 2_160)
     }
 
     @Test

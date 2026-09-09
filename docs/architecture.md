@@ -13,7 +13,7 @@ The Swift build checks types and call sites.
 | `src/App/Window/` | Own the floating panel, saved placement, notification display, and transitions. |
 | `src/App/Input/` | Convert scroll gestures and pointer locations into time edits. |
 | `src/App/Views/` | Combine mode views, the clock, notification details, menus, and the update task. |
-| `src/Core/Timing/` | Share run state, five-minute clock rounding, and notification time bands. |
+| `src/Core/Timing/` | Share run state, five-minute scroll alignment, and notification time bands. |
 | `src/Core/Timer/` | Own timer progress, pause/resume, timeout actions, and `session.json`. |
 | `src/Core/Pomodoro/` | Own focus/rest cycles, duration edits, and absolute clock schedules. |
 | `src/Core/Notifications/` | Schedule notifications and play notification sounds. |
@@ -62,7 +62,7 @@ Drawing and hit testing use the same circle inset and sector calculations.
 
 Keep each timing state machine together. Its private setters keep duration,
 remaining time, endpoints, and run state consistent. Separate files contain
-storage operations, clock schedule rules, and shared rounding rules; splitting
+storage operations, clock schedule rules, and scroll alignment rules; splitting
 the private state across extensions would weaken this ownership.
 
 ## Configuration, appearance, and stored state

@@ -97,13 +97,13 @@ final class ScrollTimeAdjuster {
         wasPreciseScrolling = isPreciseScrolling
         wasOptionPressed = isOptionPressed
         // Wheel notches respond independently. Trackpads use distance, not event timing.
-        // Option requires three times the travel without changing the five-minute marks.
-        let threshold = (isPreciseScrolling ? preciseStepDistance : 1) * (isOptionPressed ? 3 : 1)
+        // Option changes the time increment, not the input sensitivity.
+        let threshold = isPreciseScrolling ? preciseStepDistance : 1
         accumulatedDistance += abs(delta)
         guard accumulatedDistance >= threshold else { return }
         // Limit accelerated events to one mark; never retain a backlog at a limit.
         accumulatedDistance.formTruncatingRemainder(dividingBy: threshold)
-        adjust(target, steps: direction, countdown: countdown)
+        adjust(target, steps: direction, option: isOptionPressed, countdown: countdown)
     }
 
     private func resetGesture() {
@@ -116,10 +116,14 @@ final class ScrollTimeAdjuster {
         wasOptionPressed = nil
     }
 
-    private func adjust(_ target: Target, steps: Int, countdown: CountdownController) {
+    private func adjust(_ target: Target, steps: Int, option: Bool, countdown: CountdownController) {
         switch target {
-        case .timer: countdown.adjustTimerDuration(steps: steps)
-        case .pomodoro(let phase): countdown.adjustPomodoroDuration(phase, steps: steps)
+        case .timer:
+            if option { countdown.adjustTimerDuration(by: Double(steps) * 60) }
+            else { countdown.adjustTimerDuration(steps: steps) }
+        case .pomodoro(let phase):
+            if option { countdown.adjustPomodoroDuration(phase, by: Double(steps) * 60) }
+            else { countdown.adjustPomodoroDuration(phase, steps: steps) }
         }
     }
 

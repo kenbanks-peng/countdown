@@ -115,8 +115,8 @@ struct PomodoroLifecycleTests {
         if pause { timer.toggleRunning() }
         timer.resetPomodoro()
         #expect(timer.pomodoro.status == (pause ? .paused : .running))
-        // Reset uses the nearest clock mark, not an exact 25-minute duration.
-        let resetFocus: TimeInterval = elapsed == 1_620 ? 1_380 : 1_500
+        // Reset preserves the configured duration at any clock time.
+        let resetFocus: TimeInterval = 1_500
         #expect(timer.pomodoro.focusRemaining == resetFocus)
         #expect(timer.pomodoro.restRemaining == 300)
         #expect(timer.engine.isPaused == pause)

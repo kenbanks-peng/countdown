@@ -96,7 +96,7 @@ struct PomodoroClockEditTests {
         controller.adjustPomodoroDuration(.focus, by: Double(direction) * 300)
         let after = try #require(controller.pomodoro.clockSchedule)
         let shift = after.focusEnd.timeIntervalSince(before.focusEnd)
-        #expect(shift * Double(direction) > 0)
+        #expect(shift == Double(direction) * 300)
         #expect(after.restEnd == before.restEnd + shift)
         #expect(after.longRestEnd == before.longRestEnd + shift)
         #expect(after.restDuration == before.restDuration)
@@ -104,7 +104,7 @@ struct PomodoroClockEditTests {
         #expect(controller.pomodoro.restRemaining == before.restDuration)
         #expect(after.pausedAt == before.pausedAt)
         #expect(after.isValid(focusPeriodsPerCycle: controller.pomodoro.focusPeriodsPerCycle))
-        expectClockMark(after.focusEnd)
+        #expect(after.focusEnd == before.focusEnd + Double(direction) * 300)
     }
 
     @Test

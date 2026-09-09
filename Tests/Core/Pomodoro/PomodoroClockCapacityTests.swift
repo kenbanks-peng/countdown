@@ -144,16 +144,17 @@ struct PomodoroClockCapacityTests {
             controller.adjustPomodoroDuration(.focus, steps: -3)
         }
         let schedule = try #require(controller.pomodoro.clockSchedule)
-        #expect(schedule.focusEnd == start + 15 * 60)
-        #expect(controller.pomodoro.focusRemaining == 6 * 60)
+        let endMinutes: TimeInterval = amountEdit ? 14 : 15
+        #expect(schedule.focusEnd == start + endMinutes * 60)
+        #expect(controller.pomodoro.focusRemaining == (endMinutes - 9) * 60)
         #expect(schedule.restDuration == 300)
         #expect(schedule.longRestDuration == 900)
-        expectClockMark(schedule.focusEnd)
+        if !amountEdit { expectClockMark(schedule.focusEnd) }
         // Time passing must not move the selected endpoint to enforce an edit limit.
         if !paused {
             session.now = start + 11 * 60
             controller.update()
-            #expect(controller.pomodoro.focusRemaining == 4 * 60)
+            #expect(controller.pomodoro.focusRemaining == (endMinutes - 11) * 60)
             #expect(controller.pomodoro.clockSchedule?.focusEnd == schedule.focusEnd)
         }
     }

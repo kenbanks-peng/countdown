@@ -37,7 +37,7 @@ struct PomodoroDurationTests {
     }
 
     @Test(arguments: [false, true], [25, 1, 59])
-    func resetAlignsDefaultsAndEnforcesMinimum(paused: Bool, focusMinutes: Int) throws {
+    func resetPreservesDefaultDurationsWithinLimits(paused: Bool, focusMinutes: Int) throws {
         let session = Session()
         defer { session.removeState() }
         session.configuration = CountdownConfiguration(
@@ -51,11 +51,10 @@ struct PomodoroDurationTests {
         session.now += 137.5
         timer.resetPomodoro()
         let schedule = try #require(timer.pomodoro.clockSchedule)
-        let origin = Calendar.current.startOfDay(for: session.now)
-        for end in [schedule.focusEnd, schedule.restEnd, schedule.longRestEnd] {
-            #expect(end.timeIntervalSince(origin).truncatingRemainder(dividingBy: 300) == 0)
-        }
-        let expectedFocus: TimeInterval = focusMinutes == 25 ? 1_362.5 : (focusMinutes == 1 ? 462.5 : 3_162.5)
+        let expectedFocus: TimeInterval = focusMinutes == 25 ? 1_500 : (focusMinutes == 1 ? 300 : 3_300)
+        #expect(schedule.focusEnd == session.now + expectedFocus)
+        #expect(schedule.restEnd == schedule.focusEnd + 300)
+        #expect(schedule.longRestEnd == schedule.focusEnd + (focusMinutes == 25 ? 900 : 300))
         #expect(schedule.focusDuration == expectedFocus)
         #expect(schedule.restDuration == 300)
         #expect(schedule.longRestDuration == (focusMinutes == 25 ? 900 : 300))

@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct PomodoroClockLifecycleTests {
     @Test(arguments: [false, true])
-    func pauseFreezesEndpointsAndResumeSnapsOnce(inRest: Bool) throws {
+    func pauseFreezesEndpointsAndResumePreservesDurations(inRest: Bool) throws {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = session.controller
@@ -35,13 +35,12 @@ struct PomodoroClockLifecycleTests {
         let resumed = try #require(controller.pomodoro.clockSchedule)
         for phase: PomodoroModel.Phase in [.focus, .rest, .longRest] {
             let expected = edited.end(for: phase) + session.now.timeIntervalSince(paused)
-            #expect(abs(resumed.end(for: phase).timeIntervalSince(expected)) <= 150)
-            expectClockMark(resumed.end(for: phase))
+            #expect(resumed.end(for: phase) == expected)
         }
-        expectClockMark(try #require(controller.timer.endDate))
-        #expect(abs(controller.timer.remaining - timerRemaining) <= 150)
-        #expect(abs(controller.pomodoro.focusRemaining - focus) <= 150)
-        #expect(abs(controller.pomodoro.restRemaining - rest) <= 300)
+        #expect(controller.timer.endDate == resumed.restEnd)
+        #expect(controller.timer.remaining == timerRemaining)
+        #expect(controller.pomodoro.focusRemaining == focus)
+        #expect(controller.pomodoro.restRemaining == rest)
         session.now += 150
         controller.adjustPomodoroDuration(.longRest, steps: -1)
         #expect(controller.pomodoro.clockSchedule?.focusEnd == resumed.focusEnd)
@@ -49,7 +48,7 @@ struct PomodoroClockLifecycleTests {
     }
 
     @Test
-    func resumeDoesNotRestartCompletedFocusWhenRoundingMovesItsEndForward() throws {
+    func resumePreservesCompletedFocusAndRestProgress() throws {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = session.controller
@@ -59,7 +58,7 @@ struct PomodoroClockLifecycleTests {
         session.now += 60
         controller.toggleRunning()
         let resumed = try #require(controller.pomodoro.clockSchedule)
-        #expect(resumed.focusEnd > session.now)
+        #expect(resumed.focusEnd == session.now - 10)
         #expect(controller.pomodoro.focusRemaining == 0)
         let remaining = resumed.restEnd.timeIntervalSince(session.now)
         #expect(controller.pomodoro.restRemaining == remaining)
@@ -72,7 +71,7 @@ struct PomodoroClockLifecycleTests {
     }
 
     @Test(arguments: [1, 4])
-    func endpointEditsRoundFocusForFollowingCycles(startMinute: Int) throws {
+    func endpointEditsPreserveFocusDurationForFollowingCycles(startMinute: Int) throws {
         let session = ClockTestSession()
         defer { session.close() }
         let four = Calendar.current.startOfDay(for: session.now) + 4 * 3_600
@@ -85,7 +84,7 @@ struct PomodoroClockLifecycleTests {
         #expect(selected.restEnd == four + 35 * 60)
         #expect(selected.focusDuration == Double(30 - startMinute) * 60)
 
-        let repeatedFocus: TimeInterval = startMinute == 1 ? 30 * 60 : 25 * 60
+        let repeatedFocus = selected.focusDuration
         for expectedStage in [2, 3, 4, 1, 2] {
             let previous = try #require(controller.pomodoro.clockSchedule)
             let nextStart = previous.end(for: controller.pomodoro.restPhase)
@@ -113,7 +112,7 @@ struct PomodoroClockLifecycleTests {
         session.now += 150
         controller.adjustPomodoroDuration(.longRest, steps: 2)
         let selected = try #require(controller.pomodoro.clockSchedule)
-        let repeatedFocus = (selected.focusDuration / 300).rounded() * 300
+        let repeatedFocus = selected.focusDuration
         for expectedStage in [2, 3, 4, 1, 2] {
             let previous = try #require(controller.pomodoro.clockSchedule)
             session.now = previous.end(for: controller.pomodoro.restPhase)
@@ -124,9 +123,7 @@ struct PomodoroClockLifecycleTests {
             #expect(next.focusDuration == repeatedFocus)
             #expect(next.restDuration == selected.restDuration)
             #expect(next.longRestDuration == selected.longRestDuration)
-            for phase: PomodoroModel.Phase in [.focus, .rest, .longRest] {
-                expectClockMark(next.end(for: phase))
-            }
+            #expect(next.focusEnd == next.stageStart + selected.focusDuration)
         }
         let beforeSleep = try #require(controller.pomodoro.clockSchedule)
         session.now += controller.pomodoro.cycleDuration * 10_000 + 150
@@ -150,8 +147,11 @@ struct PomodoroClockLifecycleTests {
         #expect(late.focusRemaining == stepped.focusRemaining)
         #expect(late.restRemaining == stepped.restRemaining)
         let schedule = try #require(late.clockSchedule)
+        #expect(schedule.focusDuration == 1_500)
+        #expect(schedule.restDuration == 300)
+        #expect(schedule.longRestDuration == 1_200)
         for phase: PomodoroModel.Phase in [.focus, .rest, .longRest] {
-            expectClockMark(schedule.end(for: phase))
+            #expect(schedule.end(for: phase) == stepped.clockSchedule?.end(for: phase))
         }
     }
 

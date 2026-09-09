@@ -110,12 +110,11 @@ final class TimerModel: ObservableObject {
         let clampedProportion = min(1, max(0, proportion))
         if isClockEnabled {
             let date = now()
-            let target = ClockBoundary.nearest(date + clampedProportion * Self.maximumDuration,
-                                               minimum: date + 300, maximum: date + Self.maximumDuration)
+            let target = date + clampedProportion * Self.maximumDuration
             if clampedProportion == 0 { clear() } else { setClockEndpoint(target, at: date) }
             return
         }
-        duration = (clampedProportion * Self.maximumDuration).rounded()
+        duration = clampedProportion * Self.maximumDuration
         remaining = duration
 
         guard duration > 0 else {
@@ -141,8 +140,7 @@ final class TimerModel: ObservableObject {
         if isClockEnabled {
             let reference = pausedAt ?? date
             let end = endDate ?? reference
-            let target = ClockBoundary.nearest(end + amount, minimum: reference + 300,
-                                               maximum: reference + Self.maximumDuration)
+            let target = min(reference + Self.maximumDuration, max(reference, end + amount))
             if status == .empty && amount < 0 { return }
             setClockEndpoint(target, at: reference)
             return
@@ -198,12 +196,13 @@ final class TimerModel: ObservableObject {
         update(at: date)
         let reference = pausedAt ?? date
         let end = endDate ?? reference
-        let target = ClockBoundary.move(end, steps: steps, minimum: reference + 300,
+        let target = ClockBoundary.move(end, steps: steps, minimum: reference,
                                         maximum: reference + Self.maximumDuration)
         setClockEndpoint(target, at: reference)
     }
 
     private func setClockEndpoint(_ end: Date, at date: Date) {
+        guard end > date else { clear(); return }
         endDate = end
         remaining = max(0, end.timeIntervalSince(date))
         duration = remaining
@@ -215,14 +214,7 @@ final class TimerModel: ObservableObject {
     func resume() {
         guard status == .prepared, remaining > 0 else { return }
         let date = now()
-        if isClockEnabled {
-            let resumedEndDate = ClockBoundary.nearest(date + remaining, minimum: date + 1, maximum: date + Self.maximumDuration)
-            endDate = resumedEndDate
-            remaining = max(0, resumedEndDate.timeIntervalSince(date))
-            duration = remaining
-        } else {
-            endDate = date.addingTimeInterval(remaining)
-        }
+        endDate = date.addingTimeInterval(remaining)
         pausedAt = nil
         status = .active
         save()

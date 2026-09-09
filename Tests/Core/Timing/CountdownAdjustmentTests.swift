@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct CountdownAdjustmentTests {
     @Test(arguments: [false, true], [false, true])
-    func timerUsesClockMarksOrRelativeStepsAfterElapsedTimeAndPause(clock: Bool, paused: Bool) {
+    func timerUsesClockMarksOrRelativeMarksAfterElapsedTimeAndPause(clock: Bool, paused: Bool) {
         let session = Session(clock: clock)
         defer { session.close() }
         let controller = session.controller
@@ -19,7 +19,7 @@ struct CountdownAdjustmentTests {
         if clock {
             expectMark(timerEnd(controller))
         } else {
-            #expect(abs(controller.timer.remaining - 1_426.5) < 1e-6)
+            #expect(controller.timer.remaining == 1_200)
         }
         let firstEnd = timerEnd(controller)
         controller.adjustTimerDuration(steps: 1)
@@ -43,12 +43,12 @@ struct CountdownAdjustmentTests {
         controller.adjustTimerDuration(steps: -1)
         #expect(controller.timer.remaining == 0) // Decrease does not create a timer.
         controller.adjustTimerDuration(steps: 1)
-        #expect(controller.timer.remaining >= 300)
-        #expect(controller.timer.remaining < 600)
+        #expect(controller.timer.remaining > 0)
+        #expect(controller.timer.remaining <= 300)
         expectMark(timerEnd(controller))
         let minimum = controller.timer.remaining
         controller.adjustTimerDuration(steps: -100)
-        #expect(controller.timer.remaining == minimum)
+        #expect(controller.timer.remaining == (clock ? minimum : 0))
         controller.adjustTimerDuration(steps: 100)
         #expect(controller.timer.remaining <= 3_600)
         #expect(controller.timer.remaining > 3_300)
@@ -76,7 +76,7 @@ struct CountdownAdjustmentTests {
     }
 
     @Test(arguments: [0.0, 73.25, 1_713.25, 7_113.25], [false, true])
-    func pomodoroClockEditsKeepAllEndpointsAligned(elapsed: TimeInterval, paused: Bool) throws {
+    func pomodoroScrollAlignsSelectedEndpointWithoutAligningNewStages(elapsed: TimeInterval, paused: Bool) throws {
         let session = Session(clock: true)
         defer { session.close() }
         let controller = session.controller
@@ -86,11 +86,15 @@ struct CountdownAdjustmentTests {
         if paused { controller.toggleRunning() }
         for steps in [1, -1, 100, -100, 1] {
             for phase: PomodoroModel.Phase in [.focus, .rest, .longRest] {
+                let previousStageStart = controller.pomodoro.clockSchedule?.stageStart
                 controller.adjustPomodoroDuration(phase, steps: steps)
                 let schedule = try #require(controller.pomodoro.clockSchedule)
                 #expect(schedule.isValid(focusPeriodsPerCycle: controller.pomodoro.focusPeriodsPerCycle))
                 let end = schedule.end(for: phase)
-                expectMark(end.timeIntervalSince(Calendar.current.startOfDay(for: end)))
+                // An edit can finish the stage. The next stage repeats exact durations.
+                if schedule.stageStart == previousStageStart {
+                    expectMark(end.timeIntervalSince(Calendar.current.startOfDay(for: end)))
+                }
                 #expect(controller.pomodoro.focusDuration >= 300)
                 #expect(controller.pomodoro.restDuration >= 300)
                 #expect(controller.pomodoro.longRestDuration >= 300)
@@ -122,19 +126,19 @@ struct CountdownAdjustmentTests {
     }
 
     @Test
-    func clockMinimumCanExceedFiveMinutesAndEndWrapsThroughTheHour() {
+    func clockScrollUsesTheNextMarkEvenWhenLessThanFiveMinutesAway() {
         let session = Session(clock: true)
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 22, minute: 57, second: 13))!.addingTimeInterval(0.25)
         let controller = session.controller
         controller.adjustTimerDuration(steps: 1)
-        #expect(abs(controller.timer.remaining - 466.75) < 1e-6) // 23:05, not 23:00.
+        #expect(abs(controller.timer.remaining - 166.75) < 1e-6) // 23:00.
         expectMark(timerEnd(controller))
         controller.adjustTimerDuration(steps: 1)
-        #expect(abs(controller.timer.remaining - 766.75) < 1e-6)
+        #expect(abs(controller.timer.remaining - 466.75) < 1e-6)
         controller.save()
         let restored = session.makeController()
-        #expect(abs(restored.timer.remaining - 766.75) < 1e-6)
+        #expect(abs(restored.timer.remaining - 466.75) < 1e-6)
         expectMark(timerEnd(restored))
     }
 

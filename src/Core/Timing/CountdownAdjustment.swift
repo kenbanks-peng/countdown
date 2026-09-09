@@ -24,11 +24,4 @@ enum CountdownAdjustment {
         guard steps > 0 ? end + result >= originalEnd : end + result <= originalEnd else { return 0 }
         return result
     }
-
-    static func nearestDelta(end: TimeInterval, minimum: TimeInterval, maximum: TimeInterval) -> TimeInterval {
-        let lower = ceil(minimum / increment)
-        let upper = floor(maximum / increment)
-        guard lower <= upper else { return 0 }
-        return min(upper, max(lower, (end / increment).rounded())) * increment - end
-    }
 }

@@ -105,7 +105,7 @@ struct CountdownCoreTests {
     }
 
     @Test
-    func hiddenModeIsSilentAndSwitchingDoesNotCauseAnEarlyNotification() {
+    func exactDurationEditsNotifyAtTheActiveViewsBoundaries() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Date(timeIntervalSince1970: 1_699_999_800)
@@ -117,17 +117,20 @@ struct CountdownCoreTests {
         )
         controller.adjustTimerDuration(by: 610)
         controller.selectMode(.pomodoro)
-        now += 10 // Hidden Timer crosses 600 seconds.
-        controller.update()
+        #expect(controller.pomodoro.focusRemaining == 310)
         #expect(sounds == 0)
-        now += 290 // Visible Pomodoro has run for five minutes.
+        now += 10 // Visible focus crosses 300 seconds; hidden Timer must not also notify.
+        controller.update()
+        #expect(sounds == 1)
+        now += 290 // Focus has ten seconds left; no new boundary was crossed.
         controller.update()
         controller.update() // A second view can also request an update.
         #expect(sounds == 1)
         controller.selectMode(.timer)
-        now += 10 // Timer crosses 300 seconds, only ten seconds after the last sound.
+        #expect(sounds == 1) // Switching views must not notify.
+        now += 10 // Timer crosses 300 seconds, five minutes after the last sound.
         controller.update()
-        #expect(sounds == 1)
+        #expect(sounds == 2)
     }
 
     @Test(arguments: CountdownMode.allCases)

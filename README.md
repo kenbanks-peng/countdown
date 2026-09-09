@@ -7,12 +7,12 @@ See the [source organization](docs/architecture.md).
 
 - Click the circle to toggle between Normal mode and Compact mode.
 - In Timer or Countdown mode, Option-click the circle to set the timeout to end exactly on the next hour.
-- Scroll up or down to move an end to the next or previous five-minute mark.
+- Scroll up or down to move an end to the next or previous five-minute mark. Hold Option to add or subtract one minute instead.
 - Right-click the Countdown window and toggle settings or select **Quit Countdown** to quit.
 - Select **Pomodoro**, **Timer**, or **Countdown** from **View**. Timer and Pomodoro show a clock. Countdown uses the timer without a clock. Pomodoro repeats focus periods with short rests, then a long rest. The default is four focus periods. Dots show focus progress.
 - All views share the same remaining time: focus plus the current rest. Timer and Countdown edits change focus first. Pomodoro repeats only while its view is selected.
 - Countdown starts automatically. Use **Pause** or **Resume** in the right-click menu. These controls apply to all three modes; a mode change does not stop the countdown.
-- In **Timer** and **Pomodoro** modes, edits set fixed end times. A focus edit moves both rest end times to keep their durations constant. A rest edit changes only that rest end time. The selected spacing repeats. Pause freezes the countdown; resume shifts the end times and rounds them to the nearest five-minute marks. **Countdown** mode uses durations and resumes without rounding.
+- In **Timer** and **Pomodoro** modes, edits set fixed end times. A focus edit moves both rest end times to keep their durations constant. A rest edit changes only that rest end time. The selected spacing repeats. Pause freezes the countdown; resume shifts the end times without rounding. **Countdown** mode uses durations. Only scrolling without Option aligns values to five-minute marks.
 
 ## Configuration
 

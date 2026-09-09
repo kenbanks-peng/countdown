@@ -5,18 +5,18 @@ import Testing
 @MainActor
 struct ScrollDurationTests {
     @Test(arguments: [false, true])
-    func countdownScrollAddsTimeWhileTheClockAdvances(precise: Bool) throws {
+    func countdownScrollAlignsRemainingTimeWhileTheClockAdvances(precise: Bool) throws {
         let session = ScrollTestSession()
         defer { session.close() }
         session.controller.selectMode(.countdown)
-        for step in 1...4 {
+        for _ in 1...4 {
             session.now += 0.1
             try session.scroll(angle: 270, delta: precise ? 12 : 1, after: 0.1, precise: precise)
-            #expect(abs(session.controller.timer.remaining - (Double(step) * 300 - Double(step - 1) * 0.1)) < 1e-6)
+            #expect(session.controller.timer.remaining == 300)
         }
         session.now += 0.1
         try session.scroll(angle: 270, delta: precise ? -12 : -1, after: 0.1, precise: precise)
-        #expect(abs(session.controller.timer.remaining - 899.6) < 1e-6)
+        #expect(session.controller.timer.remaining == 0)
     }
 
     @Test
@@ -43,21 +43,22 @@ struct ScrollDurationTests {
     }
 
     @Test(arguments: [CountdownMode.timer, .countdown], [false, true])
-    func timerScrollUsesFiveMinuteStepsAndStopsAtFiveMinutes(mode: CountdownMode, option: Bool) throws {
+    func timerScrollUsesSelectedIncrementAndStopsAtZero(mode: CountdownMode, option: Bool) throws {
         let session = ScrollTestSession()
         defer { session.close() }
         session.controller.selectMode(mode)
         let timer = session.controller.timer
-        try session.scroll(angle: 90, delta: option ? 3 : 1, option: option)
-        #expect(timer.remaining == 300)
-        try session.scroll(angle: 90, delta: option ? 3 : 1, option: option)
-        #expect(timer.remaining == 600)
-        try session.scroll(angle: 90, delta: option ? -3 : -1, option: option)
-        #expect(timer.remaining == 300)
-        try session.scroll(angle: 90, delta: option ? -3 : -1, option: option)
-        #expect(timer.remaining == 300)
+        let increment: TimeInterval = option ? 60 : 300
+        try session.scroll(angle: 90, delta: 1, option: option)
+        #expect(timer.remaining == increment)
+        try session.scroll(angle: 90, delta: 1, option: option)
+        #expect(timer.remaining == 2 * increment)
+        try session.scroll(angle: 90, delta: -1, option: option)
+        #expect(timer.remaining == increment)
+        try session.scroll(angle: 90, delta: -1, option: option)
+        #expect(timer.remaining == 0)
         try session.scroll(angle: 90, delta: 1_200, option: option)
-        #expect(timer.remaining == 600) // Large events still move only one mark.
+        #expect(timer.remaining == increment) // Large events still move only one step.
     }
 
     @Test(arguments: [PomodoroModel.Phase.focus, .rest, .longRest], [false, true])
@@ -78,11 +79,11 @@ struct ScrollDurationTests {
             case .longRest: return timer.pomodoro.longRestDuration
             }
         }
-        for _ in 0..<12 { try session.scroll(angle: angle, delta: 1_200, option: true, after: 0.16) }
+        for _ in 0..<12 { try session.scroll(angle: angle, delta: 1_200, after: 0.16) }
         #expect(selected() == (phase == .focus ? 3_300 : (phase == .rest ? 2_100 : 3_600)))
         try session.scroll(angle: angle, delta: 12, after: 0.16)
         #expect(selected() == (phase == .focus ? 3_300 : (phase == .rest ? 2_100 : 3_600)))
-        for _ in 0..<12 { try session.scroll(angle: angle, delta: -1_200, option: true, after: 0.16) }
+        for _ in 0..<12 { try session.scroll(angle: angle, delta: -1_200, after: 0.16) }
         #expect(selected() == 300)
         try session.scroll(angle: angle, delta: -12, after: 0.16)
         #expect(selected() == 300)

@@ -36,18 +36,16 @@ struct ScrollGestureTests {
     }
 
     @Test(arguments: [false, true])
-    func optionRequiresThreeTimesTheScrollTravel(precise: Bool) throws {
+    func optionUsesOneMinuteWithTheSameScrollTravel(precise: Bool) throws {
         let session = ScrollTestSession()
         defer { session.close() }
         let distance: Int32 = precise ? 12 : 1
-        for _ in 0..<2 {
+        for step in 1...3 {
             try session.scroll(angle: 90, delta: distance, option: true, after: 0.01, precise: precise)
-            #expect(session.controller.timer.remaining == 0)
+            #expect(session.controller.timer.remaining == Double(step) * 60)
         }
-        try session.scroll(angle: 90, delta: distance, option: true, after: 0.01, precise: precise)
-        #expect(session.controller.timer.remaining == 300)
         try session.scroll(angle: 90, delta: distance, after: 0.01, precise: precise)
-        #expect(session.controller.timer.remaining == 600)
+        #expect(session.controller.timer.remaining == 300)
     }
 
     @Test
@@ -132,9 +130,9 @@ struct ScrollGestureTests {
         defer { session.close() }
         let timer = session.controller
         timer.selectMode(.pomodoro)
-        try session.scroll(angle: 180, delta: 3, option: true)
+        try session.scroll(angle: 180, delta: 1)
         #expect(timer.pomodoro.focusDuration == 1_800)
-        try session.scroll(angle: 315, delta: 3, option: true, after: 0.001)
+        try session.scroll(angle: 315, delta: 1, after: 0.001)
         #expect(timer.pomodoro.restDuration == 600)
         try session.scroll(angle: 180, delta: -1, after: 0.001)
         #expect(timer.pomodoro.focusDuration == 1_500)

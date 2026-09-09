@@ -58,7 +58,7 @@ struct CountdownView: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(countdown.mode == .pomodoro ? countdown.pomodoro.progressDescription : "")
         .accessibilityHint("Click to use \(isCompact ? "normal" : "compact") view. Use the right-click menu to \(countdown.controlLabel.lowercased()).")
-        .help("Click to change view. Use the right-click menu for timer controls. Scroll to adjust time; hold Option for slower adjustment.")
+        .help("Click to change view. Use the right-click menu for timer controls. Scroll to align to five-minute marks; hold Option for one-minute changes.")
         .contextMenu {
             Picker("View", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
                 ForEach(CountdownMode.allCases, id: \.self) { mode in

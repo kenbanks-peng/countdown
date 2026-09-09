@@ -20,8 +20,8 @@ struct TimerClockEndpointTests {
         let edited = try #require(controller.timer.endDate)
         session.now += 160
         controller.toggleRunning()
-        #expect(abs(try #require(controller.timer.endDate).timeIntervalSince(edited + 310)) <= 150)
-        expectClockMark(try #require(controller.timer.endDate))
+        #expect(controller.timer.endDate == edited + 310)
+        #expect(controller.timer.remaining == frozen + 300)
     }
 
     @Test

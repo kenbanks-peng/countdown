@@ -133,11 +133,10 @@ final class CountdownController: ObservableObject {
             return
         }
         guard timer.status != .empty || steps > 0 else { return }
-        // A relative countdown keeps decreasing between inputs. Snapping its remaining
-        // time to the next mark would repeatedly restore the same value instead of adding time.
-        let target = min(TimerModel.maximumDuration,
-                         max(300, timer.remaining + Double(steps) * CountdownAdjustment.increment))
-        let delta = target - timer.remaining
+        // Countdown has a relative face: its marks measure remaining time.
+        let delta = CountdownAdjustment.delta(
+            steps: steps, end: timer.remaining, minimum: 0, maximum: TimerModel.maximumDuration
+        )
         guard steps > 0 ? delta > 0 : delta < 0 else { return }
         timer.adjustDuration(by: delta, at: date)
     }
