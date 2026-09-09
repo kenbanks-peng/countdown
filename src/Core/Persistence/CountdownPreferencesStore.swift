@@ -3,7 +3,7 @@ import Foundation
 /// Persistent menu choices, separate from user configuration and timer progress.
 struct CountdownPreferences {
     var showsRemainingMinutes = true
-    var autoSetToNextHourEnabled = false
+    var autoRepeatEnabled = false
     var notificationEnabled = true
     var alarmEnabled = true
 }
@@ -16,7 +16,7 @@ struct CountdownPreferencesStore {
         let values = readValues()
         return CountdownPreferences(
             showsRemainingMinutes: values["current_timeout_enabled"] ?? true,
-            autoSetToNextHourEnabled: values["autoset_enabled"] ?? false,
+            autoRepeatEnabled: values["auto_repeat_enabled"] ?? false,
             notificationEnabled: values["notification_enabled"] ?? true,
             alarmEnabled: values["alarm_enabled"] ?? true
         )

@@ -78,6 +78,7 @@ struct PomodoroClockLifecycleTests {
         session.now = four + Double(startMinute) * 60
         let controller = session.controller
         controller.selectMode(.pomodoro)
+        controller.setAutoRepeatEnabled(true)
         controller.adjustPomodoroDuration(.focus, steps: 1)
         let selected = try #require(controller.pomodoro.clockSchedule)
         #expect(selected.focusEnd == four + 30 * 60)
@@ -105,6 +106,7 @@ struct PomodoroClockLifecycleTests {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = session.controller
+        controller.setAutoRepeatEnabled(true)
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, steps: -1)
         session.now += 150

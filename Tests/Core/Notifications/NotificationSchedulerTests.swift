@@ -160,6 +160,7 @@ struct NotificationSchedulerTests {
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(.pomodoro)
+        controller.setAutoRepeatEnabled(true)
         // Skip to long rest, then cross its interval marks without notifications.
         now = start + 115 * 60
         controller.update()

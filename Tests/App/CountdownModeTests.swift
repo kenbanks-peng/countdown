@@ -53,11 +53,11 @@ struct CountdownModeTests {
 
     @Test(arguments: CountdownMode.allCases, CountdownMode.allCases)
     func selectionSettlesTimeoutUnderOutgoingMode(outgoing: CountdownMode, incoming: CountdownMode) {
-        for autoSetToNextHour in [false, true] {
+        for autoRepeat in [false, true] {
             for alarm in [false, true] {
                 let session = Session()
                 defer { session.close() }
-                let controller = session.makeController(autoSetToNextHour: autoSetToNextHour, alarm: alarm)
+                let controller = session.makeController(autoRepeat: autoRepeat, alarm: alarm)
                 controller.setTimerToNextHour()
                 controller.selectMode(outgoing)
                 session.now += controller.timer.remaining
@@ -65,7 +65,7 @@ struct CountdownModeTests {
                 controller.update() // Also settles a no-op selection.
                 #expect(controller.timer.completionCount == (outgoing.usesTimer ? 1 : 0))
                 #expect(session.sounds == (outgoing.usesTimer && alarm ? 1 : 0))
-                let expected: TimeInterval = !outgoing.usesTimer || autoSetToNextHour
+                let expected: TimeInterval = !outgoing.usesTimer || autoRepeat
                     ? 3_600 : (incoming == .pomodoro ? 1_800 : 0)
                 #expect(controller.timer.remaining == expected)
                 #expect(!controller.engine.isPaused)
@@ -126,10 +126,10 @@ struct CountdownModeTests {
         var sounds = 0
         var store: TimerSessionStore { TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]) }
 
-        func makeController(autoSetToNextHour: Bool = false, alarm: Bool = true) -> CountdownController {
+        func makeController(autoRepeat: Bool = false, alarm: Bool = true) -> CountdownController {
             CountdownController(
                 sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, notificationAudioEnabled: false),
-                preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, notificationEnabled: false, alarmEnabled: alarm),
+                preferences: CountdownPreferences(autoRepeatEnabled: autoRepeat, notificationEnabled: false, alarmEnabled: alarm),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

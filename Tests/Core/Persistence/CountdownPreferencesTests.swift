@@ -54,7 +54,7 @@ struct CountdownPreferencesTests {
         original.selectMode(.countdown)
         original.notifications.setNotificationEnabled(false)
         original.timer.setRemainingMinutesVisible(false)
-        original.timer.setAutoSetToNextHourEnabled(true)
+        original.timer.setAutoRepeatEnabled(true)
         original.save()
         let savedFeatures = try JSONDecoder().decode(
             [String: Bool].self,
@@ -65,9 +65,9 @@ struct CountdownPreferencesTests {
         #expect(!restored.mode.isClockEnabled)
         #expect(!restored.notifications.isNotificationEnabled)
         #expect(!restored.timer.showsRemainingMinutes)
-        #expect(restored.timer.isAutoSetToNextHourEnabled)
+        #expect(restored.timer.isAutoRepeatEnabled)
         #expect(stateStore.load().alarmEnabled == alarmEnabled)
-        restored.timer.setAutoSetToNextHourEnabled(false)
+        restored.timer.setAutoRepeatEnabled(false)
         restored.adjustTimerDuration(by: -3_600)
         restored.adjustTimerDuration(by: 60)
         now += 60
@@ -89,7 +89,7 @@ struct CountdownPreferencesTests {
         #expect(state.showsRemainingMinutes)
         #expect(state.notificationEnabled)
         #expect(state.alarmEnabled == (contents != "{\"alarm_enabled\":false}"))
-        #expect(!state.autoSetToNextHourEnabled)
+        #expect(!state.autoRepeatEnabled)
     }
 
     @Test
@@ -104,11 +104,11 @@ struct CountdownPreferencesTests {
         controller.selectMode(.countdown)
         controller.notifications.setNotificationEnabled(false)
         controller.timer.setRemainingMinutesVisible(false)
-        controller.timer.setAutoSetToNextHourEnabled(true)
+        controller.timer.setAutoRepeatEnabled(true)
         #expect(!controller.mode.isClockEnabled)
         #expect(!controller.notifications.isNotificationEnabled)
         #expect(!controller.timer.showsRemainingMinutes)
-        #expect(controller.timer.isAutoSetToNextHourEnabled)
+        #expect(controller.timer.isAutoRepeatEnabled)
         #expect(try String(contentsOf: directory, encoding: .utf8) == "blocked")
     }
 

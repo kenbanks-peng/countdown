@@ -17,6 +17,7 @@ struct PomodoroModel {
     private(set) var focusDuration: TimeInterval
     private(set) var restDuration: TimeInterval
     private(set) var longRestDuration: TimeInterval
+    var isAutoRepeatEnabled = true
     private(set) var stage = 1
     private(set) var status: Status = .ready
     private(set) var elapsedTime: TimeInterval = 0
@@ -140,7 +141,7 @@ struct PomodoroModel {
 
     private mutating func advanceClock(at now: Date) {
         let count = focusPeriodsPerCycle
-        clockSchedule?.advance(at: now, focusPeriodsPerCycle: count)
+        clockSchedule?.advance(at: now, focusPeriodsPerCycle: count, autoRepeat: isAutoRepeatEnabled)
     }
 
     private mutating func syncClockProgress() {
@@ -316,7 +317,7 @@ struct PomodoroModel {
         }
         while elapsed > 0 {
             // Skip whole cycles after sleep without an unbounded loop.
-            if stage == 1 && focusElapsed == 0 && restElapsed == 0 && !focusCompleted {
+            if isAutoRepeatEnabled && stage == 1 && focusElapsed == 0 && restElapsed == 0 && !focusCompleted {
                 elapsed = elapsed.truncatingRemainder(dividingBy: cycleDuration)
                 if elapsed == 0 { break }
             }
@@ -327,12 +328,14 @@ struct PomodoroModel {
             restElapsed += restTime
             elapsed -= restTime
             finishDepletedPhases()
+            if !isAutoRepeatEnabled && stage == focusPeriodsPerCycle && focusRemaining + restRemaining == 0 { break }
         }
     }
 
     private mutating func finishDepletedPhases() {
         if focusRemaining == 0 { focusCompleted = true }
         if focusCompleted && restRemaining == 0 {
+            if stage == focusPeriodsPerCycle && !isAutoRepeatEnabled { return }
             stage = stage == focusPeriodsPerCycle ? 1 : stage + 1
             resetStage()
         }

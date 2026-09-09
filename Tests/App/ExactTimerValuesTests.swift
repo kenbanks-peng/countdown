@@ -51,6 +51,7 @@ struct ExactTimerValuesTests {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = session.controller
+        controller.setAutoRepeatEnabled(true)
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, by: 60)
         controller.adjustPomodoroDuration(.rest, by: 60)

@@ -18,6 +18,7 @@ final class CountdownEngine: ObservableObject {
         self.isPaused = isPaused
         self.mode = mode
         self.now = now
+        self.pomodoro.isAutoRepeatEnabled = timer.isAutoRepeatEnabled
         let date = now()
         timer.isEnginePaused = isPaused
         if self.pomodoro.clockSchedule == nil { self.pomodoro.setClockEnabled(true, at: date) }
@@ -29,6 +30,7 @@ final class CountdownEngine: ObservableObject {
             timer.setSharedRemaining(self.pomodoro.focusRemaining + self.pomodoro.restRemaining,
                                      at: self.pomodoro.clockSchedule?.pausedAt ?? date)
         }
+        if mode == .pomodoro { update(at: date) }
         timerSubscription = timer.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
         }
@@ -45,7 +47,13 @@ final class CountdownEngine: ObservableObject {
             timer.update(at: date)
             pomodoro.followTimer(remaining: timer.remaining, at: date)
         } else {
+            pomodoro.isAutoRepeatEnabled = timer.isAutoRepeatEnabled
             pomodoro.update(at: date)
+            if pomodoro.focusRemaining + pomodoro.restRemaining == 0 {
+                isPaused = true
+                timer.isEnginePaused = true
+                pomodoro.setSharedPaused(true, at: date)
+            }
             projectPomodoro(at: date)
         }
     }
@@ -67,7 +75,13 @@ final class CountdownEngine: ObservableObject {
             pomodoro.reserveMinimumRest(at: date)
             projectPomodoro(at: date)
         }
+        if mode.usesTimer { timer.captureRepeatDuration() }
         timer.save()
+    }
+
+    func setAutoRepeatEnabled(_ enabled: Bool) {
+        timer.setAutoRepeatEnabled(enabled)
+        pomodoro.isAutoRepeatEnabled = enabled
     }
 
     func timerDidChange(at date: Date? = nil) {
@@ -84,7 +98,14 @@ final class CountdownEngine: ObservableObject {
             pomodoro.setSharedPaused(isPaused, at: date)
             pomodoro.followTimer(remaining: timer.remaining, at: date)
         } else {
-            if isPaused { pomodoro.pause(at: date) } else { pomodoro.toggleRunning(at: date) }
+            if isPaused {
+                pomodoro.pause(at: date)
+            } else if pomodoro.focusRemaining + pomodoro.restRemaining == 0 {
+                pomodoro.reset(at: date)
+                pomodoro.setSharedPaused(false, at: date)
+            } else {
+                pomodoro.toggleRunning(at: date)
+            }
             projectPomodoro(at: date)
         }
         timer.save()

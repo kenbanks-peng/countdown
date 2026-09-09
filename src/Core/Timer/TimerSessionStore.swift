@@ -9,6 +9,7 @@ struct TimerSession: Codable {
     let endDate: Date?
     let savedAt: Date
     var pausedAt: Date? = nil
+    var repeatDuration: TimeInterval? = nil
 }
 
 /// Stores only the Timer mode session.

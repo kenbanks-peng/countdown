@@ -117,10 +117,14 @@ struct PomodoroClockSchedule: Codable {
         sampledAt = now
     }
 
-    mutating func advance(at now: Date, focusPeriodsPerCycle: Int) {
+    mutating func advance(at now: Date, focusPeriodsPerCycle: Int, autoRepeat: Bool = true) {
         guard pausedAt == nil else { return }
         sampledAt = max(sampledAt, now)
         while sampledAt >= (stage == focusPeriodsPerCycle ? longRestEnd : restEnd) {
+            if stage == focusPeriodsPerCycle && !autoRepeat {
+                focusCompleted = true
+                return
+            }
             let start = stage == focusPeriodsPerCycle ? longRestEnd : restEnd
             stage = stage == focusPeriodsPerCycle ? 1 : stage + 1
             moveStage(to: start)
@@ -128,7 +132,7 @@ struct PomodoroClockSchedule: Codable {
             let cycle = Double(focusPeriodsPerCycle) * focusDuration
                 + Double(focusPeriodsPerCycle - 1) * restDuration + longRestDuration
             let completeCycles = max(0, floor(sampledAt.timeIntervalSince(stageStart) / cycle))
-            if completeCycles > 0 {
+            if autoRepeat && completeCycles > 0 {
                 moveStage(to: stageStart + completeCycles * cycle)
             }
         }

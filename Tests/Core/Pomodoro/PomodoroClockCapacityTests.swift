@@ -10,6 +10,7 @@ struct PomodoroClockCapacityTests {
         defer { session.close() }
         session.now = Calendar.current.startOfDay(for: session.now)
         let controller = session.controller
+        controller.setAutoRepeatEnabled(true)
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, steps: 100)
         let selected = try #require(controller.pomodoro.clockSchedule)

@@ -8,7 +8,7 @@ struct PomodoroPersistenceTests {
     func restartRetainsModeDurationsAndCorePauseState(paused: Bool, closedTime: TimeInterval) {
         let session = Session()
         defer { session.removeState() }
-        let controller = session.makeController()
+        let controller = session.makeController(autoRepeat: true)
         controller.selectMode(.pomodoro)
         controller.adjustPomodoroDuration(.focus, by: -300)
         controller.adjustPomodoroDuration(.rest, steps: 1)
@@ -18,7 +18,7 @@ struct PomodoroPersistenceTests {
         if paused { controller.toggleRunning() }
         controller.save()
         session.now += closedTime
-        let restored = session.makeController()
+        let restored = session.makeController(autoRepeat: true)
         #expect(restored.mode == .pomodoro)
         #expect(restored.engine.isPaused == paused)
         #expect(restored.pomodoro.status == (paused ? .paused : .running))
@@ -277,11 +277,12 @@ struct PomodoroPersistenceTests {
         var store: TimerSessionStore { TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]) }
         var settingsURL: URL { directory.appendingPathComponent("countdown/settings.json") }
         func makeController(
-            configuration: CountdownConfiguration = CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15)
+            configuration: CountdownConfiguration = CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15),
+            autoRepeat: Bool = false
         ) -> CountdownController {
             CountdownController(
                 sessionStore: store, configuration: configuration,
-                preferences: CountdownPreferences(),
+                preferences: CountdownPreferences(autoRepeatEnabled: autoRepeat),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

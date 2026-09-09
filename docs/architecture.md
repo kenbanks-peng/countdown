@@ -49,7 +49,15 @@ active rest remaining. Their edits change focus first and can remove it. An incr
 during rest can restore focus without restoring spent rest. The schedule records
 spent rest separately so future stages retain the rest allocation.
 
-Pomodoro repeats only while selected. Selecting Pomodoro with an empty timer starts
+Auto Repeat is a shared menu preference, off by default. Timer and Countdown
+capture their repeat duration after an explicit edit or on mode entry. Elapsed
+time, pause/resume, and inactive projections do not change that duration. The
+timer session stores it separately from current progress. At timeout, the selected
+timer view starts that duration again from the update time when Auto Repeat is on.
+Pomodoro always advances through its stages. After the final long rest, it returns
+to the first stage only when Auto Repeat is on; otherwise it stops with zero time
+and pauses the engine. Resume starts a new cycle. Only the selected view repeats.
+Selecting Pomodoro with an empty timer starts
 a new cycle. Selecting Timer or Countdown caps the total at 60 minutes by reducing
 focus and preserving the active rest. This reduction remains after switching back.
 Entering Pomodoro reserves at least five minutes of active rest. It reduces focus
@@ -94,5 +102,5 @@ the private state across extensions would weaken this ownership.
 - Window placement uses separate `UserDefaults` keys.
 
 Internal names describe their purpose: for example,
-`focusPeriodsPerCycle`, `showsRemainingMinutes`, `isAutoSetToNextHourEnabled`,
+`focusPeriodsPerCycle`, `showsRemainingMinutes`, `isAutoRepeatEnabled`,
 `notificationIntervalMinutes`, and `sessionStore`.

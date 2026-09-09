@@ -10,7 +10,8 @@ See the [source organization](docs/architecture.md).
 - Scroll up or down to move an end to the next or previous five-minute mark. Hold Option to add or subtract one minute instead.
 - Right-click the Countdown window and toggle settings or select **Quit Countdown** to quit.
 - Select **Pomodoro**, **Timer**, or **Countdown** from **View**. Timer and Pomodoro show a clock. Countdown uses the timer without a clock. Pomodoro repeats focus periods with short rests, then a long rest. The default is four focus periods. Dots show focus progress.
-- All views share the same remaining time: focus plus the current rest. Timer and Countdown edits change focus first. Pomodoro repeats only while its view is selected.
+- All views share the same remaining time: focus plus the current rest. Timer and Countdown edits change focus first.
+- **Auto Repeat** applies to the selected view. Timer and Countdown repeat the last set or inherited duration. Pomodoro restarts after the final long rest. With Auto Repeat off, Pomodoro stops after that rest.
 - Countdown starts automatically. Use **Pause** or **Resume** in the right-click menu. These controls apply to all three modes; a mode change does not stop the countdown.
 - In **Timer** and **Pomodoro** modes, edits set fixed end times. A focus edit moves both rest end times to keep their durations constant. A rest edit changes only that rest end time. The selected spacing repeats. Pause freezes the countdown; resume shifts the end times without rounding. **Countdown** mode uses durations. Only scrolling without Option aligns values to five-minute marks.
 
@@ -35,7 +36,7 @@ multiple of 5, with a minimum of 5 minutes. Notifications count backwards from
 the active end time and include that end time. Sound paths are relative to
 `config.toml`.
 
-The selected mode, notification and alarm enablement, auto-set, and timer state are stored
+The selected mode, notification and alarm enablement, auto-repeat, and timer state are stored
 under `${XDG_STATE_HOME:-$HOME/.local/state}/countdown/`. Mode and Pomodoro settings
 use `settings.json`; other menu choices use `features.json`. Menu changes do not
 modify `config.toml`.

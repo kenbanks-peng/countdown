@@ -71,6 +71,7 @@ struct CountdownView: View {
             if countdown.testEnabled {
                 Button("Test", action: countdown.testNotification)
             }
+            Toggle("Auto Repeat", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
             Button(countdown.controlLabel, action: countdown.toggleRunning)
             Divider()
             if countdown.mode.usesTimer {

@@ -88,6 +88,7 @@ struct PomodoroRestMinimumTests {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = session.controller
+        controller.setAutoRepeatEnabled(true)
         controller.selectMode(.pomodoro)
         if phase == .longRest { session.now += 5_400 }
         controller.update()

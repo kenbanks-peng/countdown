@@ -27,7 +27,7 @@ struct TimerLifecycleTests {
     }
 
     @Test(arguments: [false, true])
-    func eachTimeoutReportsOnceIncludingAutomaticNextHour(autoSet: Bool) {
+    func eachTimeoutReportsOnceIncludingAutoRepeat(autoRepeat: Bool) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12, minute: 59))!
@@ -35,7 +35,7 @@ struct TimerLifecycleTests {
         let timer = TimerModel(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: nil),
-            preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSet, notificationEnabled: false),
+            preferences: CountdownPreferences(autoRepeatEnabled: autoRepeat, notificationEnabled: false),
             isClockEnabled: false, playSound: { _ in sounds += 1 }, now: { now }
         )
         timer.setDuration(from: 1.0 / 60)
@@ -43,7 +43,7 @@ struct TimerLifecycleTests {
         for _ in 0..<5 { timer.update() }
         #expect(timer.completionCount == 1)
         #expect(sounds == 1)
-        #expect(timer.remaining == (autoSet ? 3_600 : 0))
+        #expect(timer.remaining == (autoRepeat ? 60 : 0))
         timer.setDuration(from: 1.0 / 60)
         now += 60
         for _ in 0..<5 { timer.update() }

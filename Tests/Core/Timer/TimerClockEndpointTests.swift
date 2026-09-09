@@ -25,7 +25,7 @@ struct TimerClockEndpointTests {
     }
 
     @Test
-    func nextHourAutosetAndMidnightUseAbsoluteEndpoints() throws {
+    func nextHourAndRepeatAcrossMidnightUseAbsoluteEndpoints() throws {
         let session = ClockTestSession()
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 23, minute: 57, second: 13))!
@@ -34,10 +34,10 @@ struct TimerClockEndpointTests {
         let midnight = try #require(controller.timer.endDate)
         #expect(Calendar.current.component(.day, from: midnight) == 16)
         #expect(Calendar.current.component(.hour, from: midnight) == 0)
-        controller.timer.setAutoSetToNextHourEnabled(true)
+        controller.timer.setAutoRepeatEnabled(true)
         session.now = midnight
         controller.update()
-        #expect(controller.timer.endDate == midnight + 3_600)
+        #expect(controller.timer.endDate == midnight + 167)
         controller.toggleRunning()
         session.now += 150
         controller.setTimerToNextHour()

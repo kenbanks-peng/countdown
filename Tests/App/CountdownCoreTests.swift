@@ -163,6 +163,7 @@ struct CountdownCoreTests {
         now += 10_000
         timer.update()
         timer.update()
-        #expect(timer.notifications.notificationIntervalCount == 3) // Includes the endpoint notification.
+        // Timer reports its endpoint. A finished Pomodoro does not start another phase.
+        #expect(timer.notifications.notificationIntervalCount == (mode.usesTimer ? 3 : 2))
     }
 }

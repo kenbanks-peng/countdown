@@ -12,10 +12,11 @@ final class TimerModel: ObservableObject {
     @Published private(set) var remaining: TimeInterval = 0
     @Published private(set) var completionCount = 0
     @Published private(set) var showsRemainingMinutes = true
-    @Published private(set) var isAutoSetToNextHourEnabled = false
+    @Published private(set) var isAutoRepeatEnabled = false
 
     // The engine can be paused even when this record is empty.
     var isEnginePaused = false
+    private(set) var repeatDuration: TimeInterval = 0
     private(set) var endDate: Date?
     private(set) var pausedAt: Date?
     private(set) var isClockEnabled: Bool
@@ -49,11 +50,10 @@ final class TimerModel: ObservableObject {
         )
         let state = preferences ?? preferencesStore.load()
         showsRemainingMinutes = state.showsRemainingMinutes
-        isAutoSetToNextHourEnabled = state.autoSetToNextHourEnabled
+        isAutoRepeatEnabled = state.autoRepeatEnabled
         isAlarmEnabled = configuration.alarmEnabled && state.alarmEnabled
         self.isClockEnabled = isClockEnabled
         restore()
-        if timeoutActionsEnabled() { autoSetToNextHour() }
     }
 
     static let maximumDuration: TimeInterval = 60 * 60
@@ -73,14 +73,20 @@ final class TimerModel: ObservableObject {
         preferencesStore.saveEnablement("current_timeout_enabled", enabled: enabled)
     }
 
-    func setAutoSetToNextHourEnabled(_ enabled: Bool) {
-        isAutoSetToNextHourEnabled = enabled
-        preferencesStore.saveEnablement("autoset_enabled", enabled: enabled)
+    func setAutoRepeatEnabled(_ enabled: Bool) {
+        isAutoRepeatEnabled = enabled
+        preferencesStore.saveEnablement("auto_repeat_enabled", enabled: enabled)
     }
 
-    func autoSetToNextHour() {
-        guard isAutoSetToNextHourEnabled else { return }
-        setDurationToNextHour()
+    /// Capture only explicit edits and values inherited on mode entry.
+    func captureRepeatDuration() {
+        repeatDuration = remaining
+    }
+
+    private func repeatTimer(at date: Date) {
+        guard isAutoRepeatEnabled, repeatDuration > 0 else { return }
+        setSharedRemaining(repeatDuration, at: date)
+        save()
     }
 
     func setDurationToNextHour() {
@@ -94,6 +100,7 @@ final class TimerModel: ObservableObject {
 
         duration = nextHour.timeIntervalSince(currentTime)
         remaining = duration
+        captureRepeatDuration()
 
         if status == .prepared || isEnginePaused {
             pausedAt = isClockEnabled ? currentTime : nil
@@ -116,6 +123,7 @@ final class TimerModel: ObservableObject {
         }
         duration = clampedProportion * Self.maximumDuration
         remaining = duration
+        captureRepeatDuration()
 
         guard duration > 0 else {
             clear()
@@ -168,6 +176,7 @@ final class TimerModel: ObservableObject {
             endDate = isEnginePaused ? nil : date.addingTimeInterval(remaining)
             status = isEnginePaused ? .prepared : .active
         }
+        captureRepeatDuration()
         save()
     }
 
@@ -206,6 +215,7 @@ final class TimerModel: ObservableObject {
         endDate = end
         remaining = max(0, end.timeIntervalSince(date))
         duration = remaining
+        captureRepeatDuration()
         status = isEnginePaused || status == .prepared ? .prepared : .active
         pausedAt = status == .prepared ? date : nil
         save()
@@ -232,6 +242,7 @@ final class TimerModel: ObservableObject {
     }
 
     func clear() {
+        repeatDuration = 0
         status = .empty
         duration = 0
         remaining = 0
@@ -259,7 +270,7 @@ final class TimerModel: ObservableObject {
                 }
             }
             sessionStore.remove()
-            if timeoutActionsEnabled() { autoSetToNextHour() }
+            if timeoutActionsEnabled() { repeatTimer(at: date ?? now()) }
         }
     }
 
@@ -271,7 +282,8 @@ final class TimerModel: ObservableObject {
         sessionStore.save(.init(
             status: status == .active ? .active : .prepared,
             duration: duration, remaining: remaining, endDate: endDate,
-            savedAt: now(), pausedAt: status == .prepared ? pausedAt : nil
+            savedAt: now(), pausedAt: status == .prepared ? pausedAt : nil,
+            repeatDuration: repeatDuration
         ))
     }
 
@@ -284,6 +296,7 @@ final class TimerModel: ObservableObject {
 
         duration = saved.duration
         remaining = saved.remaining
+        repeatDuration = saved.repeatDuration ?? saved.duration
         switch saved.status {
         case .active:
             guard let endDate = saved.endDate else {

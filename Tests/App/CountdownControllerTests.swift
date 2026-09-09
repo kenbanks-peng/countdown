@@ -47,18 +47,19 @@ struct CountdownControllerTests {
     }
 
     @Test
-    func autosetFollowsTheActiveModeWithoutChangingTheCoreRunState() {
+    func autoRepeatFollowsTheActiveModeWithoutChangingTheCoreRunState() {
         let session = Session()
         defer { session.removeState() }
         session.now = Calendar.current.date(from: DateComponents(year: 2025, month: 1, day: 6, hour: 10, minute: 30))!
-        let controller = session.makeController(autoSetToNextHour: true)
-        #expect(controller.timer.remaining == 1_800)
+        let controller = session.makeController(autoRepeat: true)
+        #expect(controller.timer.remaining == 0)
+        controller.adjustTimerDuration(by: 1_800)
         session.now += 1_800
         controller.selectMode(.pomodoro) // The outgoing Timer mode handles this timeout.
-        #expect(controller.timer.remaining == 3_600)
+        #expect(controller.timer.remaining == 1_800)
         #expect(controller.timer.status == .active)
-        session.now += 3_600
-        controller.update() // Pomodoro repeats; Timer alarm and Autoset do not run.
+        session.now += 1_800
+        controller.update() // Pomodoro advances; Timer timeout actions do not run.
         #expect(controller.timer.status == .active)
         #expect(controller.pomodoro.stage == 2)
         #expect(session.sounds == 1)
@@ -67,7 +68,7 @@ struct CountdownControllerTests {
         controller.toggleRunning()
         controller.setTimerToNextHour()
         #expect(controller.timer.isPaused)
-        #expect(controller.timer.remaining == 3_600)
+        #expect(controller.timer.remaining == 1_800)
         #expect(controller.engine.isPaused)
     }
 
@@ -76,11 +77,11 @@ struct CountdownControllerTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var now = Date(timeIntervalSince1970: 1_699_999_800)
         var sounds = 0
-        func makeController(autoSetToNextHour: Bool = false) -> CountdownController {
+        func makeController(autoRepeat: Bool = false) -> CountdownController {
             CountdownController(
                 sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
                 configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, notificationAudioEnabled: false),
-                preferences: CountdownPreferences(autoSetToNextHourEnabled: autoSetToNextHour, notificationEnabled: false),
+                preferences: CountdownPreferences(autoRepeatEnabled: autoRepeat, notificationEnabled: false),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )
         }

@@ -74,6 +74,7 @@ final class CountdownController: ObservableObject {
                 TimeInterval(configuration.pomodoroLongRestMinutes * 60)
             )
         )
+        pomodoro.isAutoRepeatEnabled = state.autoRepeatEnabled
         if let schedule = settings.pomodoroClockSchedule {
             pomodoro.restoreClockSchedule(schedule, at: now(), advance: settings.mode == .pomodoro)
         }
@@ -94,6 +95,12 @@ final class CountdownController: ObservableObject {
         let configuration = reloadConfiguration()
         update()
         testNotificationRequested.send(configuration)
+    }
+
+    func setAutoRepeatEnabled(_ enabled: Bool) {
+        update()
+        engine.setAutoRepeatEnabled(enabled)
+        saveSettings()
     }
 
     func toggleRunning() {
@@ -188,7 +195,7 @@ final class CountdownController: ObservableObject {
         let previousFocus = pomodoro.focusRemaining
         let previousRest = pomodoro.restRemaining
         engine.update(at: date)
-        guard mode == .pomodoro else { return }
+        guard mode == .pomodoro, pomodoro.focusRemaining + pomodoro.restRemaining > 0 else { return }
         let elapsed = max(0, pomodoro.elapsedTime - previousElapsed)
         guard elapsed > 0 else { return }
 

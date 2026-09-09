@@ -124,6 +124,7 @@ struct ScrollDurationTests {
         defer { session.close() }
         let timer = session.controller
         timer.selectMode(.pomodoro)
+        timer.setAutoRepeatEnabled(true)
         session.now += 7_200
         try session.scroll(angle: 120, delta: 12)
         #expect(timer.pomodoro.stage == 4)
