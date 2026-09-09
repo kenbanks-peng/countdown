@@ -145,6 +145,48 @@ struct CountdownNotificationViewTests {
         #expect(normal.tiffRepresentation != varied.tiffRepresentation)
     }
 
+    @Test(.enabled(if: NSFont(name: "SFPro-Regular", size: 144) != nil,
+                   "Requires the SF Pro variable font"))
+    func testReloadChangesRenderedNamedFontWeight() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let configDirectory = directory.appendingPathComponent("countdown")
+        try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
+        let controller = CountdownController(
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, testEnabled: true),
+            playSound: { _ in }, now: { Date(timeIntervalSince1970: 1_699_999_800) },
+            reloadConfiguration: { CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path]) }
+        )
+        controller.selectMode(.countdown)
+        controller.adjustTimerDuration(by: 600)
+        var received: CountdownConfiguration?
+        let subscription = controller.testNotificationRequested.sink { received = $0 }
+        defer { subscription.cancel() }
+        var images: [Data] = []
+        for weight in [100, 900, 100] {
+            try """
+            [notifications]
+            notification_font = "SFPro-Regular"
+            notification_font_weight = \(weight)
+            notification_font_width = 60
+            """.write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
+            received = nil
+            controller.testNotification()
+            let configuration = try #require(received)
+            #expect(configuration.notificationFontVariations.weight == Double(weight))
+            let bitmap = try render(NSHostingView(rootView: CountdownView(
+                countdown: controller, isNotification: true,
+                notificationFont: configuration.notificationFont,
+                notificationFontVariations: configuration.notificationFontVariations,
+                changePresentation: {}
+            )), side: 512)
+            images.append(try #require(bitmap.tiffRepresentation))
+        }
+        #expect(images[0] != images[1])
+        #expect(images[0] == images[2])
+    }
+
     @Test
     func notificationTimeRoundsUpWithoutShowingZeroEarly() {
         #expect(CountdownNotificationOverlay.timeLabel(0) == "0")
