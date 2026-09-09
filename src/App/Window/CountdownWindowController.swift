@@ -93,7 +93,8 @@ final class CountdownWindowController {
             )),
             screenFrame: screen.frame, size: screen.frame.size,
             duration: TimeInterval(configuration.notificationTimeSeconds),
-            fadeDuration: configuration.notificationFadeTimeSeconds
+            fadeDuration: configuration.notificationFadeTimeSeconds,
+            peakAlpha: configuration.notificationFontAlpha
         )
     }
 

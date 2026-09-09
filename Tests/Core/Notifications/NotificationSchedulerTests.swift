@@ -58,9 +58,14 @@ struct NotificationSchedulerTests {
         #expect(CountdownConfiguration(alarmNotificationURL: nil, notificationIntervalMinutes: value).notificationIntervalMinutes == value)
     }
 
-    @Test(arguments: [-1, 0, 1, 7, 30])
-    func notificationDisplayTimeUsesPositiveSeconds(value: Int) {
-        #expect(CountdownConfiguration(alarmNotificationURL: nil, notificationTimeSeconds: value).notificationTimeSeconds == (value > 0 ? value : 5))
+    @Test(arguments: [0.0, 0.1, 0.5, 1, 7, 30])
+    func notificationDisplayTimePreservesNonnegativeSeconds(value: Double) {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, notificationTimeSeconds: value).notificationTimeSeconds == value)
+    }
+
+    @Test(arguments: [-1.0, -0.1, Double.infinity, -Double.infinity, Double.nan])
+    func invalidNotificationDisplayTimesUseDefault(value: Double) {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, notificationTimeSeconds: value).notificationTimeSeconds == 5)
     }
 
     @Test(arguments: [5, 8])

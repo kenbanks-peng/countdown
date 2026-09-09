@@ -2,7 +2,7 @@
 size = 1
 compact_size = 1
 # Show a Test menu item for an immediate visual notification, in either view.
-# Test re-reads this file for the preview's font, size, and timing settings.
+# Test re-reads this file for the preview's font, alpha, size, and timing settings.
 # Other app settings, including menu visibility, still require a restart.
 # The test does not require notifications to be enabled. It does not play audio.
 test = false
@@ -21,6 +21,9 @@ notification_fade_time_seconds = 1.5
 notification_font = ""
 # Font size in points, independent of the circle scale.
 notification_font_size_pt = 144
+# Peak font alpha, from 0 (invisible) to 1 (fully opaque).
+# Fades go from 0 to this value, then back to 0. Invalid values use 1.
+notification_font_alpha = 1
 # Optional variable-font axes. Remove the # to set a value.
 # Omitted or invalid values keep the selected font's defaults.
 # Values must be positive and finite. Values outside the font's range are

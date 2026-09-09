@@ -67,6 +67,7 @@ struct CountdownTestNotificationTests {
             [notifications]
             notification_font = "Impact"
             notification_font_size_pt = \(size)
+            notification_font_alpha = \(Double(size) / 300)
             notification_font_weight = 800
             notification_font_width = 75
             notification_font_optical_size_pt = 48
@@ -81,6 +82,7 @@ struct CountdownTestNotificationTests {
             #expect(events.last == "show")
             #expect(config.notificationFont == "Impact")
             #expect(config.notificationFontSizePt == Double(size))
+            #expect(config.notificationFontAlpha == Double(size) / 300)
             #expect(config.notificationFontVariations == NotificationFontVariations(weight: 800, width: 75, opticalSize: 48))
             #expect(config.notificationTimeSeconds == 2)
             #expect(config.notificationFadeTimeSeconds == 0)

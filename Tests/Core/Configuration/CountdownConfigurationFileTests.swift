@@ -34,6 +34,18 @@ struct CountdownConfigurationFileTests {
         #expect(config.alarmNotificationURL?.lastPathComponent == "alarm.mp3")
     }
 
+    @Test(arguments: ["0", "0.0", "0.1", "0.5", "1", "1.0", "5"])
+    func notificationDurationPreservesNonnegativeSeconds(seconds: String) throws {
+        let config = try load("[notifications]\nnotification_time_seconds = \(seconds)")
+        #expect(config.notificationTimeSeconds == Double(seconds))
+    }
+
+    @Test(arguments: ["-1", "-0.1", "inf", "-inf", "nan", "\"0.1\""])
+    func invalidNotificationDurationsUseDefault(seconds: String) throws {
+        let config = try load("[notifications]\nnotification_time_seconds = \(seconds)")
+        #expect(config.notificationTimeSeconds == 5)
+    }
+
     @Test(arguments: ["", "test = false", "test = invalid", "test = \"true\"", "[notifications]\ntest = true"])
     func testMenuIsDisabledUnlessExplicitlyEnabled(contents: String) throws {
         #expect(!CountdownConfiguration(alarmNotificationURL: nil).testEnabled)

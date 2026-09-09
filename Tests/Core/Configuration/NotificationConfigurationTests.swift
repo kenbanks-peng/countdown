@@ -64,6 +64,41 @@ struct NotificationConfigurationTests {
     }
 
     @Test
+    func fontAlphaDefaultsToOpaque() throws {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil).notificationFontAlpha == 1)
+        #expect(try load("").notificationFontAlpha == 1)
+        #expect(try load("[pomodoro]\nnotification_font_alpha = 0.5").notificationFontAlpha == 1)
+    }
+
+    @Test(arguments: [0.0, 0.1, 0.5, 1.0])
+    func fontAlphaUsesFirstValueInNotificationSection(value: Double) throws {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, notificationFontAlpha: value).notificationFontAlpha == value)
+        let config = try load("""
+        notification_font_alpha = 0.9
+        [notifications]
+        notification_font_alpha = \(value) # Peak opacity
+        notification_font_alpha = 0.9
+        [pomodoro]
+        notification_font_alpha = 0.9
+        """)
+        #expect(config.notificationFontAlpha == value)
+    }
+
+    @Test(arguments: ["", "invalid", "-0.1", "1.1", "nan", "inf", "-inf", "1e999", "\"0.5\""])
+    func invalidFontAlphaUsesDefault(value: String) throws {
+        #expect(try load("""
+        [notifications]
+        notification_font_alpha = \(value)
+        notification_font_alpha = 0.5
+        """).notificationFontAlpha == 1)
+    }
+
+    @Test(arguments: [-0.1, 1.1, Double.nan, Double.infinity, -Double.infinity])
+    func initializerRejectsInvalidFontAlpha(value: Double) {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, notificationFontAlpha: value).notificationFontAlpha == 1)
+    }
+
+    @Test
     func defaultFadeTimeIsOneAndAHalfSeconds() throws {
         #expect(CountdownConfiguration(alarmNotificationURL: nil).notificationFadeTimeSeconds == 1.5)
         #expect(try load("").notificationFadeTimeSeconds == 1.5)

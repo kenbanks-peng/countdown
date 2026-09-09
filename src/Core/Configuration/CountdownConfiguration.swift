@@ -13,11 +13,12 @@ struct CountdownConfiguration {
     let alarmNotificationURL: URL?
     static let defaultNotificationFontSizePt: Double = 144
     let notificationFontSizePt: Double
+    let notificationFontAlpha: Double
     let notificationFont: String
     let notificationFontVariations: NotificationFontVariations
     static let defaultNotificationFadeTimeSeconds: Double = 1.5
     let notificationFadeTimeSeconds: Double
-    let notificationTimeSeconds: Int
+    let notificationTimeSeconds: Double
     let notificationIntervalMinutes: Int
     let pomodoroFocusPeriodsPerCycle: Int
     let pomodoroFocusMinutes: Int
@@ -29,9 +30,10 @@ struct CountdownConfiguration {
         greenNotificationURL: URL? = nil,
         yellowNotificationURL: URL? = nil,
         redNotificationURL: URL? = nil,
-        notificationTimeSeconds: Int = 5,
+        notificationTimeSeconds: Double = 5,
         notificationFadeTimeSeconds: Double = CountdownConfiguration.defaultNotificationFadeTimeSeconds,
         notificationFontSizePt: Double = CountdownConfiguration.defaultNotificationFontSizePt,
+        notificationFontAlpha: Double = 1,
         notificationFont: String = "",
         notificationFontVariations: NotificationFontVariations = NotificationFontVariations(),
         notificationIntervalMinutes: Int = 15,
@@ -57,13 +59,16 @@ struct CountdownConfiguration {
         self.yellowNotificationURL = yellowNotificationURL
         self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
+        self.notificationFontAlpha = notificationFontAlpha.isFinite && (0...1).contains(notificationFontAlpha)
+            ? notificationFontAlpha : 1
         self.notificationFont = notificationFont.trimmingCharacters(in: .whitespacesAndNewlines)
         self.notificationFontVariations = notificationFontVariations
         self.notificationFontSizePt = notificationFontSizePt.isFinite && notificationFontSizePt > 0
             ? notificationFontSizePt : Self.defaultNotificationFontSizePt
         self.notificationFadeTimeSeconds = notificationFadeTimeSeconds.isFinite && notificationFadeTimeSeconds >= 0
             ? notificationFadeTimeSeconds : Self.defaultNotificationFadeTimeSeconds
-        self.notificationTimeSeconds = notificationTimeSeconds > 0 ? notificationTimeSeconds : 5
+        self.notificationTimeSeconds = notificationTimeSeconds.isFinite && notificationTimeSeconds >= 0
+            ? notificationTimeSeconds : 5
         let interval = max(5, notificationIntervalMinutes)
         let roundedDown = interval - interval % 5
         self.notificationIntervalMinutes = interval % 5 >= 3 && roundedDown <= Int.max - 5 ? roundedDown + 5 : roundedDown
@@ -89,9 +94,10 @@ struct CountdownConfiguration {
             greenNotificationURL: configurationFile.soundURL(for: "green_audio", defaultName: "green.mp3"),
             yellowNotificationURL: configurationFile.soundURL(for: "yellow_audio", defaultName: "yellow.mp3"),
             redNotificationURL: configurationFile.soundURL(for: "red_audio", defaultName: "red.mp3"),
-            notificationTimeSeconds: configurationFile.intValue(for: "notification_time_seconds", section: "notifications") ?? 5,
+            notificationTimeSeconds: configurationFile.doubleValue(for: "notification_time_seconds", section: "notifications") ?? 5,
             notificationFadeTimeSeconds: configurationFile.doubleValue(for: "notification_fade_time_seconds", section: "notifications") ?? Self.defaultNotificationFadeTimeSeconds,
             notificationFontSizePt: configurationFile.doubleValue(for: "notification_font_size_pt", section: "notifications") ?? Self.defaultNotificationFontSizePt,
+            notificationFontAlpha: configurationFile.doubleValue(for: "notification_font_alpha", section: "notifications") ?? 1,
             notificationFont: configurationFile.stringValue(for: "notification_font", section: "notifications") ?? "",
             notificationFontVariations: NotificationFontVariations(
                 weight: configurationFile.doubleValue(for: "notification_font_weight", section: "notifications"),
