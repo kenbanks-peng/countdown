@@ -4,7 +4,7 @@ import Testing
 
 @MainActor
 struct CountdownNotificationControllerTests {
-    @Test(arguments: [0.9, 1.0, 3.0])
+    @Test(arguments: [0.35, 1.0, 3.0])
     func scaleKeepsContentCenterFixed(scale: CGFloat) {
         let size = NSSize(width: 400, height: 180)
         let transform = CountdownNotificationController.scaleTransform(size: size, scale: scale)
@@ -25,7 +25,7 @@ struct CountdownNotificationControllerTests {
         let panel = try #require(notification.panel)
         let layer = try #require(panel.contentView?.layer)
         let scalesIn = !reduceMotion && fadeDuration > 0
-        #expect(layer.sublayerTransform.m11 == (scalesIn ? 0.9 : 1))
+        #expect(layer.sublayerTransform.m11 == (scalesIn ? 0.35 : 1))
         #expect(panel.alphaValue == 0)
         let frame = panel.frame
         // The full suite can hold the main actor longer than the animation.
@@ -55,12 +55,12 @@ struct CountdownNotificationControllerTests {
         if isExit { layer.sublayerTransform = CATransform3DIdentity }
         let target = CountdownNotificationController.scaleTransform(size: panel.frame.size,
                                                                    scale: isExit ? 3 : 1)
-        let curve: CAMediaTimingFunctionName = isExit ? .easeIn : .easeOut
+        let curve: CAMediaTimingFunctionName = isExit ? .easeIn : .easeInEaseOut
         CountdownNotificationController.animateScale(layer, to: target, duration: 1, curve: curve)
         let animation = try #require(layer.animation(forKey: "notificationScale") as? CABasicAnimation)
         let start = try #require(animation.fromValue as? CATransform3D)
         let end = try #require(animation.toValue as? CATransform3D)
-        #expect(start.m11 == (isExit ? 1 : 0.9))
+        #expect(start.m11 == (isExit ? 1 : 0.35))
         #expect(CATransform3DEqualToTransform(end, target))
         #expect(animation.duration == 1)
         #expect(animation.timingFunction == CAMediaTimingFunction(name: curve))

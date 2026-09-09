@@ -47,7 +47,7 @@ final class CountdownNotificationController {
         content.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin, .maxYMargin]
         container.addSubview(content)
         panel.contentView = container
-        container.layer?.sublayerTransform = Self.scaleTransform(size: panelSize, scale: scales ? 0.9 : 1)
+        container.layer?.sublayerTransform = Self.scaleTransform(size: panelSize, scale: scales ? 0.35 : 1)
         // Set both position and zero visibility before the panel enters the screen.
         panel.alphaValue = 0
         self.panel = panel
@@ -56,8 +56,9 @@ final class CountdownNotificationController {
         dismissalTask = Task { @MainActor [weak self] in
             guard !Task.isCancelled else { return }
             if scales, let layer = container.layer {
+                // Keep substantial growth visible as opacity rises, then settle at full size.
                 Self.animateScale(layer, to: CATransform3DIdentity, duration: fadeDuration,
-                                  curve: .easeOut)
+                                  curve: .easeInEaseOut)
             }
             await Self.fade(panel, to: CGFloat(peakAlpha), duration: fadeDuration, curve: fadeIn)
             guard !Task.isCancelled else { return }

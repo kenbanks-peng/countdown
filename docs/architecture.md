@@ -33,7 +33,7 @@ shared time. Mode folders contain presentation code, not separate countdown engi
 panel, countdown controller, scroll monitor, notification subscription, and
 `CountdownNotificationController`. The notification uses a separate, non-interactive panel. It
 starts transparent at the center of the countdown window's screen, fades in while
-its content grows from 90% to full size with an ease-out curve, waits for the
+its content grows from 35% to full size with an ease-in-out curve, waits for the
 configured duration, then grows to 300% with an ease-in curve as it fades out.
 Each scale effect uses the fade duration and keeps the content centered without
 overshoot. Transparent panel space prevents clipping during the outward scale.
