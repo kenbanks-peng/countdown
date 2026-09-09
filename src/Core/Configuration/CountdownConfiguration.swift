@@ -18,6 +18,8 @@ struct CountdownConfiguration {
     let notificationFontVariations: NotificationFontVariations
     static let defaultNotificationFadeTimeSeconds: Double = 1.5
     let notificationFadeTimeSeconds: Double
+    let notificationFadeIn: NotificationFadeCurve
+    let notificationFadeOut: NotificationFadeCurve
     let notificationTimeSeconds: Double
     let notificationIntervalMinutes: Int
     let pomodoroFocusPeriodsPerCycle: Int
@@ -32,6 +34,8 @@ struct CountdownConfiguration {
         redNotificationURL: URL? = nil,
         notificationTimeSeconds: Double = 5,
         notificationFadeTimeSeconds: Double = CountdownConfiguration.defaultNotificationFadeTimeSeconds,
+        notificationFadeIn: NotificationFadeCurve = .easeIn,
+        notificationFadeOut: NotificationFadeCurve = .easeOut,
         notificationFontSizePt: Double = CountdownConfiguration.defaultNotificationFontSizePt,
         notificationFontAlpha: Double = 1,
         notificationFont: String = "",
@@ -67,6 +71,8 @@ struct CountdownConfiguration {
             ? notificationFontSizePt : Self.defaultNotificationFontSizePt
         self.notificationFadeTimeSeconds = notificationFadeTimeSeconds.isFinite && notificationFadeTimeSeconds >= 0
             ? notificationFadeTimeSeconds : Self.defaultNotificationFadeTimeSeconds
+        self.notificationFadeIn = notificationFadeIn
+        self.notificationFadeOut = notificationFadeOut
         self.notificationTimeSeconds = notificationTimeSeconds.isFinite && notificationTimeSeconds >= 0
             ? notificationTimeSeconds : 5
         let interval = max(5, notificationIntervalMinutes)
@@ -96,6 +102,10 @@ struct CountdownConfiguration {
             redNotificationURL: configurationFile.soundURL(for: "red_audio", defaultName: "red.mp3"),
             notificationTimeSeconds: configurationFile.doubleValue(for: "notification_time_seconds", section: "notifications") ?? 5,
             notificationFadeTimeSeconds: configurationFile.doubleValue(for: "notification_fade_time_seconds", section: "notifications") ?? Self.defaultNotificationFadeTimeSeconds,
+            notificationFadeIn: configurationFile.stringValue(for: "notification_fade_in", section: "notifications")
+                .flatMap(NotificationFadeCurve.init(rawValue:)) ?? .easeIn,
+            notificationFadeOut: configurationFile.stringValue(for: "notification_fade_out", section: "notifications")
+                .flatMap(NotificationFadeCurve.init(rawValue:)) ?? .easeOut,
             notificationFontSizePt: configurationFile.doubleValue(for: "notification_font_size_pt", section: "notifications") ?? Self.defaultNotificationFontSizePt,
             notificationFontAlpha: configurationFile.doubleValue(for: "notification_font_alpha", section: "notifications") ?? 1,
             notificationFont: configurationFile.stringValue(for: "notification_font", section: "notifications") ?? "",

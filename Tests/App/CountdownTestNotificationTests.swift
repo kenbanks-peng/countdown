@@ -73,6 +73,8 @@ struct CountdownTestNotificationTests {
             notification_font_optical_size_pt = 48
             notification_time_seconds = 2
             notification_fade_time_seconds = 0
+            notification_fade_in = "\(size == 180 ? "linear" : "ease-out")"
+            notification_fade_out = "\(size == 180 ? "ease-in-out" : "ease-in")"
             """.write(to: file, atomically: true, encoding: .utf8)
             events = []
             controller.testNotification()
@@ -86,6 +88,8 @@ struct CountdownTestNotificationTests {
             #expect(config.notificationFontVariations == NotificationFontVariations(weight: 800, width: 75, opticalSize: 48))
             #expect(config.notificationTimeSeconds == 2)
             #expect(config.notificationFadeTimeSeconds == 0)
+            #expect(config.notificationFadeIn == (size == 180 ? .linear : .easeOut))
+            #expect(config.notificationFadeOut == (size == 180 ? .easeInOut : .easeIn))
         }
     }
 

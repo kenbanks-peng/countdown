@@ -13,7 +13,8 @@ final class CountdownNotificationController {
     }
 
     func show(content: NSView, screenFrame: NSRect, size: NSSize, duration: TimeInterval,
-              fadeDuration: TimeInterval? = nil, peakAlpha: Double = 1) {
+              fadeDuration: TimeInterval? = nil, peakAlpha: Double = 1,
+              fadeIn: NotificationFadeCurve = .easeIn, fadeOut: NotificationFadeCurve = .easeOut) {
         dismiss()
         let frame = NSRect(
             x: screenFrame.midX - size.width / 2,
@@ -39,11 +40,11 @@ final class CountdownNotificationController {
         let fadeDuration = fadeDuration ?? self.fadeDuration
         dismissalTask = Task { @MainActor [weak self] in
             guard !Task.isCancelled else { return }
-            await Self.fade(panel, to: CGFloat(peakAlpha), duration: fadeDuration)
+            await Self.fade(panel, to: CGFloat(peakAlpha), duration: fadeDuration, curve: fadeIn)
             guard !Task.isCancelled else { return }
             try? await Task.sleep(for: .seconds(duration))
             guard !Task.isCancelled else { return }
-            await Self.fade(panel, to: 0, duration: fadeDuration)
+            await Self.fade(panel, to: 0, duration: fadeDuration, curve: fadeOut)
             guard !Task.isCancelled else { return }
             self?.dismiss()
         }
@@ -56,10 +57,21 @@ final class CountdownNotificationController {
         panel = nil
     }
 
-    private static func fade(_ panel: NSPanel, to opacity: CGFloat, duration: TimeInterval) async {
+    static func timingFunctionName(for curve: NotificationFadeCurve) -> CAMediaTimingFunctionName {
+        switch curve {
+        case .linear: .linear
+        case .easeIn: .easeIn
+        case .easeOut: .easeOut
+        case .easeInOut: .easeInEaseOut
+        }
+    }
+
+    private static func fade(_ panel: NSPanel, to opacity: CGFloat, duration: TimeInterval,
+                             curve: NotificationFadeCurve) async {
         await withCheckedContinuation { continuation in
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = duration
+                context.timingFunction = CAMediaTimingFunction(name: timingFunctionName(for: curve))
                 panel.animator().alphaValue = opacity
             } completionHandler: {
                 continuation.resume()

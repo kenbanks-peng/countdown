@@ -99,6 +99,45 @@ struct NotificationConfigurationTests {
     }
 
     @Test
+    func fadeCurvesDefaultToEaseInAndEaseOut() throws {
+        let direct = CountdownConfiguration(alarmNotificationURL: nil)
+        #expect(direct.notificationFadeIn == .easeIn)
+        #expect(direct.notificationFadeOut == .easeOut)
+        for contents in ["", "notification_fade_in = \"linear\"\nnotification_fade_out = \"linear\"",
+                         "[pomodoro]\nnotification_fade_in = \"linear\"\nnotification_fade_out = \"linear\""] {
+            let config = try load(contents)
+            #expect(config.notificationFadeIn == .easeIn)
+            #expect(config.notificationFadeOut == .easeOut)
+        }
+    }
+
+    @Test(arguments: NotificationFadeCurve.allCases)
+    func fadeCurvesUseFirstValueInNotificationSection(curve: NotificationFadeCurve) throws {
+        let config = try load("""
+        [notifications]
+        notification_fade_in = "\(curve.rawValue)" # Curve
+        notification_fade_out = "\(curve.rawValue)"
+        notification_fade_in = "invalid"
+        notification_fade_out = "invalid"
+        """)
+        #expect(config.notificationFadeIn == curve)
+        #expect(config.notificationFadeOut == curve)
+    }
+
+    @Test(arguments: ["", "linear", "123", "\"\"", "\"unknown\"", "\"EASE-IN\"", "\"linear\" invalid"])
+    func invalidFadeCurvesUseDirectionalDefaults(value: String) throws {
+        let config = try load("""
+        [notifications]
+        notification_fade_in = \(value)
+        notification_fade_out = \(value)
+        notification_fade_in = "linear"
+        notification_fade_out = "linear"
+        """)
+        #expect(config.notificationFadeIn == .easeIn)
+        #expect(config.notificationFadeOut == .easeOut)
+    }
+
+    @Test
     func defaultFadeTimeIsOneAndAHalfSeconds() throws {
         #expect(CountdownConfiguration(alarmNotificationURL: nil).notificationFadeTimeSeconds == 1.5)
         #expect(try load("").notificationFadeTimeSeconds == 1.5)

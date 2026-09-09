@@ -4,6 +4,30 @@ import Testing
 
 @MainActor
 struct CountdownNotificationControllerTests {
+    @Test
+    func fadeCurvesMapToAnimationTimingFunctions() {
+        #expect(CountdownNotificationController.timingFunctionName(for: .linear) == .linear)
+        #expect(CountdownNotificationController.timingFunctionName(for: .easeIn) == .easeIn)
+        #expect(CountdownNotificationController.timingFunctionName(for: .easeOut) == .easeOut)
+        #expect(CountdownNotificationController.timingFunctionName(for: .easeInOut) == .easeInEaseOut)
+    }
+
+    @Test(arguments: NotificationFadeCurve.allCases)
+    func zeroHoldNotificationCompletesWithEachCurve(curve: NotificationFadeCurve) async throws {
+        let notification = CountdownNotificationController(fadeDuration: 0.02)
+        defer { notification.dismiss() }
+        notification.show(content: NSView(), screenFrame: NSRect(x: 0, y: 0, width: 800, height: 600),
+                          size: NSSize(width: 188, height: 188), duration: 0, fadeIn: curve, fadeOut: curve)
+        let panel = try #require(notification.panel)
+        for _ in 0..<100 {
+            if notification.panel == nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(notification.panel == nil)
+        #expect(!panel.isVisible)
+        #expect(panel.alphaValue == 0)
+    }
+
     @Test(arguments: [0.0, 0.4, 1.0])
     func notificationStartsInvisibleAtScreenCenterAndNeverMoves(peakAlpha: Double) async throws {
         let notification = CountdownNotificationController(fadeDuration: 0.02)

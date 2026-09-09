@@ -17,6 +17,12 @@ notification_time_seconds = 5
 
 # Duration of each fade, in seconds. Zero disables fades.
 notification_fade_time_seconds = 1.5
+# Fade curves: "linear", "ease-in", "ease-out", "ease-in-out".
+# linear: constant speed; ease-in: slow start; ease-out: slow finish.
+# ease-in-out: slow start and finish. Invalid values use the defaults below.
+# These defaults reduce the time near peak opacity when the hold time is zero.
+notification_fade_in = "ease-in"
+notification_fade_out = "ease-out"
 # Installed font name, for example "Impact". Empty uses the system font.
 notification_font = ""
 # Font size in points, independent of the circle scale.
