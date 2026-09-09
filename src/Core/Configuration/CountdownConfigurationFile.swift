@@ -52,6 +52,14 @@ struct CountdownConfigurationFile {
         return URL(fileURLWithPath: path, relativeTo: url.deletingLastPathComponent())
     }
 
+    func stringValue(for key: String, section: String) -> String? {
+        guard let value = sectionValues[section]?[key], value.first == "\"",
+              let end = value.dropFirst().firstIndex(of: "\"") else { return nil }
+        let suffix = value[value.index(after: end)...].trimmingCharacters(in: .whitespaces)
+        guard suffix.isEmpty || suffix.hasPrefix("#") else { return nil }
+        return String(value[value.index(after: value.startIndex)..<end])
+    }
+
     func boolValue(for key: String) -> Bool? {
         guard let value = sectionValues["notifications"]?[key] else { return nil }
         switch value.split(separator: "#", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) {

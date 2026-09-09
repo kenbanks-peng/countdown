@@ -4,6 +4,31 @@ import Testing
 
 struct ReminderConfigurationTests {
     @Test
+    func reminderFontDefaultsToSystem() throws {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil).reminderFont.isEmpty)
+        #expect(try load("").reminderFont.isEmpty)
+        #expect(try load("[pomodoro]\nreminder_font = \"Impact\"").reminderFont.isEmpty)
+    }
+
+    @Test
+    func reminderFontUsesNotificationSection() throws {
+        let config = try load("""
+        reminder_font = "Arial"
+        [notifications]
+        reminder_font = " Impact " # Installed font
+        reminder_font = "Arial"
+        [pomodoro]
+        reminder_font = "Arial"
+        """)
+        #expect(config.reminderFont == "Impact")
+    }
+
+    @Test(arguments: ["", "Impact", "123", "\"Impact", "\"Impact\" invalid", "\"\"", "\"   \""])
+    func invalidOrEmptyFontUsesSystem(value: String) throws {
+        #expect(try load("[notifications]\nreminder_font = \(value)").reminderFont.isEmpty)
+    }
+
+    @Test
     func defaultFontIs144Points() throws {
         #expect(CountdownConfiguration(alarmNotificationURL: nil).reminderFontSizePt == 144)
         #expect(try load("").reminderFontSizePt == 144)

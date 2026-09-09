@@ -8,16 +8,18 @@ struct CountdownView: View {
     var isReminder = false
     let scale: CGFloat
     let reminderFontSizePt: CGFloat
+    let reminderFont: String
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, isReminder: Bool = false, scale: CGFloat = 1, reminderFontSizePt: CGFloat = CountdownConfiguration.defaultReminderFontSizePt, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isReminder: Bool = false, scale: CGFloat = 1, reminderFontSizePt: CGFloat = CountdownConfiguration.defaultReminderFontSizePt, reminderFont: String = "", allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
         self.isReminder = isReminder
         self.scale = scale
         self.reminderFontSizePt = reminderFontSizePt
+        self.reminderFont = reminderFont
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
         self._currentTime = State(initialValue: countdown.currentTime)
@@ -90,14 +92,14 @@ struct CountdownView: View {
     private var reminderOverlay: CountdownReminderOverlay {
         if countdown.mode.usesTimer {
             return CountdownReminderOverlay(
-                remaining: countdown.timer.remaining, fontSizePt: reminderFontSizePt
+                remaining: countdown.timer.remaining, fontSizePt: reminderFontSizePt, fontName: reminderFont
             )
         }
         let model = countdown.pomodoro
         return CountdownReminderOverlay(
             remaining: model.focusRemaining,
             isRest: model.focusRemaining == 0,
-            fontSizePt: reminderFontSizePt
+            fontSizePt: reminderFontSizePt, fontName: reminderFont
         )
     }
 

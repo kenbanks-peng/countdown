@@ -85,10 +85,28 @@ struct CountdownReminderViewTests {
         try expectReminderMinutes(render(hosting, side: 512), remaining: 600, fontSize: fontSize)
     }
 
+    @Test(arguments: [CountdownMode.countdown, .pomodoro])
+    func configuredFontReachesReminder(mode: CountdownMode) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let controller = CountdownController(
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            playSound: { _ in }
+        )
+        controller.selectMode(mode)
+        if mode.usesTimer { controller.adjustTimerDuration(by: 600) }
+        let hosting = NSHostingView(rootView: CountdownView(
+            countdown: controller, isReminder: true, reminderFont: "Impact", changePresentation: {}
+        ))
+        let remaining = mode.usesTimer ? controller.timer.remaining : controller.pomodoro.focusRemaining
+        try expectReminderMinutes(render(hosting, side: 512), remaining: remaining, fontName: "Impact")
+    }
+
     // Vision can omit isolated single digits. Compare the complete rendered image instead.
     private func expectReminderMinutes(_ bitmap: NSBitmapImageRep, remaining: TimeInterval,
-                                       fontSize: Double = 144) throws {
-        let expected = try render(NSHostingView(rootView: CountdownReminderOverlay(remaining: remaining, fontSizePt: fontSize)), side: 512)
+                                       fontSize: Double = 144, fontName: String = "") throws {
+        let expected = try render(NSHostingView(rootView: CountdownReminderOverlay(remaining: remaining, fontSizePt: fontSize, fontName: fontName)), side: 512)
         for y in 0..<bitmap.pixelsHigh {
             for x in 0..<bitmap.pixelsWide {
                 let actualColor = try #require(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))

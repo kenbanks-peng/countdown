@@ -13,6 +13,7 @@ struct CountdownConfiguration {
     let alarmNotificationURL: URL?
     static let defaultReminderFontSizePt: Double = 144
     let reminderFontSizePt: Double
+    let reminderFont: String
     static let defaultReminderFadeTimeSeconds: Double = 1.5
     let reminderFadeTimeSeconds: Double
     let reminderTimeSeconds: Int
@@ -30,6 +31,7 @@ struct CountdownConfiguration {
         reminderTimeSeconds: Int = 5,
         reminderFadeTimeSeconds: Double = CountdownConfiguration.defaultReminderFadeTimeSeconds,
         reminderFontSizePt: Double = CountdownConfiguration.defaultReminderFontSizePt,
+        reminderFont: String = "",
         reminderIntervalMinutes: Int = 15,
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
@@ -53,6 +55,7 @@ struct CountdownConfiguration {
         self.yellowNotificationURL = yellowNotificationURL
         self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
+        self.reminderFont = reminderFont.trimmingCharacters(in: .whitespacesAndNewlines)
         self.reminderFontSizePt = reminderFontSizePt.isFinite && reminderFontSizePt > 0
             ? reminderFontSizePt : Self.defaultReminderFontSizePt
         self.reminderFadeTimeSeconds = reminderFadeTimeSeconds.isFinite && reminderFadeTimeSeconds >= 0
@@ -86,6 +89,7 @@ struct CountdownConfiguration {
             reminderTimeSeconds: configurationFile.intValue(for: "notification_time_seconds", section: "notifications") ?? 5,
             reminderFadeTimeSeconds: configurationFile.doubleValue(for: "reminder_fade_time_seconds", section: "notifications") ?? Self.defaultReminderFadeTimeSeconds,
             reminderFontSizePt: configurationFile.doubleValue(for: "reminder_font_size_pt", section: "notifications") ?? Self.defaultReminderFontSizePt,
+            reminderFont: configurationFile.stringValue(for: "reminder_font", section: "notifications") ?? "",
             reminderIntervalMinutes: configurationFile.intValue(for: "notification_interval_minutes", section: "notifications") ?? 15,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,

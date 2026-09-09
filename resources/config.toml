@@ -13,6 +13,8 @@ notification_time_seconds = 5
 reminder_notification_enabled = true
 # Duration of each fade, in seconds. Zero disables fades.
 reminder_fade_time_seconds = 1.5
+# Installed font name, for example "Impact". Empty uses the system font.
+reminder_font = ""
 # Font size in points, independent of the circle scale.
 reminder_font_size_pt = 144
 

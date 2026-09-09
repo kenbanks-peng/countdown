@@ -81,7 +81,7 @@ final class CountdownWindowController {
         reminder.show(
             content: NSHostingView(rootView: CountdownView(
                 countdown: countdown, isReminder: true, reminderFontSizePt: configuration.reminderFontSizePt,
-                changePresentation: {}
+                reminderFont: configuration.reminderFont, changePresentation: {}
             )),
             screenFrame: screen.frame, size: screen.frame.size,
             duration: TimeInterval(configuration.reminderTimeSeconds)

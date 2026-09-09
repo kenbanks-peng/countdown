@@ -5,6 +5,13 @@ struct CountdownReminderOverlay: View {
     let remaining: TimeInterval
     var isRest = false
     var fontSizePt: CGFloat = CountdownConfiguration.defaultReminderFontSizePt
+    var fontName = ""
+
+    private var font: Font {
+        fontName.isEmpty
+            ? .system(size: fontSizePt, weight: .semibold).monospacedDigit()
+            : .custom(fontName, fixedSize: fontSizePt)
+    }
 
     static func timeLabel(_ remaining: TimeInterval) -> String {
         String(Int(ceil(max(0, remaining) / 60)))
@@ -13,7 +20,7 @@ struct CountdownReminderOverlay: View {
     var body: some View {
         GeometryReader { geometry in
             Text(isRest ? "REST" : Self.timeLabel(remaining))
-                .font(.system(size: fontSizePt, weight: .semibold).monospacedDigit())
+                .font(font)
                 .tracking(-1)
                 .foregroundStyle(.white)
                 .lineLimit(1)
