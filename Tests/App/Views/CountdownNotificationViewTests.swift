@@ -187,6 +187,24 @@ struct CountdownNotificationViewTests {
         #expect(images[0] == images[2])
     }
 
+    @Test(arguments: [false, true])
+    func notificationHasDarkOutlineOnWhiteBackground(isRest: Bool) throws {
+        let bitmap = try render(NSHostingView(rootView: CountdownNotificationOverlay(
+            remaining: 600, isRest: isRest
+        ).background(Color.white)), side: 512)
+        var darkPixels = 0
+        for y in 0..<bitmap.pixelsHigh {
+            for x in 0..<bitmap.pixelsWide {
+                let color = try #require(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))
+                if max(color.redComponent, color.greenComponent, color.blueComponent) < 0.2 {
+                    darkPixels += 1
+                }
+            }
+        }
+        // The existing 70% black shadow alone cannot provide this contrast on white.
+        #expect(darkPixels > 20)
+    }
+
     @Test
     func notificationTimeRoundsUpWithoutShowingZeroEarly() {
         #expect(CountdownNotificationOverlay.timeLabel(0) == "0")

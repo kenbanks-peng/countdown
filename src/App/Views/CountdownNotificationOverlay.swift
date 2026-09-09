@@ -33,6 +33,13 @@ struct CountdownNotificationOverlay: View {
                 graphics.translateBy(x: (size.width - width) / 2,
                                      y: (size.height + CTFontGetAscent(font) - CTFontGetDescent(font)) / 2)
                 graphics.scaleBy(x: 1, y: -1)
+                // Draw the outline first so the white fill keeps its original weight.
+                graphics.setStrokeColor(CGColor(gray: 0, alpha: 0.85))
+                graphics.setLineWidth(2)
+                graphics.setLineJoin(.round)
+                graphics.setTextDrawingMode(.stroke)
+                CTFontDrawGlyphs(font, glyphs, positions, glyphs.count, graphics)
+                graphics.setTextDrawingMode(.fill)
                 graphics.setFillColor(CGColor.white)
                 CTFontDrawGlyphs(font, glyphs, positions, glyphs.count, graphics)
             }
