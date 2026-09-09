@@ -67,7 +67,6 @@ struct CountdownView: View {
             Divider()
             Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
             Button(countdown.controlLabel, action: countdown.toggleRunning)
-            Button(isCompact ? "Normal" : "Compact", action: changePresentation)
             Divider()
             if countdown.mode.usesTimer {
                 TimerContextMenu(model: countdown.timer, setToNextHour: countdown.setTimerToNextHour)
