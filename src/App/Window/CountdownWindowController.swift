@@ -13,6 +13,7 @@ final class CountdownWindowController {
     private var presentation: Presentation = .normal
     private var isTransitioning = false
     private var notificationSubscription: AnyCancellable?
+    private var testNotificationSubscription: AnyCancellable?
     private let notification: CountdownNotificationController
 
     private let windowState = CountdownWindowStateStore()
@@ -38,6 +39,9 @@ final class CountdownWindowController {
         panel.makeKeyAndOrderFront(nil)
 
         observeNotificationIntervals(from: countdown.notifications)
+        testNotificationSubscription = countdown.testNotificationRequested.sink { [weak self] configuration in
+            self?.showNotification(configuration: configuration)
+        }
         scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, normalScale: configuration.size, isCompact: { [weak self] in
             self?.presentation == .compact
         })
@@ -76,15 +80,20 @@ final class CountdownWindowController {
 
     private func handleNotificationInterval() {
         guard presentation == .compact else { return }
+        showNotification(configuration: configuration)
+    }
 
+    private func showNotification(configuration: CountdownConfiguration) {
         guard let screen = panel.screen ?? NSScreen.main else { return }
         notification.show(
             content: NSHostingView(rootView: CountdownView(
                 countdown: countdown, isNotification: true, notificationFontSizePt: configuration.notificationFontSizePt,
-                notificationFont: configuration.notificationFont, changePresentation: {}
+                notificationFont: configuration.notificationFont,
+                notificationFontVariations: configuration.notificationFontVariations, changePresentation: {}
             )),
             screenFrame: screen.frame, size: screen.frame.size,
-            duration: TimeInterval(configuration.notificationTimeSeconds)
+            duration: TimeInterval(configuration.notificationTimeSeconds),
+            fadeDuration: configuration.notificationFadeTimeSeconds
         )
     }
 

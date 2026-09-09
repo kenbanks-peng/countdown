@@ -34,6 +34,18 @@ struct CountdownConfigurationFileTests {
         #expect(config.alarmNotificationURL?.lastPathComponent == "alarm.mp3")
     }
 
+    @Test(arguments: ["", "test = false", "test = invalid", "test = \"true\"", "[notifications]\ntest = true"])
+    func testMenuIsDisabledUnlessExplicitlyEnabled(contents: String) throws {
+        #expect(!CountdownConfiguration(alarmNotificationURL: nil).testEnabled)
+        #expect(try !load(contents).testEnabled)
+    }
+
+    @Test
+    func testMenuUsesTopLevelFirstValue() throws {
+        #expect(try load("test = true # Show the menu\ntest = false\n[notifications]\ntest = false").testEnabled)
+        #expect(try !load("test = invalid\ntest = true").testEnabled)
+    }
+
     @Test
     func valuesUseTheirOwnSectionsAndFirstDuplicate() throws {
         let config = try load("""

@@ -21,14 +21,18 @@ struct CountdownNotificationViewTests {
         controller.selectMode(.pomodoro)
         now += elapsed
         controller.update()
-        let hosting = NSHostingView(rootView: CountdownView(countdown: controller, isNotification: true, changePresentation: {}))
+        let variations = NotificationFontVariations(weight: 800, width: 85, opticalSize: 48)
+        let hosting = NSHostingView(rootView: CountdownView(
+            countdown: controller, isNotification: true, notificationFontVariations: variations, changePresentation: {}
+        ))
         let bitmap = try render(hosting, side: 512)
         let text = try recognizedText(bitmap).joined(separator: " ")
         let model = controller.pomodoro
         if model.focusRemaining > 0 {
-            try expectNotificationMinutes(bitmap, remaining: model.focusRemaining)
+            try expectNotificationMinutes(bitmap, remaining: model.focusRemaining, fontVariations: variations)
         } else {
             #expect(text == "REST")
+            try expectNotificationMinutes(bitmap, remaining: 0, fontVariations: variations, isRest: true)
         }
         #expect(!text.contains(":"))
         #expect(!text.contains("Session"))
@@ -85,8 +89,8 @@ struct CountdownNotificationViewTests {
         try expectNotificationMinutes(render(hosting, side: 512), remaining: 600, fontSize: fontSize)
     }
 
-    @Test(arguments: [CountdownMode.countdown, .pomodoro])
-    func configuredFontReachesNotification(mode: CountdownMode) throws {
+    @Test(arguments: [CountdownMode.countdown, .pomodoro], ["Impact", ""])
+    func configuredFontReachesNotification(mode: CountdownMode, fontName: String) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let controller = CountdownController(
@@ -96,17 +100,25 @@ struct CountdownNotificationViewTests {
         )
         controller.selectMode(mode)
         if mode.usesTimer { controller.adjustTimerDuration(by: 600) }
+        let variations = NotificationFontVariations(weight: 800, width: 85, opticalSize: 48)
         let hosting = NSHostingView(rootView: CountdownView(
-            countdown: controller, isNotification: true, notificationFont: "Impact", changePresentation: {}
+            countdown: controller, isNotification: true, notificationFont: fontName,
+            notificationFontVariations: variations, changePresentation: {}
         ))
         let remaining = mode.usesTimer ? controller.timer.remaining : controller.pomodoro.focusRemaining
-        try expectNotificationMinutes(render(hosting, side: 512), remaining: remaining, fontName: "Impact")
+        try expectNotificationMinutes(render(hosting, side: 512), remaining: remaining,
+                                      fontName: fontName, fontVariations: variations)
     }
 
     // Vision can omit isolated single digits. Compare the complete rendered image instead.
     private func expectNotificationMinutes(_ bitmap: NSBitmapImageRep, remaining: TimeInterval,
-                                       fontSize: Double = 144, fontName: String = "") throws {
-        let expected = try render(NSHostingView(rootView: CountdownNotificationOverlay(remaining: remaining, fontSizePt: fontSize, fontName: fontName)), side: 512)
+                                       fontSize: Double = 144, fontName: String = "",
+                                       fontVariations: NotificationFontVariations = NotificationFontVariations(),
+                                       isRest: Bool = false) throws {
+        let expected = try render(NSHostingView(rootView: CountdownNotificationOverlay(
+            remaining: remaining, isRest: isRest, fontSizePt: fontSize,
+            fontName: fontName, fontVariations: fontVariations
+        )), side: 512)
         for y in 0..<bitmap.pixelsHigh {
             for x in 0..<bitmap.pixelsWide {
                 let actualColor = try #require(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))
@@ -118,6 +130,19 @@ struct CountdownNotificationViewTests {
                 #expect(abs(actualColor.blueComponent - expectedColor.blueComponent) < 0.03)
             }
         }
+    }
+
+    @Test(arguments: [
+        NotificationFontVariations(weight: 900),
+        NotificationFontVariations(width: 60),
+        NotificationFontVariations(opticalSize: 17),
+    ])
+    func eachAxisChangesRenderedText(variations: NotificationFontVariations) throws {
+        let normal = try render(NSHostingView(rootView: CountdownNotificationOverlay(remaining: 600)), side: 512)
+        let varied = try render(NSHostingView(rootView: CountdownNotificationOverlay(
+            remaining: 600, fontVariations: variations
+        )), side: 512)
+        #expect(normal.tiffRepresentation != varied.tiffRepresentation)
     }
 
     @Test

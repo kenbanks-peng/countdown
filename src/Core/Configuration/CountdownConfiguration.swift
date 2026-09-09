@@ -1,6 +1,7 @@
 import Foundation
 
 struct CountdownConfiguration {
+    let testEnabled: Bool
     let notificationEnabled: Bool
     let notificationAudioEnabled: Bool
     let alarmEnabled: Bool
@@ -13,6 +14,7 @@ struct CountdownConfiguration {
     static let defaultNotificationFontSizePt: Double = 144
     let notificationFontSizePt: Double
     let notificationFont: String
+    let notificationFontVariations: NotificationFontVariations
     static let defaultNotificationFadeTimeSeconds: Double = 1.5
     let notificationFadeTimeSeconds: Double
     let notificationTimeSeconds: Int
@@ -31,6 +33,7 @@ struct CountdownConfiguration {
         notificationFadeTimeSeconds: Double = CountdownConfiguration.defaultNotificationFadeTimeSeconds,
         notificationFontSizePt: Double = CountdownConfiguration.defaultNotificationFontSizePt,
         notificationFont: String = "",
+        notificationFontVariations: NotificationFontVariations = NotificationFontVariations(),
         notificationIntervalMinutes: Int = 15,
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
@@ -40,8 +43,10 @@ struct CountdownConfiguration {
         compactSize: Double = 1,
         notificationEnabled: Bool = true,
         notificationAudioEnabled: Bool = true,
-        alarmEnabled: Bool = true
+        alarmEnabled: Bool = true,
+        testEnabled: Bool = false
     ) {
+        self.testEnabled = testEnabled
         self.notificationEnabled = notificationEnabled
         self.notificationAudioEnabled = notificationAudioEnabled
         self.alarmEnabled = alarmEnabled
@@ -53,6 +58,7 @@ struct CountdownConfiguration {
         self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
         self.notificationFont = notificationFont.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.notificationFontVariations = notificationFontVariations
         self.notificationFontSizePt = notificationFontSizePt.isFinite && notificationFontSizePt > 0
             ? notificationFontSizePt : Self.defaultNotificationFontSizePt
         self.notificationFadeTimeSeconds = notificationFadeTimeSeconds.isFinite && notificationFadeTimeSeconds >= 0
@@ -87,6 +93,11 @@ struct CountdownConfiguration {
             notificationFadeTimeSeconds: configurationFile.doubleValue(for: "notification_fade_time_seconds", section: "notifications") ?? Self.defaultNotificationFadeTimeSeconds,
             notificationFontSizePt: configurationFile.doubleValue(for: "notification_font_size_pt", section: "notifications") ?? Self.defaultNotificationFontSizePt,
             notificationFont: configurationFile.stringValue(for: "notification_font", section: "notifications") ?? "",
+            notificationFontVariations: NotificationFontVariations(
+                weight: configurationFile.doubleValue(for: "notification_font_weight", section: "notifications"),
+                width: configurationFile.doubleValue(for: "notification_font_width", section: "notifications"),
+                opticalSize: configurationFile.doubleValue(for: "notification_font_optical_size_pt", section: "notifications")
+            ),
             notificationIntervalMinutes: configurationFile.intValue(for: "notification_interval_minutes", section: "notifications") ?? 15,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,
@@ -96,7 +107,8 @@ struct CountdownConfiguration {
             compactSize: configurationFile.doubleValue(for: "compact_size") ?? 1,
             notificationEnabled: configurationFile.boolValue(for: "notification_enabled") ?? true,
             notificationAudioEnabled: configurationFile.boolValue(for: "notification_audio_enabled") ?? true,
-            alarmEnabled: configurationFile.boolValue(for: "alarm_enabled") ?? true
+            alarmEnabled: configurationFile.boolValue(for: "alarm_enabled") ?? true,
+            testEnabled: configurationFile.boolValue(for: "test", section: "") ?? false
         )
     }
 

@@ -1,6 +1,11 @@
 # Positive scale factors. Restart Countdown after configuration changes.
 size = 1
 compact_size = 1
+# Show a Test menu item for an immediate visual notification, in either view.
+# Test re-reads this file for the preview's font, size, and timing settings.
+# Other app settings, including menu visibility, still require a restart.
+# The test does not require notifications to be enabled. It does not play audio.
+test = false
 
 [notifications]
 notification_enabled = true
@@ -16,6 +21,17 @@ notification_fade_time_seconds = 1.5
 notification_font = ""
 # Font size in points, independent of the circle scale.
 notification_font_size_pt = 144
+# Optional variable-font axes. Remove the # to set a value.
+# Omitted or invalid values keep the selected font's defaults.
+# Values must be positive and finite. Values outside the font's range are
+# limited to that range. Axes that the font does not support are ignored.
+# OpenType weight (wght): 400 is regular; 600 is semibold.
+# notification_font_weight = 600
+# OpenType width (wdth), percent: 100 is normal; 75 is condensed.
+# notification_font_width = 100
+# Optical size (opsz), points: changes letter shapes, not the text size.
+# Omit this setting to let the font select its optical size.
+# notification_font_optical_size_pt = 72
 
 notification_audio_enabled = true
 # Paths are relative to this file.

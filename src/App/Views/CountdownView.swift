@@ -9,17 +9,19 @@ struct CountdownView: View {
     let scale: CGFloat
     let notificationFontSizePt: CGFloat
     let notificationFont: String
+    let notificationFontVariations: NotificationFontVariations
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", notificationFontVariations: NotificationFontVariations = NotificationFontVariations(), allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
         self.isNotification = isNotification
         self.scale = scale
         self.notificationFontSizePt = notificationFontSizePt
         self.notificationFont = notificationFont
+        self.notificationFontVariations = notificationFontVariations
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
         self._currentTime = State(initialValue: countdown.currentTime)
@@ -66,6 +68,9 @@ struct CountdownView: View {
             .pickerStyle(.inline)
             Divider()
             Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
+            if countdown.testEnabled {
+                Button("Test", action: countdown.testNotification)
+            }
             Button(countdown.controlLabel, action: countdown.toggleRunning)
             Divider()
             if countdown.mode.usesTimer {
@@ -91,14 +96,15 @@ struct CountdownView: View {
     private var notificationOverlay: CountdownNotificationOverlay {
         if countdown.mode.usesTimer {
             return CountdownNotificationOverlay(
-                remaining: countdown.timer.remaining, fontSizePt: notificationFontSizePt, fontName: notificationFont
+                remaining: countdown.timer.remaining, fontSizePt: notificationFontSizePt,
+                fontName: notificationFont, fontVariations: notificationFontVariations
             )
         }
         let model = countdown.pomodoro
         return CountdownNotificationOverlay(
             remaining: model.focusRemaining,
             isRest: model.focusRemaining == 0,
-            fontSizePt: notificationFontSizePt, fontName: notificationFont
+            fontSizePt: notificationFontSizePt, fontName: notificationFont, fontVariations: notificationFontVariations
         )
     }
 

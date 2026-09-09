@@ -12,7 +12,8 @@ final class CountdownNotificationController {
         self.fadeDuration = fadeDuration
     }
 
-    func show(content: NSView, screenFrame: NSRect, size: NSSize, duration: TimeInterval) {
+    func show(content: NSView, screenFrame: NSRect, size: NSSize, duration: TimeInterval,
+              fadeDuration: TimeInterval? = nil) {
         dismiss()
         let frame = NSRect(
             x: screenFrame.midX - size.width / 2,
@@ -35,7 +36,7 @@ final class CountdownNotificationController {
         self.panel = panel
         panel.orderFrontRegardless()
 
-        let fadeDuration = fadeDuration
+        let fadeDuration = fadeDuration ?? self.fadeDuration
         dismissalTask = Task { @MainActor [weak self] in
             guard !Task.isCancelled else { return }
             await Self.fade(panel, to: 1, duration: fadeDuration)

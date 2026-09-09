@@ -60,8 +60,8 @@ struct CountdownConfigurationFile {
         return String(value[value.index(after: value.startIndex)..<end])
     }
 
-    func boolValue(for key: String) -> Bool? {
-        guard let value = sectionValues["notifications"]?[key] else { return nil }
+    func boolValue(for key: String, section: String = "notifications") -> Bool? {
+        guard let value = sectionValues[section]?[key] else { return nil }
         switch value.split(separator: "#", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) {
         case "true": return true
         case "false": return false

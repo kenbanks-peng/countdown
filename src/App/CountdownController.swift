@@ -6,6 +6,9 @@ import Combine
 final class CountdownController: ObservableObject {
     @Published private(set) var mode: CountdownMode = .timer
     let notifications: NotificationScheduler
+    let testEnabled: Bool
+    let testNotificationRequested = PassthroughSubject<CountdownConfiguration, Never>()
+    private let reloadConfiguration: () -> CountdownConfiguration
     let engine: CountdownEngine
     var timer: TimerModel { engine.timer }
     var pomodoro: PomodoroModel { engine.pomodoro }
@@ -26,9 +29,12 @@ final class CountdownController: ObservableObject {
         preferences: CountdownPreferences? = nil,
         playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
-        saveEnablement: ((String, Bool) -> Void)? = nil
+        saveEnablement: ((String, Bool) -> Void)? = nil,
+        reloadConfiguration: @escaping () -> CountdownConfiguration = { CountdownConfiguration.load() }
     ) {
         self.now = now
+        self.reloadConfiguration = reloadConfiguration
+        testEnabled = configuration.testEnabled
         settingsStore = CountdownSettingsStore(
             fileManager: sessionStore.fileManager, stateDirectory: sessionStore.stateDirectory
         )
@@ -81,6 +87,14 @@ final class CountdownController: ObservableObject {
     }
 
     var controlLabel: String { engine.isPaused ? "Resume" : "Pause" }
+
+    /// Preview the current notification without waiting for an interval or enabling alerts.
+    func testNotification() {
+        guard testEnabled else { return }
+        let configuration = reloadConfiguration()
+        update()
+        testNotificationRequested.send(configuration)
+    }
 
     func toggleRunning() {
         update()

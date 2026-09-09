@@ -6,11 +6,10 @@ struct CountdownNotificationOverlay: View {
     var isRest = false
     var fontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt
     var fontName = ""
+    var fontVariations = NotificationFontVariations()
 
     private var font: Font {
-        fontName.isEmpty
-            ? .system(size: fontSizePt, weight: .semibold).monospacedDigit()
-            : .custom(fontName, fixedSize: fontSizePt)
+        Font(NotificationFont.make(name: fontName, size: fontSizePt, variations: fontVariations))
     }
 
     static func timeLabel(_ remaining: TimeInterval) -> String {

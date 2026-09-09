@@ -103,6 +103,45 @@ struct NotificationConfigurationTests {
         """).notificationFadeTimeSeconds == 1.5)
     }
 
+    @Test
+    func fontVariationsDefaultToUnspecified() throws {
+        #expect(CountdownConfiguration(alarmNotificationURL: nil).notificationFontVariations == NotificationFontVariations())
+        #expect(try load("").notificationFontVariations == NotificationFontVariations())
+    }
+
+    @Test
+    func fontVariationsUseFirstValueInNotificationSection() throws {
+        let config = try load("""
+        notification_font_weight = 100
+        [notifications]
+        notification_font_weight = 650.5 # OpenType weight
+        notification_font_weight = 900
+        notification_font_width = 85.5
+        notification_font_optical_size_pt = 48
+        [pomodoro]
+        notification_font_width = 120
+        """)
+        #expect(config.notificationFontVariations == NotificationFontVariations(weight: 650.5, width: 85.5, opticalSize: 48))
+        #expect(try load("[pomodoro]\nnotification_font_weight = 700").notificationFontVariations.weight == nil)
+    }
+
+    @Test(arguments: ["", "invalid", "0", "-1", "nan", "inf", "1e999", "\"600\""])
+    func invalidFontVariationsKeepDefaults(value: String) throws {
+        let config = try load("""
+        [notifications]
+        notification_font_weight = \(value)
+        notification_font_weight = 600
+        notification_font_width = \(value)
+        notification_font_optical_size_pt = \(value)
+        """)
+        #expect(config.notificationFontVariations == NotificationFontVariations())
+    }
+
+    @Test(arguments: [0.0, -1, Double.nan, Double.infinity, -Double.infinity])
+    func initializerRejectsInvalidFontVariations(value: Double) {
+        #expect(NotificationFontVariations(weight: value, width: value, opticalSize: value) == NotificationFontVariations())
+    }
+
     private func load(_ contents: String) throws -> CountdownConfiguration {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
