@@ -103,7 +103,7 @@ struct ScrollGestureTests {
         try session.scroll(angle: 264, delta: -12, after: 0.16)
         #expect(session.controller.pomodoro.focusDuration == 600)
         try session.scroll(angle: 264, delta: -12, after: 0.5)
-        #expect(session.controller.pomodoro.focusDuration == 600)
+        #expect(session.controller.pomodoro.focusDuration == 300)
     }
 
     @Test(arguments: [NSEvent.Phase.ended, .cancelled])
@@ -137,9 +137,9 @@ struct ScrollGestureTests {
         try session.scroll(angle: 180, delta: -1, after: 0.001)
         #expect(timer.pomodoro.focusDuration == 1_500)
         try session.scroll(angle: 15, delta: -1, after: 0.001)
-        #expect(timer.pomodoro.focusDuration == 1_500)
-        try session.scroll(angle: 180, delta: -1, after: 0.001)
         #expect(timer.pomodoro.focusDuration == 1_200)
+        try session.scroll(angle: 180, delta: -1, after: 0.001)
+        #expect(timer.pomodoro.focusDuration == 900)
     }
 
     @Test

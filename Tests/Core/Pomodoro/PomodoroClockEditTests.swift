@@ -56,8 +56,9 @@ struct PomodoroClockEditTests {
         controller.adjustPomodoroDuration(rest == .rest ? .longRest : .rest, steps: 1)
         let after = try #require(controller.pomodoro.clockSchedule)
         #expect(after.end(for: rest) == focusEdit.end(for: rest))
-        #expect(controller.pomodoro.focusRemaining == 0)
-        #expect(controller.pomodoro.restRemaining == focusEdit.end(for: rest).timeIntervalSince(session.now))
+        #expect(controller.pomodoro.focusRemaining == (steps > 0 ? focusEdit.focusEnd.timeIntervalSince(session.now) : 0))
+        let restStart = steps > 0 ? focusEdit.focusEnd : session.now
+        #expect(controller.pomodoro.restRemaining == focusEdit.end(for: rest).timeIntervalSince(restStart))
     }
 
     @Test

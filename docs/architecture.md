@@ -55,7 +55,12 @@ focus and preserving the active rest. This reduction remains after switching bac
 Entering Pomodoro reserves at least five minutes of active rest. It reduces focus
 first and increases the total only when less than five minutes remain. Rest edits
 also leave at least five minutes from the later of the focus end and the current
-clock reference. Normal countdown can still finish rest. A view change otherwise
+clock reference. In Pomodoro, scrolling on focus or background adjusts focus.
+During rest, either scroll direction first raises rest to at least five minutes
+if needed. Further increases in the same gesture restore focus in the current
+stage and keep unspent rest. Decreases at zero focus leave the expired focus
+endpoint unchanged, so they cannot end rest or start another stage. Scrolling on the blue sector continues to adjust rest only.
+Normal countdown can still finish rest. A view change otherwise
 preserves remaining time and pause state. Model change signals pass through the
 engine and controller to the view.
 

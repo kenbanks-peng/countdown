@@ -146,7 +146,8 @@ final class ScrollTimeAdjuster {
 
     private func pomodoroTarget(for event: NSEvent, countdown: CountdownController) -> Target? {
         let model = countdown.pomodoro
-        guard let offset = circleOffset(for: event), hypot(offset.x, offset.y) > 0 else { return nil }
+        guard let offset = circleOffset(for: event) else { return nil }
+        if hypot(offset.x, offset.y) == 0 { return .pomodoro(.focus) }
         var degrees = atan2(offset.x, offset.y) * 180 / .pi
         if degrees < 0 { degrees += 360 }
         // Remove floating-point noise at exact shared boundaries, not a visible hit margin.
@@ -160,7 +161,7 @@ final class ScrollTimeAdjuster {
             schedule: model.clockSchedule, restPhase: model.restPhase
         )
         if arcs.rest.contains(degrees / 360) { return .pomodoro(model.restPhase) }
-        if arcs.focus.contains(degrees / 360) { return .pomodoro(.focus) }
-        return nil
+        // Focus and background share a target, including when focus has expired.
+        return .pomodoro(.focus)
     }
 }

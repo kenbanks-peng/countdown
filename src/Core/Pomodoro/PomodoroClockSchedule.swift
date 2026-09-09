@@ -12,7 +12,7 @@ struct PomodoroClockSchedule: Codable {
     var pausedAt: Date?
     var stage: Int
     var focusCompleted: Bool
-    // Rest already spent before focus was restored from another view.
+    // Rest already spent before focus was restored.
     var restCarry: TimeInterval?
     var longRestCarry: TimeInterval?
 

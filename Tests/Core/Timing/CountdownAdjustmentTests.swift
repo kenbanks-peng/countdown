@@ -86,13 +86,21 @@ struct CountdownAdjustmentTests {
         if paused { controller.toggleRunning() }
         for steps in [1, -1, 100, -100, 1] {
             for phase: PomodoroModel.Phase in [.focus, .rest, .longRest] {
-                let previousStageStart = controller.pomodoro.clockSchedule?.stageStart
+                let previousSchedule = controller.pomodoro.clockSchedule
+                let completedFocus = phase == .focus && controller.pomodoro.focusRemaining == 0
+                let target = completedFocus && controller.pomodoro.restRemaining < 300
+                    ? controller.pomodoro.restPhase : phase
+                let unchangedFocus = completedFocus && target == .focus && steps < 0
                 controller.adjustPomodoroDuration(phase, steps: steps)
                 let schedule = try #require(controller.pomodoro.clockSchedule)
                 #expect(schedule.isValid(focusPeriodsPerCycle: controller.pomodoro.focusPeriodsPerCycle))
-                let end = schedule.end(for: phase)
+                let end = schedule.end(for: target)
                 // An edit can finish the stage. The next stage repeats exact durations.
-                if schedule.stageStart == previousStageStart {
+                if unchangedFocus {
+                    #expect(schedule.focusEnd == previousSchedule?.focusEnd)
+                    #expect(schedule.restEnd == previousSchedule?.restEnd)
+                    #expect(schedule.longRestEnd == previousSchedule?.longRestEnd)
+                } else if schedule.stageStart == previousSchedule?.stageStart {
                     expectMark(end.timeIntervalSince(Calendar.current.startOfDay(for: end)))
                 }
                 #expect(controller.pomodoro.focusDuration >= 300)

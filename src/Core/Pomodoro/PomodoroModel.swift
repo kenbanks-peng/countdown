@@ -132,7 +132,8 @@ struct PomodoroModel {
 
     mutating func adjustClockEndpoint(_ phase: Phase, steps: Int, at now: Date) {
         update(at: now)
-        clockSchedule?.edit(phase, steps: steps)
+        guard let target = prepareFocusEdit(phase, increasing: steps > 0, at: now) else { return }
+        clockSchedule?.edit(target, steps: steps)
         advanceClock(at: now)
         syncClockProgress()
     }
@@ -218,7 +219,8 @@ struct PomodoroModel {
         guard amount.isFinite else { return }
         update(at: now)
         if clockSchedule != nil {
-            clockSchedule?.edit(phase, amount: amount)
+            guard let target = prepareFocusEdit(phase, increasing: amount > 0, at: now) else { return }
+            clockSchedule?.edit(target, amount: amount)
             advanceClock(at: now)
             syncClockProgress()
             return
@@ -233,6 +235,26 @@ struct PomodoroModel {
         }
         // Removed time is not elapsed time in the next phase or stage.
         finishDepletedPhases()
+    }
+
+    /// During rest, either direction first repairs the rest minimum. Further
+    /// increases restore focus; decreases cannot move an expired focus endpoint.
+    private mutating func prepareFocusEdit(_ phase: Phase, increasing: Bool, at now: Date) -> Phase? {
+        guard phase == .focus, focusRemaining == 0,
+              var schedule = clockSchedule else { return phase }
+        if restRemaining < 300 { return restPhase }
+        guard increasing else { return nil }
+        let reference = schedule.pausedAt ?? now
+        let rest = restRemaining
+        schedule.stageStart = reference
+        schedule.focusEnd = reference
+        schedule.restEnd = reference + (restPhase == .rest ? rest : restDuration)
+        schedule.longRestEnd = reference + (restPhase == .longRest ? rest : longRestDuration)
+        schedule.restCarry = restPhase == .rest ? restDuration - rest : nil
+        schedule.longRestCarry = restPhase == .longRest ? longRestDuration - rest : nil
+        schedule.focusCompleted = false
+        clockSchedule = schedule
+        return phase
     }
 
     mutating func toggleRunning(at now: Date) {
