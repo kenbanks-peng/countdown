@@ -112,7 +112,8 @@ struct CountdownConfiguration {
             notificationFontVariations: NotificationFontVariations(
                 weight: configurationFile.doubleValue(for: "notification_font_weight", section: "notifications"),
                 width: configurationFile.doubleValue(for: "notification_font_width", section: "notifications"),
-                opticalSize: configurationFile.doubleValue(for: "notification_font_optical_size_pt", section: "notifications")
+                opticalSize: configurationFile.doubleValue(for: "notification_font_optical_size_pt", section: "notifications"),
+                slant: configurationFile.doubleValue(for: "notification_font_slant_degrees", section: "notifications")
             ),
             notificationIntervalMinutes: configurationFile.intValue(for: "notification_interval_minutes", section: "notifications") ?? 15,
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,

@@ -187,15 +187,19 @@ struct NotificationConfigurationTests {
     func fontVariationsUseFirstValueInNotificationSection() throws {
         let config = try load("""
         notification_font_weight = 100
+        notification_font_slant_degrees = 8
         [notifications]
         notification_font_weight = 650.5 # OpenType weight
         notification_font_weight = 900
         notification_font_width = 85.5
         notification_font_optical_size_pt = 48
+        notification_font_slant_degrees = -8.5
+        notification_font_slant_degrees = -12
         [pomodoro]
         notification_font_width = 120
+        notification_font_slant_degrees = 4
         """)
-        #expect(config.notificationFontVariations == NotificationFontVariations(weight: 650.5, width: 85.5, opticalSize: 48))
+        #expect(config.notificationFontVariations == NotificationFontVariations(weight: 650.5, width: 85.5, opticalSize: 48, slant: -8.5))
         #expect(try load("[pomodoro]\nnotification_font_weight = 700").notificationFontVariations.weight == nil)
     }
 
@@ -214,6 +218,34 @@ struct NotificationConfigurationTests {
     @Test(arguments: [0.0, -1, Double.nan, Double.infinity, -Double.infinity])
     func initializerRejectsInvalidFontVariations(value: Double) {
         #expect(NotificationFontVariations(weight: value, width: value, opticalSize: value) == NotificationFontVariations())
+    }
+
+    @Test(arguments: [-12.5, 0, 8.5])
+    func slantAcceptsSignedFiniteValues(value: Double) throws {
+        let config = try load("[notifications]\nnotification_font_slant_degrees = \(value)")
+        #expect(config.notificationFontVariations.slant == value)
+        #expect(NotificationFontVariations(slant: value).slant == value)
+    }
+
+    @Test(arguments: ["", "invalid", "nan", "inf", "-inf", "1e999", "\"-8\""])
+    func invalidSlantKeepsDefault(value: String) throws {
+        let config = try load("""
+        [notifications]
+        notification_font_slant_degrees = \(value)
+        notification_font_slant_degrees = -8
+        """)
+        #expect(config.notificationFontVariations.slant == nil)
+    }
+
+    @Test(arguments: [Double.nan, Double.infinity, -Double.infinity])
+    func initializerRejectsNonfiniteSlant(value: Double) {
+        #expect(NotificationFontVariations(slant: value).slant == nil)
+    }
+
+    @Test
+    func slantOutsideNotificationsIsIgnored() throws {
+        #expect(try load("notification_font_slant_degrees = -8").notificationFontVariations.slant == nil)
+        #expect(try load("[pomodoro]\nnotification_font_slant_degrees = -8").notificationFontVariations.slant == nil)
     }
 
     private func load(_ contents: String) throws -> CountdownConfiguration {

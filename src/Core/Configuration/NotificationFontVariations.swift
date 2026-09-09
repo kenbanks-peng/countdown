@@ -5,11 +5,13 @@ struct NotificationFontVariations: Equatable {
     let weight: Double?
     let width: Double?
     let opticalSize: Double?
+    let slant: Double?
 
-    init(weight: Double? = nil, width: Double? = nil, opticalSize: Double? = nil) {
+    init(weight: Double? = nil, width: Double? = nil, opticalSize: Double? = nil, slant: Double? = nil) {
         self.weight = Self.positiveFinite(weight)
         self.width = Self.positiveFinite(width)
         self.opticalSize = Self.positiveFinite(opticalSize)
+        self.slant = slant.flatMap { $0.isFinite ? $0 : nil }
     }
 
     private static func positiveFinite(_ value: Double?) -> Double? {

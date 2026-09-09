@@ -8,11 +8,12 @@ enum NotificationFont {
         let font = base ?? NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
         guard let axes = CTFontCopyVariationAxes(font) as? [[String: Any]] else { return font }
 
-        // OpenType tags: wght, wdth, opsz.
+        // OpenType tags: wght, wdth, opsz, slnt.
         let requested: [UInt32: Double?] = [
             0x77676874: variations.weight,
             0x77647468: variations.width,
             0x6F70737A: variations.opticalSize,
+            0x736C6E74: variations.slant,
         ]
         var values = (CTFontCopyVariation(font) as? [NSNumber: NSNumber]) ?? [:]
         var attributes: [CFString: Any] = [:]

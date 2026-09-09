@@ -32,8 +32,9 @@ notification_font_size_pt = 144
 notification_font_alpha = 1
 # Optional variable-font axes. Remove the # to set a value.
 # Omitted or invalid values keep the selected font's defaults.
-# Values must be positive and finite. Values outside the font's range are
-# limited to that range. Axes that the font does not support are ignored.
+# Values must be finite. Weight, width, and optical size must be positive.
+# Slant can be negative, zero, or positive. Values outside the font's range
+# are limited to that range. Unsupported axes are ignored.
 # OpenType weight (wght): 400 is regular; 600 is semibold.
 # notification_font_weight = 600
 # OpenType width (wdth), percent: 100 is normal; 75 is condensed.
@@ -41,6 +42,9 @@ notification_font_alpha = 1
 # Optical size (opsz), points: changes letter shapes, not the text size.
 # Omit this setting to let the font select its optical size.
 # notification_font_optical_size_pt = 72
+# Slant (slnt), in degrees: 0 is upright; negative values lean right.
+# Omit this setting to keep the font's default slant.
+# notification_font_slant_degrees = 0
 
 notification_audio_enabled = true
 # Paths are relative to this file.
