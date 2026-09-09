@@ -19,10 +19,14 @@ final class CountdownNotificationController {
               fadeDuration: TimeInterval? = nil, peakAlpha: Double = 1,
               fadeIn: NotificationFadeCurve = .easeIn, fadeOut: NotificationFadeCurve = .easeOut) {
         dismiss()
+        let fadeDuration = fadeDuration ?? self.fadeDuration
+        let scales = !reduceMotion() && fadeDuration > 0
+        // Reserve transparent space so the outward scale is not clipped by the panel.
+        let panelSize = scales ? NSSize(width: size.width * 3, height: size.height * 3) : size
         let frame = NSRect(
-            x: screenFrame.midX - size.width / 2,
-            y: screenFrame.midY - size.height / 2,
-            width: size.width, height: size.height
+            x: screenFrame.midX - panelSize.width / 2,
+            y: screenFrame.midY - panelSize.height / 2,
+            width: panelSize.width, height: panelSize.height
         )
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -35,15 +39,15 @@ final class CountdownNotificationController {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         // Scale a separate container, not the hosted view or the panel frame.
-        let container = NSView(frame: NSRect(origin: .zero, size: size))
+        let container = NSView(frame: NSRect(origin: .zero, size: panelSize))
         container.wantsLayer = true
-        content.frame = container.bounds
-        content.autoresizingMask = [.width, .height]
+        content.frame = NSRect(x: (panelSize.width - size.width) / 2,
+                               y: (panelSize.height - size.height) / 2,
+                               width: size.width, height: size.height)
+        content.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin, .maxYMargin]
         container.addSubview(content)
         panel.contentView = container
-        let fadeDuration = fadeDuration ?? self.fadeDuration
-        let scalesIn = !reduceMotion() && fadeDuration > 0
-        container.layer?.sublayerTransform = Self.entranceTransform(size: size, scale: scalesIn ? 0.9 : 1)
+        container.layer?.sublayerTransform = Self.scaleTransform(size: panelSize, scale: scales ? 0.9 : 1)
         // Set both position and zero visibility before the panel enters the screen.
         panel.alphaValue = 0
         self.panel = panel
@@ -51,13 +55,18 @@ final class CountdownNotificationController {
 
         dismissalTask = Task { @MainActor [weak self] in
             guard !Task.isCancelled else { return }
-            if scalesIn, let layer = container.layer {
-                Self.animateEntrance(layer, duration: fadeDuration)
+            if scales, let layer = container.layer {
+                Self.animateScale(layer, to: CATransform3DIdentity, duration: fadeDuration,
+                                  curve: .easeOut)
             }
             await Self.fade(panel, to: CGFloat(peakAlpha), duration: fadeDuration, curve: fadeIn)
             guard !Task.isCancelled else { return }
             try? await Task.sleep(for: .seconds(duration))
             guard !Task.isCancelled else { return }
+            if scales, let layer = container.layer {
+                Self.animateScale(layer, to: Self.scaleTransform(size: panelSize, scale: 3),
+                                  duration: fadeDuration, curve: .easeIn)
+            }
             await Self.fade(panel, to: 0, duration: fadeDuration, curve: fadeOut)
             guard !Task.isCancelled else { return }
             self?.dismiss()
@@ -72,22 +81,23 @@ final class CountdownNotificationController {
         panel = nil
     }
 
-    static func animateEntrance(_ layer: CALayer, duration: TimeInterval) {
+    static func animateScale(_ layer: CALayer, to transform: CATransform3D,
+                             duration: TimeInterval, curve: CAMediaTimingFunctionName) {
         let animation = CABasicAnimation(keyPath: "sublayerTransform")
         animation.fromValue = layer.sublayerTransform
-        animation.toValue = CATransform3DIdentity
+        animation.toValue = transform
         animation.duration = duration
-        // Ease out without overshoot; the configured opacity curve is unchanged.
-        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        // Scale timing is independent of the configured opacity curve.
+        animation.timingFunction = CAMediaTimingFunction(name: curve)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        layer.sublayerTransform = CATransform3DIdentity
-        layer.add(animation, forKey: "notificationEntrance")
+        layer.sublayerTransform = transform
+        layer.add(animation, forKey: "notificationScale")
         CATransaction.commit()
     }
 
-    static func entranceTransform(size: NSSize, scale: CGFloat) -> CATransform3D {
-        // Keep the visual center fixed while the content grows to its full size.
+    static func scaleTransform(size: NSSize, scale: CGFloat) -> CATransform3D {
+        // Keep the visual center fixed throughout both scale effects.
         var transform = CATransform3DMakeTranslation(size.width / 2, size.height / 2, 0)
         transform = CATransform3DScale(transform, scale, scale, 1)
         return CATransform3DTranslate(transform, -size.width / 2, -size.height / 2, 0)

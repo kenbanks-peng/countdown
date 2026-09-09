@@ -4,12 +4,12 @@ import Testing
 
 @MainActor
 struct CountdownNotificationControllerTests {
-    @Test
-    func entranceScaleKeepsContentCenterFixed() {
+    @Test(arguments: [0.9, 1.0, 3.0])
+    func scaleKeepsContentCenterFixed(scale: CGFloat) {
         let size = NSSize(width: 400, height: 180)
-        let transform = CountdownNotificationController.entranceTransform(size: size, scale: 0.9)
-        #expect(transform.m11 == 0.9)
-        #expect(transform.m22 == 0.9)
+        let transform = CountdownNotificationController.scaleTransform(size: size, scale: scale)
+        #expect(transform.m11 == scale)
+        #expect(transform.m22 == scale)
         #expect(abs(size.width / 2 * transform.m11 + transform.m41 - size.width / 2) < 0.001)
         #expect(abs(size.height / 2 * transform.m22 + transform.m42 - size.height / 2) < 0.001)
     }
@@ -36,15 +36,15 @@ struct CountdownNotificationControllerTests {
         }
         try await Task.sleep(for: .milliseconds(300))
         #expect(CATransform3DIsIdentity(layer.sublayerTransform))
-        #expect(layer.animation(forKey: "notificationEntrance") == nil)
+        #expect(layer.animation(forKey: "notificationScale") == nil)
         #expect(panel.frame == frame)
         #expect(abs(panel.alphaValue - 0.4) < 0.001)
         notification.dismiss()
         #expect(!panel.isVisible)
     }
 
-    @Test
-    func dismissalRemovesEntranceAnimation() throws {
+    @Test(arguments: [false, true])
+    func dismissalRemovesScaleAnimation(isExit: Bool) throws {
         let notification = CountdownNotificationController(fadeDuration: 1, reduceMotion: { false })
         defer { notification.dismiss() }
         notification.show(content: NSView(), screenFrame: NSRect(x: 0, y: 0, width: 800, height: 600),
@@ -52,17 +52,53 @@ struct CountdownNotificationControllerTests {
         let panel = try #require(notification.panel)
         let layer = try #require(panel.contentView?.layer)
         // Submit directly so the checks do not depend on main-actor scheduling.
-        CountdownNotificationController.animateEntrance(layer, duration: 1)
-        let animation = try #require(layer.animation(forKey: "notificationEntrance") as? CABasicAnimation)
+        if isExit { layer.sublayerTransform = CATransform3DIdentity }
+        let target = CountdownNotificationController.scaleTransform(size: panel.frame.size,
+                                                                   scale: isExit ? 3 : 1)
+        let curve: CAMediaTimingFunctionName = isExit ? .easeIn : .easeOut
+        CountdownNotificationController.animateScale(layer, to: target, duration: 1, curve: curve)
+        let animation = try #require(layer.animation(forKey: "notificationScale") as? CABasicAnimation)
         let start = try #require(animation.fromValue as? CATransform3D)
         let end = try #require(animation.toValue as? CATransform3D)
-        #expect(start.m11 == 0.9)
-        #expect(CATransform3DIsIdentity(end))
+        #expect(start.m11 == (isExit ? 1 : 0.9))
+        #expect(CATransform3DEqualToTransform(end, target))
         #expect(animation.duration == 1)
-        #expect(animation.timingFunction == CAMediaTimingFunction(name: .easeOut))
-        #expect(CATransform3DIsIdentity(layer.sublayerTransform))
+        #expect(animation.timingFunction == CAMediaTimingFunction(name: curve))
+        #expect(CATransform3DEqualToTransform(layer.sublayerTransform, target))
         notification.dismiss()
-        #expect(layer.animation(forKey: "notificationEntrance") == nil)
+        #expect(layer.animation(forKey: "notificationScale") == nil)
+        #expect(!panel.isVisible)
+    }
+
+    @Test(arguments: [false, true], [0.0, 0.02])
+    func exitGrowsToTripleSizeUnlessMotionIsDisabled(reduceMotion: Bool,
+                                                    fadeDuration: Double) async throws {
+        let notification = CountdownNotificationController(fadeDuration: fadeDuration,
+                                                          reduceMotion: { reduceMotion })
+        defer { notification.dismiss() }
+        let content = NSView()
+        let size = NSSize(width: 400, height: 180)
+        notification.show(content: content, screenFrame: NSRect(x: -800, y: 100, width: 800, height: 600),
+                          size: size, duration: 0)
+        let panel = try #require(notification.panel)
+        let layer = try #require(panel.contentView?.layer)
+        let scales = !reduceMotion && fadeDuration > 0
+        let frame = panel.frame
+        #expect(content.frame.size == size)
+        #expect(content.frame.midX == panel.contentView?.bounds.midX)
+        #expect(content.frame.midY == panel.contentView?.bounds.midY)
+        #expect(frame.width == size.width * (scales ? 3 : 1))
+        #expect(frame.height == size.height * (scales ? 3 : 1))
+        for _ in 0..<100 {
+            if notification.panel == nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(notification.panel == nil)
+        #expect(layer.sublayerTransform.m11 == (scales ? 3 : 1))
+        #expect(layer.sublayerTransform.m22 == (scales ? 3 : 1))
+        #expect(layer.animation(forKey: "notificationScale") == nil)
+        #expect(panel.frame == frame)
+        #expect(panel.alphaValue == 0)
         #expect(!panel.isVisible)
     }
 

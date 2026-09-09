@@ -34,8 +34,10 @@ panel, countdown controller, scroll monitor, notification subscription, and
 `CountdownNotificationController`. The notification uses a separate, non-interactive panel. It
 starts transparent at the center of the countdown window's screen, fades in while
 its content grows from 90% to full size with an ease-out curve, waits for the
-configured duration, then fades out. The scale uses the fade-in duration and keeps
-the content centered without overshoot. Reduce Motion disables the scale effect. It does not move, change the
+configured duration, then grows to 300% with an ease-in curve as it fades out.
+Each scale effect uses the fade duration and keeps the content centered without
+overshoot. Transparent panel space prevents clipping during the outward scale.
+Reduce Motion disables both scale effects. It does not move, change the
 main window's mode, or save window placement. It shows whole minutes for the
 current timer or Pomodoro Focus period. At the start of Rest, it shows `REST`.
 No interval notifications occur during Rest. Notifications resume at the next Focus period.
