@@ -32,8 +32,10 @@ shared time. Mode folders contain presentation code, not separate countdown engi
 `AppDelegate` owns `CountdownWindowController`. The window controller owns the
 panel, countdown controller, scroll monitor, notification subscription, and
 `CountdownNotificationController`. The notification uses a separate, non-interactive panel. It
-starts transparent at the center of the countdown window's screen, fades in,
-waits for the configured duration, then fades out. It does not move, change the
+starts transparent at the center of the countdown window's screen, fades in while
+its content grows from 90% to full size with an ease-out curve, waits for the
+configured duration, then fades out. The scale uses the fade-in duration and keeps
+the content centered without overshoot. Reduce Motion disables the scale effect. It does not move, change the
 main window's mode, or save window placement. It shows whole minutes for the
 current timer or Pomodoro Focus period. At the start of Rest, it shows `REST`.
 No interval notifications occur during Rest. Notifications resume at the next Focus period.

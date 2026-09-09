@@ -46,7 +46,8 @@ update when a test moves. Suites are grouped by subject:
 The former standalone circle-transition check is covered by the discovered
 layout suite. That suite checks all modes and intermediate sizes. Notification tests
 check text-only rendering, zero initial opacity, fixed screen-center placement,
-fade completion, and cancellation.
+fade completion, centered entrance scaling, Reduce Motion, zero-duration entrance,
+and cancellation.
 Other view suites check sector colors, labels, pause state, and restart images.
 Tests use temporary state directories and injected clocks; they must not alter
 the user's saved timer state.
