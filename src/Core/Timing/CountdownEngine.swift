@@ -60,9 +60,11 @@ final class CountdownEngine: ObservableObject {
             pomodoro.followTimer(remaining: timer.remaining, at: date)
         } else if timer.remaining == 0 {
             // An empty timer has no stage to resume. The active Pomodoro view starts a cycle.
-            pomodoro.reset()
-            pomodoro.setClockEnabled(true, at: date)
+            pomodoro.reset(at: date)
             pomodoro.setSharedPaused(isPaused, at: date)
+            projectPomodoro(at: date)
+        } else {
+            pomodoro.reserveMinimumRest(at: date)
             projectPomodoro(at: date)
         }
         timer.save()

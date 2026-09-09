@@ -52,8 +52,12 @@ spent rest separately so future stages retain the rest allocation.
 Pomodoro repeats only while selected. Selecting Pomodoro with an empty timer starts
 a new cycle. Selecting Timer or Countdown caps the total at 60 minutes by reducing
 focus and preserving the active rest. This reduction remains after switching back.
-A view change otherwise preserves remaining time and pause state. Model change
-signals pass through the engine and controller to the view.
+Entering Pomodoro reserves at least five minutes of active rest. It reduces focus
+first and increases the total only when less than five minutes remain. Rest edits
+also leave at least five minutes from the later of the focus end and the current
+clock reference. Normal countdown can still finish rest. A view change otherwise
+preserves remaining time and pause state. Model change signals pass through the
+engine and controller to the view.
 
 The view update task samples time every 100 ms. Timer and Pomodoro updates use
 absolute dates. Scroll input uses uptime for gesture timing. Timer and Countdown

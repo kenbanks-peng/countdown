@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct SharedTimerValuesTests {
     @Test(arguments: [CountdownMode.timer, .countdown])
-    func editsRemoveAndRestoreFocusWithoutRestoringSpentRest(view: CountdownMode) {
+    func editsRemoveAndRestoreFocusWithMinimumRestOnConversion(view: CountdownMode) {
         let session = ClockTestSession()
         defer { session.close() }
         session.now = Date(timeIntervalSince1970: 1_699_999_800)
@@ -25,18 +25,18 @@ struct SharedTimerValuesTests {
         controller.update()
         controller.selectMode(.pomodoro)
         #expect(controller.pomodoro.focusRemaining == 0)
-        #expect(controller.pomodoro.restRemaining == 120)
+        #expect(controller.pomodoro.restRemaining == 300)
         controller.selectMode(view)
         controller.adjustTimerDuration(steps: 1)
         let total = controller.timer.remaining
         controller.selectMode(.pomodoro)
-        #expect(controller.pomodoro.focusRemaining == total - 120)
-        #expect(controller.pomodoro.restRemaining == 120)
+        #expect(controller.pomodoro.focusRemaining == total - 300)
+        #expect(controller.pomodoro.restRemaining == 300)
         #expect(controller.pomodoro.restDuration == 300)
         controller.save()
         let restored = session.makeController()
-        #expect(restored.pomodoro.focusRemaining == total - 120)
-        #expect(restored.pomodoro.restRemaining == 120)
+        #expect(restored.pomodoro.focusRemaining == total - 300)
+        #expect(restored.pomodoro.restRemaining == 300)
         #expect(restored.timer.remaining == total)
         session.now += total
         restored.update()
@@ -89,7 +89,8 @@ struct SharedTimerValuesTests {
         #expect(restored.timer.remaining == remaining)
         restored.selectMode(.pomodoro)
         #expect(restored.pomodoro.focusRemaining == 0)
-        #expect(restored.pomodoro.restRemaining == remaining)
+        #expect(restored.pomodoro.restRemaining == 300)
+        #expect(restored.timer.remaining == 300)
         #expect(restored.engine.isPaused == paused)
     }
 

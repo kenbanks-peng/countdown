@@ -50,16 +50,47 @@ struct PomodoroClockSchedule: Codable {
             minimum = reference.addingTimeInterval(300)
             maximum = reference.addingTimeInterval(3_600 - restDuration)
         case .rest:
-            minimum = focusEnd.addingTimeInterval(300)
+            minimum = max(focusEnd, pausedAt ?? sampledAt).addingTimeInterval(300)
             let reference = max(stageStart, pausedAt ?? sampledAt)
             maximum = min(reference.addingTimeInterval(3_600), focusEnd.addingTimeInterval(3_300 - (restCarry ?? 0)))
         case .longRest:
-            minimum = focusEnd.addingTimeInterval(300)
+            minimum = max(focusEnd, pausedAt ?? sampledAt).addingTimeInterval(300)
             maximum = focusEnd.addingTimeInterval(3_600 - (longRestCarry ?? 0))
         }
+        if phase != .focus {
+            let origin = Calendar.current.startOfDay(for: minimum)
+            let firstMark = origin + ceil(minimum.timeIntervalSince(origin) / 300) * 300
+            if (steps == nil ? minimum : firstMark) > maximum {
+                // Spent rest can fill the allocation limit. Start its allocation
+                // at the current reference, without advancing the stage. Keep
+                // the selected endpoint and the other rest setting.
+                let reference = max(focusEnd, pausedAt ?? sampledAt)
+                let focus = focusDuration
+                let shortRest = restDuration
+                let longRest = longRestDuration
+                let selectedEnd = end(for: phase)
+                stageStart = reference - focus
+                focusEnd = reference
+                restEnd = phase == .rest ? max(reference, selectedEnd) : reference + shortRest
+                longRestEnd = phase == .longRest ? max(reference, selectedEnd) : reference + longRest
+                restCarry = nil
+                longRestCarry = nil
+                edit(phase, steps: steps, amount: amount)
+                return
+            }
+        }
         let end = end(for: phase)
-        let target = steps.map { ClockBoundary.move(end, steps: $0, minimum: minimum, maximum: maximum) }
-            ?? min(maximum, max(minimum, end.addingTimeInterval(amount)))
+        let target: Date
+        if let steps {
+            // An elapsed rest can already be below the edit minimum. Enforce
+            // that minimum even when the requested direction is downward.
+            let requested = ClockBoundary.move(end, steps: steps, minimum: minimum, maximum: maximum)
+            target = requested < minimum
+                ? ClockBoundary.move(minimum - 300, steps: 1, minimum: minimum, maximum: maximum)
+                : requested
+        } else {
+            target = min(maximum, max(minimum, end.addingTimeInterval(amount)))
+        }
         switch phase {
         case .focus:
             let shift = target.timeIntervalSince(focusEnd)

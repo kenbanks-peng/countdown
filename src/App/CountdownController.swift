@@ -133,9 +133,11 @@ final class CountdownController: ObservableObject {
             return
         }
         guard timer.status != .empty || steps > 0 else { return }
-        // Countdown has a relative face: its marks measure remaining time.
+        // Use the displayed minute to select the next relative mark. Otherwise,
+        // elapsed fractions of a second make upward scrolls repeat the same mark.
         let delta = CountdownAdjustment.delta(
-            steps: steps, end: timer.remaining, minimum: 0, maximum: TimerModel.maximumDuration
+            steps: steps, end: timer.remaining, minimum: 0, maximum: TimerModel.maximumDuration,
+            from: Double(timer.remainingMinutes) * 60
         )
         guard steps > 0 ? delta > 0 : delta < 0 else { return }
         timer.adjustDuration(by: delta, at: date)

@@ -194,6 +194,26 @@ struct PomodoroModel {
         syncClockProgress()
     }
 
+    /// Reserve five minutes of rest when entering Pomodoro. Reuse focus time
+    /// first; only a total below five minutes needs to grow.
+    mutating func reserveMinimumRest(at now: Date) {
+        guard var schedule = clockSchedule, restRemaining < 300 else { return }
+        let reference = schedule.pausedAt ?? now
+        let focus = max(0, focusRemaining + restRemaining - 300)
+        let shortRest = max(300, restDuration)
+        let longRest = max(300, longRestDuration)
+        schedule.stageStart = reference
+        schedule.focusEnd = reference + focus
+        schedule.restEnd = schedule.focusEnd + (restPhase == .rest ? 300 : shortRest)
+        schedule.longRestEnd = schedule.focusEnd + (restPhase == .longRest ? 300 : longRest)
+        schedule.restCarry = restPhase == .rest ? shortRest - 300 : nil
+        schedule.longRestCarry = restPhase == .longRest ? longRest - 300 : nil
+        schedule.focusCompleted = focus == 0
+        schedule.sampledAt = now
+        clockSchedule = schedule
+        syncClockProgress()
+    }
+
     mutating func adjustDuration(_ phase: Phase, by amount: TimeInterval, at now: Date) {
         guard amount.isFinite else { return }
         update(at: now)

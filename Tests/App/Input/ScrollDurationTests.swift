@@ -9,14 +9,39 @@ struct ScrollDurationTests {
         let session = ScrollTestSession()
         defer { session.close() }
         session.controller.selectMode(.countdown)
-        for _ in 1...4 {
+        for step in 1...4 {
             session.now += 0.1
             try session.scroll(angle: 270, delta: precise ? 12 : 1, after: 0.1, precise: precise)
-            #expect(session.controller.timer.remaining == 300)
+            #expect(session.controller.timer.remaining == Double(step * 300))
         }
-        session.now += 0.1
-        try session.scroll(angle: 270, delta: precise ? -12 : -1, after: 0.1, precise: precise)
-        #expect(session.controller.timer.remaining == 0)
+        for step in (0...3).reversed() {
+            session.now += 0.1
+            try session.scroll(angle: 270, delta: precise ? -12 : -1, after: 0.1, precise: precise)
+            #expect(session.controller.timer.remaining == Double(step * 300))
+        }
+    }
+
+    @Test(arguments: [0.1, 8.5664880275726, 59.9, 60, 73.5], [false, true])
+    func countdownScrollUsesDisplayedMinutesAfterElapsedTime(elapsed: TimeInterval, paused: Bool) throws {
+        for direction: Int32 in [-1, 1] {
+            let session = ScrollTestSession()
+            defer { session.close() }
+            let controller = session.controller
+            controller.selectMode(.countdown)
+            controller.adjustTimerDuration(by: 600)
+            session.now += elapsed
+            controller.update()
+            #expect(controller.timer.remainingMinutes == (elapsed < 60 ? 10 : 9))
+            if paused {
+                controller.toggleRunning()
+                session.now += 120
+            }
+            try session.scroll(angle: 270, delta: direction)
+            let expected: TimeInterval = direction < 0 ? 300 : (elapsed < 60 ? 900 : 600)
+            #expect(controller.timer.remaining == expected)
+            #expect(controller.engine.isPaused == paused)
+            #expect(controller.timer.remaining == controller.pomodoro.focusRemaining + controller.pomodoro.restRemaining)
+        }
     }
 
     @Test
