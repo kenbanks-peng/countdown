@@ -6,6 +6,32 @@ import Vision
 
 @MainActor
 struct CountdownViewTests {
+    @Test(arguments: [CountdownMode.timer, .countdown])
+    func compactViewDoesNotExpandDuringFinalMinute(mode: CountdownMode) async throws {
+        let session = ClockTestSession(clock: mode == .timer)
+        defer { session.close() }
+        let controller = session.controller
+        controller.adjustTimerDuration(by: 61)
+        var presentationChanges = 0
+        let hosting = NSHostingView(rootView: CountdownView(
+            countdown: controller, isCompact: true,
+            changePresentation: { presentationChanges += 1 }
+        ))
+        _ = try render(hosting, side: 32)
+
+        for remaining in [60.0, 59, 1, 0] {
+            session.now += controller.timer.remaining - remaining
+            // Let the view's update task advance the timer, not the test.
+            for _ in 0..<100 {
+                if controller.timer.remaining == remaining { break }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            #expect(controller.timer.remaining == remaining)
+            #expect(presentationChanges == 0)
+        }
+        withExtendedLifetime(hosting) {}
+    }
+
     @Test(arguments: CountdownMode.allCases, [false, true])
     func pauseIconAppearsAndDisappearsInEveryMode(mode: CountdownMode, isCompact: Bool) throws {
         let session = ClockTestSession()

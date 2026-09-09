@@ -88,7 +88,6 @@ struct CountdownView: View {
             while !Task.isCancelled {
                 countdown.update()
                 currentTime = countdown.currentTime
-                expandAtOneMinuteRemaining()
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
@@ -138,11 +137,5 @@ struct CountdownView: View {
         } else {
             changePresentation()
         }
-    }
-
-    private func expandAtOneMinuteRemaining() {
-        guard isCompact, countdown.mode.usesTimer, countdown.timer.status == .active,
-              countdown.timer.remaining > 0, countdown.timer.remaining <= 60 else { return }
-        changePresentation()
     }
 }
