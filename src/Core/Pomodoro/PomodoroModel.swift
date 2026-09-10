@@ -282,6 +282,23 @@ struct PomodoroModel {
         }
     }
 
+    /// Restart the selected stage with full allocations and no spent rest.
+    mutating func restartStage(_ stage: Int, at now: Date) {
+        guard (1...focusPeriodsPerCycle).contains(stage) else { return }
+        focusDuration = clockSchedule?.nextStageFocusDuration ?? focusDuration
+        if focusDuration == 0 { focusDuration = defaultDurations.focus }
+        self.stage = stage
+        resetStage()
+        clockSchedule = PomodoroClockSchedule(
+            stageStart: now, focusEnd: now + focusDuration,
+            restEnd: now + focusDuration + restDuration,
+            longRestEnd: now + focusDuration + longRestDuration,
+            sampledAt: now, pausedAt: nil, stage: stage, focusCompleted: false
+        )
+        status = .running
+        lastUpdate = now
+    }
+
     mutating func reset() {
         focusDuration = defaultDurations.focus
         restDuration = defaultDurations.rest

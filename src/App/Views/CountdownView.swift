@@ -61,6 +61,16 @@ struct CountdownView: View {
         .accessibilityValue(countdown.mode == .pomodoro ? countdown.pomodoro.progressDescription : "")
         .accessibilityHint("Click to use \(isCompact ? "normal" : "compact") view. Use the right-click menu to \(countdown.controlLabel.lowercased()).")
         .help("Click to change view. Use the right-click menu for timer controls. Scroll to align to five-minute marks; hold Option for one-minute changes.")
+        .overlay {
+            if countdown.mode == .pomodoro && !isCompact {
+                PomodoroCycleControls(model: countdown.pomodoro) { stage in
+                    guard allowsClick() else { return }
+                    countdown.restartPomodoroStage(stage)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipShape(Circle().inset(by: CountdownAppearance.circleInset))
+            }
+        }
         .contextMenu {
             Picker("View", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
                 ForEach(CountdownMode.allCases, id: \.self) { mode in
@@ -124,7 +134,7 @@ struct CountdownView: View {
         case .timer, .countdown:
             TimerView(model: countdown.timer, isCompact: isCompact, clockDate: clockDate)
         case .pomodoro:
-            PomodoroView(model: countdown.pomodoro, isCompact: isCompact, clockDate: clockDate)
+            PomodoroView(model: countdown.pomodoro, isCompact: isCompact, clockDate: clockDate, showsSessionDots: false)
         }
     }
 

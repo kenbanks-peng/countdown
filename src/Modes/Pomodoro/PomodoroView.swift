@@ -32,15 +32,7 @@ struct PomodoroView: View {
             if !isCompact && showsSessionDots {
                 HStack(spacing: model.focusPeriodsPerCycle > 6 ? 2 : 6) {
                     ForEach(0..<model.focusPeriodsPerCycle, id: \.self) { index in
-                        ZStack {
-                            Circle().strokeBorder(.white, lineWidth: 1)
-                            if dotStates[index] == .completed {
-                                Circle().fill(.white)
-                            } else if dotStates[index] == .current {
-                                Circle().fill(.white).padding(2.5)
-                            }
-                        }
-                        .frame(width: 8, height: 8)
+                        PomodoroCycleIndicator(state: dotStates[index])
                     }
                 }
                 .fixedSize()
@@ -54,5 +46,43 @@ struct PomodoroView: View {
         }
         .clipShape(Circle())
         .padding(isCompact ? 0 : CountdownAppearance.circleInset)
+    }
+}
+
+struct PomodoroCycleIndicator: View {
+    let state: PomodoroModel.DotState
+
+    var body: some View {
+        ZStack {
+            Circle().strokeBorder(.white, lineWidth: 1)
+            if state == .completed {
+                Circle().fill(.white)
+            } else if state == .current {
+                Circle().fill(.white).padding(2.5)
+            }
+        }
+        .frame(width: 8, height: 8)
+    }
+}
+
+struct PomodoroCycleControls: View {
+    let model: PomodoroModel
+    let selectStage: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: model.focusPeriodsPerCycle > 6 ? 0 : 4) {
+            ForEach(0..<model.focusPeriodsPerCycle, id: \.self) { index in
+                Button { selectStage(index + 1) } label: {
+                    PomodoroCycleIndicator(state: model.dotStates[index])
+                        .padding(1)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start Pomodoro cycle \(index + 1)")
+                .help("Start work at cycle \(index + 1).")
+            }
+        }
+        .fixedSize()
+        .offset(y: 32)
     }
 }

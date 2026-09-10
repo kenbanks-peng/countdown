@@ -58,6 +58,9 @@ capture their repeat duration after an explicit edit or on mode entry. Elapsed
 time, pause/resume, and inactive projections do not change that duration. The
 timer session stores it separately from current progress. At timeout, the selected
 timer view starts that duration again from the update time when Auto Repeat is on.
+Clicking a Pomodoro cycle indicator starts work at that stage with full allocations,
+resumes the shared countdown, and sends a WORK notification when notifications are enabled.
+It does not change the window presentation. Earlier indicators show as completed.
 Pomodoro always advances through its stages. After the final long rest, it returns
 to the first stage only when Auto Repeat is on; otherwise it stops with zero time
 and pauses the engine. Resume starts a new cycle. Only the selected view repeats.
