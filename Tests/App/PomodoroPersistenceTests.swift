@@ -40,7 +40,7 @@ struct PomodoroPersistenceTests {
     }
 
     @Test(arguments: [false, true])
-    func resetAfterRestartUsesConfiguredDefaults(paused: Bool) {
+    func restartRetainsEditedDurationsAndCycleProgress(paused: Bool) {
         let session = Session()
         defer { session.removeState() }
         let configuration = CountdownConfiguration(
@@ -62,17 +62,12 @@ struct PomodoroPersistenceTests {
         #expect(restored.pomodoro.focusDuration == 1_500)
         #expect(restored.pomodoro.restDuration == 900)
         #expect(restored.pomodoro.longRestDuration == 1_500)
-        restored.resetPomodoro()
-
-        // Reset saves the new schedule without a separate save command.
-        let reloaded = session.makeController(configuration: configuration)
-        #expect(reloaded.pomodoro.stage == 1)
-        #expect(reloaded.pomodoro.focusPeriodsPerCycle == 3)
-        #expect(reloaded.pomodoro.completedFocusPeriods == 0)
-        #expect(reloaded.pomodoro.focusRemaining == 1_200)
-        #expect(reloaded.pomodoro.restRemaining == 600)
-        #expect(reloaded.pomodoro.longRestDuration == 1_200)
-        #expect(reloaded.engine.isPaused == paused)
+        #expect(restored.pomodoro.stage == 3)
+        #expect(restored.pomodoro.focusPeriodsPerCycle == 3)
+        #expect(restored.pomodoro.completedFocusPeriods == 2)
+        #expect(restored.pomodoro.focusRemaining == controller.pomodoro.focusRemaining)
+        #expect(restored.pomodoro.restRemaining == controller.pomodoro.restRemaining)
+        #expect(restored.engine.isPaused == paused)
     }
 
     @Test(arguments: [
@@ -151,12 +146,13 @@ struct PomodoroPersistenceTests {
         #expect(restored.pomodoro.restDuration == (focusAtMinimum ? 3_300 : 300))
         restored.adjustPomodoroDuration(minimum, by: -60)
         restored.adjustPomodoroDuration(maximum, by: 60)
-        restored.resetPomodoro()
         let reloaded = session.makeController()
         #expect(reloaded.pomodoro.status == .running)
         #expect(reloaded.pomodoro.stage == 1)
-        #expect(reloaded.pomodoro.focusRemaining == 1_500)
-        #expect(reloaded.pomodoro.restRemaining == 300)
+        #expect(reloaded.pomodoro.focusDuration == (focusAtMinimum ? 300 : 3_300))
+        #expect(reloaded.pomodoro.restDuration == (focusAtMinimum ? 3_300 : 300))
+        #expect(reloaded.pomodoro.focusRemaining == restored.pomodoro.focusRemaining)
+        #expect(reloaded.pomodoro.restRemaining == restored.pomodoro.restRemaining)
     }
 
     @Test(arguments: [true, false])

@@ -126,12 +126,4 @@ final class CountdownEngine: ObservableObject {
         pomodoro.autoAlign(at: date)
         projectPomodoro(at: date)
     }
-
-    /// Reset the cycle without changing the shared run state.
-    func resetPomodoro() {
-        let date = now()
-        pomodoro.reset(at: date)
-        pomodoro.setSharedPaused(isPaused, at: date)
-        projectPomodoro(at: date)
-    }
 }

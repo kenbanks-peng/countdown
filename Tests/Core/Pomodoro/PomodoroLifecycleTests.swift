@@ -38,9 +38,6 @@ struct PomodoroLifecycleTests {
         #expect(timer.pomodoro.stage == 4)
         #expect(timer.pomodoro.restRemaining == 900)
         #expect(session.sounds == 0)
-        timer.resetPomodoro()
-        #expect(timer.pomodoro.status == .running)
-        #expect(timer.pomodoro.focusRemaining == 1_500)
     }
 
     @Test(arguments: [600.0, 1_500, 1_620, 1_800, 3_900])
@@ -57,8 +54,7 @@ struct PomodoroLifecycleTests {
         #expect(timer.pomodoro.restRemaining == max(0, 300 - max(0, stageElapsed - 1_500)))
         #expect(!timer.engine.isPaused)
         session.now += 1_200
-        timer.togglePomodoroRunning()
-        timer.resetPomodoro() // Hidden UI commands do not change the core.
+        timer.togglePomodoroRunning() // Hidden UI commands do not change the core.
         timer.update()
         let expired = stageElapsed + 1_200 >= 1_800
         #expect(timer.pomodoro.stage == Int(elapsed / 1_800) + 1)
@@ -100,28 +96,6 @@ struct PomodoroLifecycleTests {
         #expect(timer.timer.remaining == remaining - 60)
         #expect(timer.pomodoro.focusRemaining == max(0, focus - 60))
         #expect(timer.pomodoro.restRemaining == rest - (focus == 0 ? 60 : 0))
-        #expect(session.sounds == 0)
-    }
-
-    @Test(arguments: [0.0, 600, 1_620, 3_900], [false, true])
-    func resetKeepsTheCoreRunState(elapsed: TimeInterval, pause: Bool) {
-        let session = Session()
-        defer { session.removeState() }
-        let timer = session.timer
-        timer.selectMode(.pomodoro)
-        session.now += elapsed
-        timer.update()
-        if pause { timer.toggleRunning() }
-        timer.resetPomodoro()
-        #expect(timer.pomodoro.status == (pause ? .paused : .running))
-        // Reset preserves the configured duration at any clock time.
-        let resetFocus: TimeInterval = 1_500
-        #expect(timer.pomodoro.focusRemaining == resetFocus)
-        #expect(timer.pomodoro.restRemaining == 300)
-        #expect(timer.engine.isPaused == pause)
-        session.now += 60
-        timer.update()
-        #expect(timer.pomodoro.focusRemaining == (pause ? resetFocus : resetFocus - 60))
         #expect(session.sounds == 0)
     }
 

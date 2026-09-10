@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct PomodoroDurationTests {
     @Test(arguments: [false, true])
-    func resetRestoresDefaultsAndFirstCycleWithoutChangingPauseState(paused: Bool) {
+    func durationEditsPreserveStageAndPauseState(paused: Bool) {
         let session = Session()
         defer { session.removeState() }
         let timer = session.timer
@@ -20,24 +20,21 @@ struct PomodoroDurationTests {
         #expect(timer.pomodoro.restDuration == 600)
         timer.adjustPomodoroDuration(.longRest, steps: 1)
         #expect(timer.pomodoro.longRestDuration == 1_200)
-        timer.resetPomodoro()
-        #expect(timer.pomodoro.stage == 1)
-        #expect(timer.pomodoro.completedFocusPeriods == 0)
-        #expect(timer.pomodoro.focusRemaining == 1_500)
-        #expect(timer.pomodoro.restRemaining == 300)
-        #expect(timer.pomodoro.clockSchedule?.focusDuration == 1_500)
-        #expect(timer.pomodoro.clockSchedule?.restDuration == 300)
-        #expect(timer.pomodoro.clockSchedule?.longRestDuration == 900)
+        #expect(timer.pomodoro.stage == 4)
+        #expect(timer.pomodoro.completedFocusPeriods == 3)
+        #expect(timer.pomodoro.clockSchedule?.focusDuration == 1_200)
+        #expect(timer.pomodoro.clockSchedule?.restDuration == 600)
+        #expect(timer.pomodoro.clockSchedule?.longRestDuration == 1_200)
         #expect(timer.engine.isPaused == paused)
         #expect(timer.pomodoro.status == (paused ? .paused : .running))
         timer.selectMode(.countdown)
         timer.adjustPomodoroDuration(.focus, steps: 1)
-        #expect(timer.pomodoro.focusDuration == 1_500)
+        #expect(timer.pomodoro.focusDuration == 1_200)
         #expect(session.sounds == 0)
     }
 
     @Test(arguments: [false, true], [25, 1, 59])
-    func resetPreservesDefaultDurationsWithinLimits(paused: Bool, focusMinutes: Int) throws {
+    func startingCyclePreservesDefaultDurationsWithinLimits(paused: Bool, focusMinutes: Int) throws {
         let session = Session()
         defer { session.removeState() }
         session.configuration = CountdownConfiguration(
@@ -46,10 +43,9 @@ struct PomodoroDurationTests {
             pomodoroLongRestMinutes: focusMinutes == 25 ? 15 : 1
         )
         let timer = session.timer
-        timer.selectMode(.pomodoro)
         if paused { timer.toggleRunning() }
         session.now += 137.5
-        timer.resetPomodoro()
+        timer.selectMode(.pomodoro)
         let schedule = try #require(timer.pomodoro.clockSchedule)
         let expectedFocus: TimeInterval = focusMinutes == 25 ? 1_500 : (focusMinutes == 1 ? 300 : 3_300)
         #expect(schedule.focusEnd == session.now + expectedFocus)

@@ -191,13 +191,6 @@ final class CountdownController: ObservableObject {
         saveSettings()
     }
 
-    func resetPomodoro() {
-        guard mode == .pomodoro else { return }
-        update()
-        engine.resetPomodoro()
-        saveSettings()
-    }
-
     func update(at date: Date? = nil) {
         let previousElapsed = pomodoro.elapsedTime
         let previousFocus = pomodoro.focusRemaining

@@ -70,9 +70,6 @@ struct CountdownView: View {
             Button(countdown.controlLabel, action: countdown.toggleRunning)
             Button("Align", action: countdown.autoAlign)
                 .disabled(!countdown.canAutoAlign)
-            if !countdown.mode.usesTimer {
-                Button("Reset", action: countdown.resetPomodoro)
-            }
             Divider()
             if countdown.mode.usesTimer {
                 TimerContextMenu(model: countdown.timer)
