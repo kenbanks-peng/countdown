@@ -67,20 +67,28 @@ struct CountdownView: View {
             }
             .pickerStyle(.inline)
             Divider()
-            Button(countdown.controlLabel, action: countdown.toggleRunning)
-            Button("Align", action: countdown.autoAlign)
-                .disabled(!countdown.canAutoAlign)
-            Divider()
+            Toggle("Pause", isOn: Binding(
+                get: { countdown.engine.isPaused },
+                set: { paused in
+                    if paused != countdown.engine.isPaused {
+                        countdown.toggleRunning()
+                    }
+                }
+            ))
+            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
+            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
             if countdown.mode.usesTimer {
                 TimerContextMenu(model: countdown.timer)
             }
-            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
-            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
+            Divider()
+            Button("Align", action: countdown.autoAlign)
+                .disabled(!countdown.canAutoAlign)
             if countdown.testEnabled {
+                Divider()
                 Button("Test", action: countdown.testNotification)
             }
             Divider()
-            Button("Quit Countdown") {
+            Button("Quit") {
                 NSApplication.shared.terminate(nil)
             }
         }
