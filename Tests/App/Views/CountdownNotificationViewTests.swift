@@ -7,7 +7,7 @@ import Vision
 @MainActor
 struct CountdownNotificationViewTests {
     @Test(arguments: [0.0, 1_500, 1_560, 1_800, 6_900, 7_200, 8_100])
-    func pomodoroNotificationShowsFocusMinutesOrRest(elapsed: TimeInterval) throws {
+    func pomodoroNotificationShowsWorkOrRest(elapsed: TimeInterval) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         // Start on a clock mark so both displays have the same phase times.
@@ -29,7 +29,9 @@ struct CountdownNotificationViewTests {
         let text = try recognizedText(bitmap).joined(separator: " ")
         let model = controller.pomodoro
         if model.focusRemaining > 0 {
-            try expectNotificationMinutes(bitmap, remaining: model.focusRemaining, fontVariations: variations)
+            #expect(text == "WORK")
+            try expectNotificationMinutes(bitmap, remaining: model.focusRemaining,
+                                          fontVariations: variations, isPomodoro: true)
         } else {
             #expect(text == "REST")
             try expectNotificationMinutes(bitmap, remaining: 0, fontVariations: variations, isRest: true)
@@ -107,16 +109,16 @@ struct CountdownNotificationViewTests {
         ))
         let remaining = mode.usesTimer ? controller.timer.remaining : controller.pomodoro.focusRemaining
         try expectNotificationMinutes(render(hosting, side: 512), remaining: remaining,
-                                      fontName: fontName, fontVariations: variations)
+                                      fontName: fontName, fontVariations: variations, isPomodoro: mode == .pomodoro)
     }
 
     // Vision can omit isolated single digits. Compare the complete rendered image instead.
     private func expectNotificationMinutes(_ bitmap: NSBitmapImageRep, remaining: TimeInterval,
                                        fontSize: Double = 144, fontName: String = "",
                                        fontVariations: NotificationFontVariations = NotificationFontVariations(),
-                                       isRest: Bool = false) throws {
+                                       isRest: Bool = false, isPomodoro: Bool = false) throws {
         let expected = try render(NSHostingView(rootView: CountdownNotificationOverlay(
-            remaining: remaining, isRest: isRest, fontSizePt: fontSize,
+            remaining: remaining, isRest: isRest, isPomodoro: isPomodoro, fontSizePt: fontSize,
             fontName: fontName, fontVariations: fontVariations
         )), side: 512)
         for y in 0..<bitmap.pixelsHigh {
@@ -203,6 +205,19 @@ struct CountdownNotificationViewTests {
         }
         // The existing 70% black shadow alone cannot provide this contrast on white.
         #expect(darkPixels > 20)
+    }
+
+    @Test(arguments: [72.0, 144, 200])
+    func phaseLabelsUseEightyPercentOfNumberFontSize(fontSize: Double) {
+        let number = CountdownNotificationOverlay(remaining: 600, fontSizePt: fontSize)
+        let work = CountdownNotificationOverlay(remaining: 600, isPomodoro: true, fontSizePt: fontSize)
+        let rest = CountdownNotificationOverlay(remaining: 0, isRest: true, isPomodoro: true, fontSizePt: fontSize)
+        #expect(number.label == "10")
+        #expect(work.label == "WORK")
+        #expect(rest.label == "REST")
+        #expect(number.effectiveFontSizePt == CGFloat(fontSize))
+        #expect(work.effectiveFontSizePt == CGFloat(fontSize) * 0.8)
+        #expect(rest.effectiveFontSizePt == CGFloat(fontSize) * 0.8)
     }
 
     @Test

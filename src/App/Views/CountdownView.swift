@@ -67,6 +67,14 @@ struct CountdownView: View {
             }
             .pickerStyle(.inline)
             Divider()
+            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
+            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
+            Button("Align", action: countdown.autoAlign)
+                .disabled(!countdown.canAutoAlign)
+            if countdown.mode.usesTimer {
+                TimerContextMenu(model: countdown.timer)
+            }
+            Divider()
             Toggle("Pause", isOn: Binding(
                 get: { countdown.engine.isPaused },
                 set: { paused in
@@ -75,14 +83,6 @@ struct CountdownView: View {
                     }
                 }
             ))
-            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
-            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
-            if countdown.mode.usesTimer {
-                TimerContextMenu(model: countdown.timer)
-            }
-            Divider()
-            Button("Align", action: countdown.autoAlign)
-                .disabled(!countdown.canAutoAlign)
             if countdown.testEnabled {
                 Divider()
                 Button("Test", action: countdown.testNotification)
@@ -112,6 +112,7 @@ struct CountdownView: View {
         return CountdownNotificationOverlay(
             remaining: model.focusRemaining,
             isRest: model.focusRemaining == 0,
+            isPomodoro: true,
             fontSizePt: notificationFontSizePt, fontName: notificationFont, fontVariations: notificationFontVariations
         )
     }

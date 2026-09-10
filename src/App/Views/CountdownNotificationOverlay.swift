@@ -1,10 +1,11 @@
 import CoreText
 import SwiftUI
 
-/// Remaining focus/timer minutes or REST, centered on a transparent surface.
+/// Timer minutes or a Pomodoro phase, centered on a transparent surface.
 struct CountdownNotificationOverlay: View {
     let remaining: TimeInterval
     var isRest = false
+    var isPomodoro = false
     var fontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt
     var fontName = ""
     var fontVariations = NotificationFontVariations()
@@ -13,12 +14,20 @@ struct CountdownNotificationOverlay: View {
         String(Int(ceil(max(0, remaining) / 60)))
     }
 
+    var label: String {
+        isRest ? "REST" : isPomodoro ? "WORK" : Self.timeLabel(remaining)
+    }
+
+    var effectiveFontSizePt: CGFloat {
+        fontSizePt * (isRest || isPomodoro ? 0.8 : 1)
+    }
+
     var body: some View {
         Canvas { context, size in
-            // The label contains only ASCII digits or REST. Draw its glyphs directly:
+            // The label contains only ASCII digits or phase text. Draw its glyphs directly:
             // attributed text can reuse a named font's previously cached weight.
-            let font = NotificationFont.make(name: fontName, size: fontSizePt, variations: fontVariations)
-            let characters = Array((isRest ? "REST" : Self.timeLabel(remaining)).utf16)
+            let font = NotificationFont.make(name: fontName, size: effectiveFontSizePt, variations: fontVariations)
+            let characters = Array(label.utf16)
             var glyphs = [CGGlyph](repeating: 0, count: characters.count)
             CTFontGetGlyphsForCharacters(font, characters, &glyphs, characters.count)
             var advances = [CGSize](repeating: .zero, count: glyphs.count)
@@ -46,6 +55,6 @@ struct CountdownNotificationOverlay: View {
         }
         .shadow(color: .black.opacity(0.7), radius: 2)
         .allowsHitTesting(false)
-        .accessibilityLabel(isRest ? "REST" : "\(Self.timeLabel(remaining)) minutes remaining")
+        .accessibilityLabel(isRest || isPomodoro ? label : "\(label) minutes remaining")
     }
 }
