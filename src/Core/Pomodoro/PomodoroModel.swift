@@ -132,7 +132,7 @@ struct PomodoroModel {
     }
 
     func canAutoAlign(at now: Date) -> Bool {
-        clockSchedule?.autoAlignedFocusEnd(at: now, restPhase: restPhase) != nil
+        clockSchedule?.autoAlignedRestEnd(at: now, restPhase: restPhase) != nil
     }
 
     mutating func autoAlign(at now: Date) {

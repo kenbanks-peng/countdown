@@ -42,27 +42,31 @@ struct PomodoroClockSchedule: Codable {
         }
     }
 
-    /// Switch between valid half-hour rest endpoints, leaving five minutes of focus.
-    func autoAlignedFocusEnd(at now: Date, restPhase: PomodoroModel.Phase,
-                             calendar: Calendar = .current) -> Date? {
-        guard !focusCompleted, focusEnd > (pausedAt ?? now) else { return nil }
-        let rest = end(for: restPhase).timeIntervalSince(focusEnd)
-        let minimum = now + 300 + rest
-        let maximum = now + 3_600 - restDuration + rest
-        guard let boundary = ClockBoundary.alignment(
-            from: end(for: restPhase), minimum: minimum, maximum: maximum, calendar: calendar
-        ) else { return nil }
-        return boundary - rest
+    /// Switch between the next two half-hour endpoints. Only the five-minute
+    /// rest minimum can exclude an endpoint; the current phase cannot.
+    func autoAlignedRestEnd(at now: Date, restPhase: PomodoroModel.Phase,
+                            calendar: Calendar = .current) -> Date? {
+        ClockBoundary.alignment(
+            from: end(for: restPhase), minimum: now + 300, maximum: now + 3_600, calendar: calendar
+        )
     }
 
     mutating func autoAlign(at now: Date, restPhase: PomodoroModel.Phase) {
-        guard let target = autoAlignedFocusEnd(at: now, restPhase: restPhase) else { return }
+        guard let target = autoAlignedRestEnd(at: now, restPhase: restPhase) else { return }
         nextStageFocusDuration = nextStageFocusDuration ?? focusDuration
-        let shift = target.timeIntervalSince(focusEnd)
-        focusEnd = target
-        restEnd += shift
-        longRestEnd += shift
+        let shortRest = restDuration
+        let longRest = longRestDuration
+        let reference = pausedAt ?? now
+        let remainingRest = end(for: restPhase).timeIntervalSince(max(reference, focusEnd))
+        let rest = min(target.timeIntervalSince(now), max(300, remainingRest))
+        focusEnd = target - rest
         stageStart = now
+        // Keep the inactive short-rest allocation within the one-hour clock.
+        restEnd = restPhase == .rest ? target : focusEnd + min(shortRest, 3_600 - focusDuration)
+        longRestEnd = restPhase == .longRest ? target : focusEnd + longRest
+        restCarry = nil
+        longRestCarry = nil
+        focusCompleted = focusEnd <= now
         sampledAt = now
         if pausedAt != nil { pausedAt = now }
     }

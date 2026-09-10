@@ -78,9 +78,12 @@ It selects the first valid :00 or :30 boundary. If that endpoint is already sele
 and a second boundary is valid, it selects the second instead. Repeated use switches
 between the two; a single valid boundary stays selected. Timer and Countdown leave
 at least five minutes, stay within one hour, keep the pause state, and save the new
-repeat duration. Pomodoro changes only the current focus so active rest ends at the
-selected boundary. It keeps both rest durations and leaves at least five minutes of focus. In Pomodoro,
-the command is disabled during rest or when the boundary exceeds the focus allocation limit.
+repeat duration. Pomodoro selects from the next two half-hour boundaries and excludes
+only endpoints less than five minutes away. Align also works during rest. It raises
+remaining active rest to at least five minutes, shortens it if necessary to fit the
+endpoint, and fills the time before rest with focus. Spent rest is cleared from the
+new allocation. The inactive short-rest allocation is capped to keep its focus-plus-rest
+total within one hour.
 A paused alignment uses the current wall time and stays paused; a later resume
 moves the endpoints by the pause duration. The schedule saves the prior focus
 allocation and restores it at the next stage. A manual focus edit replaces that

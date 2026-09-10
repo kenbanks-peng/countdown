@@ -47,7 +47,7 @@ struct PomodoroAutoAlignControllerTests {
     }
 
     @Test
-    func commandSettlesElapsedTimeBeforeCheckingFocus() throws {
+    func commandSettlesElapsedTimeAndAlignsDuringRest() throws {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = session.controller
@@ -55,8 +55,10 @@ struct PomodoroAutoAlignControllerTests {
         let schedule = try #require(controller.pomodoro.clockSchedule)
         session.now = schedule.focusEnd
         controller.autoAlign()
-        #expect(!controller.canAutoAlign)
-        #expect(controller.pomodoro.focusRemaining == 0)
-        #expect(controller.pomodoro.clockSchedule?.restEnd == schedule.restEnd)
+        #expect(controller.canAutoAlign)
+        #expect(controller.pomodoro.focusRemaining > 0)
+        #expect(controller.pomodoro.restRemaining == 300)
+        #expect(controller.pomodoro.clockSchedule?.restEnd != schedule.restEnd)
+        #expect(controller.timer.remaining == controller.pomodoro.focusRemaining + controller.pomodoro.restRemaining)
     }
 }

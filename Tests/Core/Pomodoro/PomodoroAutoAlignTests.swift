@@ -49,11 +49,12 @@ struct PomodoroAutoAlignTests {
 
     @Test(arguments: [0.0, 0.25])
     func fiveMinuteMinimumIsInclusiveButFractionsDoNotRoundDown(fraction: TimeInterval) {
-        let now = date(minute: 20) + fraction
+        let now = date(minute: 25) + fraction
         var model = model(at: now)
         model.autoAlign(at: now)
         #expect(model.clockSchedule?.restEnd == (fraction == 0 ? date(minute: 30) : date(hour: 11, minute: 0)))
-        #expect(model.focusRemaining >= 300)
+        #expect(model.focusRemaining >= 0)
+        #expect(model.restRemaining == 300)
     }
 
     @Test
@@ -67,12 +68,12 @@ struct PomodoroAutoAlignTests {
 
     @Test
     func finalStageUsesLongRestAndRestoresFocusOnRepeat() throws {
-        let now = date(hour: 23, minute: 58)
+        let now = date(hour: 23, minute: 2)
         var model = model(at: now, stage: 4)
         model.autoAlign(at: now)
         let schedule = try #require(model.clockSchedule)
-        #expect(schedule.longRestEnd == date(hour: 23, minute: 30) + 3_600)
-        #expect(model.focusRemaining == 12 * 60)
+        #expect(schedule.longRestEnd == date(hour: 23, minute: 30))
+        #expect(model.focusRemaining == 8 * 60)
         #expect(model.restRemaining == 1_200)
         #expect(model.restDuration == 300)
         model.autoAlign(at: now)
@@ -99,41 +100,81 @@ struct PomodoroAutoAlignTests {
     }
 
     @Test
-    func restAndCompletedCycleCannotBeAligned() throws {
+    func restAndCompletedCycleCanBeAligned() throws {
         let now = date(minute: 2)
-        var model = model(at: now, stage: 4)
-        model.isAutoRepeatEnabled = false
         for offset in [1_500.0, 2_700] {
+            var model = model(at: now, stage: 4)
+            model.isAutoRepeatEnabled = false
             model.update(at: now + offset)
             let before = try #require(model.clockSchedule)
-            #expect(!model.canAutoAlign(at: now + offset))
+            #expect(model.canAutoAlign(at: now + offset))
             model.autoAlign(at: now + offset)
-            #expect(model.clockSchedule?.focusEnd == before.focusEnd)
-            #expect(model.clockSchedule?.longRestEnd == before.longRestEnd)
+            let schedule = try #require(model.clockSchedule)
+            #expect(schedule.longRestEnd > now + offset)
+            #expect(schedule.longRestEnd != before.longRestEnd)
+            #expect(model.restRemaining >= 300)
             #expect(model.stage == 4)
+            #expect(schedule.isValid(focusPeriodsPerCycle: 4))
         }
     }
 
     @Test
-    func capacityConflictDisablesAlignmentInsteadOfMissingBoundary() {
+    func largeRestIsShortenedToFitInsteadOfDisablingAlignment() {
         let now = date(minute: 2)
         var model = model(at: now, focus: 300, rest: 3_300)
-        #expect(!model.canAutoAlign(at: now))
+        #expect(model.canAutoAlign(at: now))
         model.autoAlign(at: now)
-        #expect(model.focusRemaining == 300)
-        #expect(model.restRemaining == 3_300)
+        #expect(model.clockSchedule?.restEnd == date(minute: 30))
+        #expect(model.focusRemaining == 0)
+        #expect(model.restRemaining == 28 * 60)
+        model.autoAlign(at: now)
+        #expect(model.clockSchedule?.restEnd == date(hour: 11, minute: 0))
+        #expect(model.focusRemaining == 30 * 60)
     }
 
     @Test
-    func largeRestLeavesOnlyOneValidAlignment() {
+    func largeRestStillAllowsBothAlignments() {
         let now = date(minute: 2)
         var model = model(at: now, focus: 600, rest: 1_800)
+        for minute in [30, 60, 30] {
+            model.autoAlign(at: now)
+            #expect(model.clockSchedule?.restEnd == date(minute: 0) + Double(minute * 60))
+            #expect(model.focusRemaining == Double((minute - 30) * 60))
+            #expect(model.restDuration == 28 * 60)
+            #expect(model.clockSchedule?.nextStageFocusDuration == 600)
+        }
+    }
+
+    @Test(arguments: [false, true], [1, 4])
+    func alignmentDuringRestRestoresFocusAndToggles(paused: Bool, stage: Int) throws {
+        let start = date(minute: 2)
+        var model = model(at: start, focus: 60, rest: 120, longRest: 120, stage: stage)
+        let now = start + 120
+        model.update(at: now)
+        if paused { model.toggleRunning(at: now) }
+        #expect(model.focusRemaining == 0)
+        #expect(model.restRemaining == 60)
+        for minute in [30, 60, 30] {
+            #expect(model.canAutoAlign(at: now))
+            model.autoAlign(at: now)
+            let schedule = try #require(model.clockSchedule)
+            #expect(schedule.end(for: model.restPhase) == date(minute: 0) + Double(minute * 60))
+            #expect(model.restRemaining == 300)
+            #expect(model.focusRemaining == Double((minute - 9) * 60))
+            #expect(!schedule.focusCompleted)
+            #expect(model.stage == stage)
+            #expect(model.status == (paused ? .paused : .running))
+            #expect(schedule.isValid(focusPeriodsPerCycle: 4))
+        }
+    }
+
+    @Test
+    func boundaryWithinFiveMinutesDoesNotIntroduceAThirdCandidate() {
+        let now = date(minute: 26)
+        var model = model(at: now)
         for _ in 0..<3 {
             model.autoAlign(at: now)
             #expect(model.clockSchedule?.restEnd == date(hour: 11, minute: 0))
-            #expect(model.focusRemaining == 28 * 60)
-            #expect(model.restDuration == 1_800)
-            #expect(model.clockSchedule?.nextStageFocusDuration == 600)
         }
     }
 
