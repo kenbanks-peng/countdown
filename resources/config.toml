@@ -1,66 +1,48 @@
 # Positive scale factors. Restart Countdown after configuration changes.
 size = 1
 compact_size = 1
-# Show a Test menu item for an immediate visual notification, in either view.
-# Test re-reads this file for the preview's font, alpha, size, and timing settings.
-# Other app settings, including menu visibility, still require a restart.
-# The test does not require notifications to be enabled. It does not play audio.
-test = false
 
 [notifications]
 notification_enabled = true
+
 # Rounded to the nearest multiple of 5 minutes, with a minimum of 5.
 # Notifications count backwards from the active end time, including zero.
 notification_interval_minutes = 15
+
 # Seconds the centered minutes stay visible between fades.
 notification_time_seconds = 5
 
 # Duration of each fade, in seconds. Zero disables fades.
-notification_fade_time_seconds = 1.5
+notification_fade_time_seconds = 0.8 
+
 # Fade curves: "linear", "ease-in", "ease-out", "ease-in-out".
 # linear: constant speed; ease-in: slow start; ease-out: slow finish.
 # ease-in-out: slow start and finish. Invalid values use the defaults below.
 # These defaults reduce the time near peak opacity when the hold time is zero.
 notification_fade_in = "ease-in"
 notification_fade_out = "ease-out"
-# Installed font name, for example "Impact". Empty uses the system font.
-notification_font = ""
-# Font size in points, independent of the circle scale.
-notification_font_size_pt = 144
-# Peak font alpha, from 0 (invisible) to 1 (fully opaque).
-# Fades go from 0 to this value, then back to 0. Invalid values use 1.
-notification_font_alpha = 1
-# Optional variable-font axes. Remove the # to set a value.
-# Omitted or invalid values keep the selected font's defaults.
-# Values must be finite. Weight, width, and optical size must be positive.
-# Slant can be negative, zero, or positive. Values outside the font's range
-# are limited to that range. Unsupported axes are ignored.
-# OpenType weight (wght): 400 is regular; 600 is semibold.
-# notification_font_weight = 600
-# OpenType width (wdth), percent: 100 is normal; 75 is condensed.
-# notification_font_width = 100
-# Optical size (opsz), points: changes letter shapes, not the text size.
-# Omit this setting to let the font select its optical size.
-# notification_font_optical_size_pt = 72
-# Slant (slnt), in degrees: 0 is upright; negative values lean right.
-# Omit this setting to keep the font's default slant.
-# notification_font_slant_degrees = 0
 
-notification_audio_enabled = true
-# Paths are relative to this file.
+notification_font = "SFPro-Regular"
+notification_font_size_pt = 600
+notification_font_alpha = 0.8        # From 0 (invisible) to 1 (fully opaque).
+
+
+# Optional variable-font axes. Font specific properties and values.
+notification_font_weight = 600
+notification_font_width = 1000
+# notification_font_optical_size_pt = 28    # SF Pro: 17 to 28, normal = 28
+# notification_font_slant_degrees = -10     # Monaspace: 0 = upright; negative values lean right
+
+notification_audio_enabled = false
 green_audio = "green.mp3"
 yellow_audio = "yellow.mp3"
 red_audio = "red.mp3"
 
-# The alarm is independent of interval notifications.
-alarm_enabled = true
+alarm_enabled = false
 alarm_audio = "alarm.mp3"
 
 [pomodoro]
-# Defaults in minutes. Saved duration edits take priority.
-# Focus and rest: 1–59; long-rest: 1–60; focus + rest: at most 60.
-focus = 25
-rest = 5
-long-rest = 20
-# Focus periods before a long rest (1–12).
-cycles = 4
+focus = 25          # minutes
+rest = 5            # minutes
+long-rest = 20      # minutes
+cycles = 4          # 1 to 6
