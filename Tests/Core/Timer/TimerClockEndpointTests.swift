@@ -25,24 +25,25 @@ struct TimerClockEndpointTests {
     }
 
     @Test
-    func nextHourAndRepeatAcrossMidnightUseAbsoluteEndpoints() throws {
+    func autoAlignAndRepeatAcrossMidnightUseAbsoluteEndpoints() throws {
         let session = ClockTestSession()
         defer { session.close() }
         session.now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 23, minute: 57, second: 13))!
         let controller = session.controller
-        controller.setTimerToNextHour()
-        let midnight = try #require(controller.timer.endDate)
-        #expect(Calendar.current.component(.day, from: midnight) == 16)
-        #expect(Calendar.current.component(.hour, from: midnight) == 0)
+        controller.autoAlign()
+        let alignedEnd = try #require(controller.timer.endDate)
+        #expect(Calendar.current.component(.day, from: alignedEnd) == 16)
+        #expect(Calendar.current.component(.hour, from: alignedEnd) == 0)
+        #expect(Calendar.current.component(.minute, from: alignedEnd) == 30)
         controller.timer.setAutoRepeatEnabled(true)
-        session.now = midnight
+        session.now = alignedEnd
         controller.update()
-        #expect(controller.timer.endDate == midnight + 167)
+        #expect(controller.timer.endDate == alignedEnd + 1_967)
         controller.toggleRunning()
         session.now += 150
-        controller.setTimerToNextHour()
-        #expect(controller.timer.endDate == midnight + 3_600)
-        #expect(controller.timer.remaining == 3_450)
+        controller.autoAlign()
+        #expect(controller.timer.endDate == alignedEnd + 1_800)
+        #expect(controller.timer.remaining == 1_650)
         #expect(controller.timer.isPaused)
     }
 }

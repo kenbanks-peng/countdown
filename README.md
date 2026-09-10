@@ -6,7 +6,7 @@ See the [source organization](docs/architecture.md).
 ## Usage
 
 - Click the circle to toggle between Normal mode and Compact mode.
-- In Timer or Countdown mode, Option-click the circle to set the timeout to end exactly on the next hour.
+- Select **Align** in any view to end at a valid :00 or :30 boundary. If both are available, repeated use switches between them. Pomodoro adjusts the current focus so rest ends at that boundary. In Timer or Countdown, Option-click the normal circle to use Align.
 - Scroll up or down to move an end to the next or previous five-minute mark. Hold Option to add or subtract one minute instead.
 - Right-click the Countdown window and toggle settings or select **Quit Countdown** to quit.
 - Select **Pomodoro**, **Timer**, or **Countdown** from **View**. Timer and Pomodoro show a clock. Countdown uses the timer without a clock. Pomodoro repeats focus periods with short rests, then a long rest. The default is four focus periods. Dots show focus progress.

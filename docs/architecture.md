@@ -73,8 +73,19 @@ if needed. Further increases in the same gesture restore focus in the current
 stage and keep unspent rest. Decreases at zero focus leave the expired focus
 endpoint unchanged, so they cannot end rest or start another stage. Scrolling on the blue sector continues to adjust rest only.
 Normal countdown can still finish rest. A view change otherwise
-preserves remaining time and pause state. Model change signals pass through the
-engine and controller to the view.
+preserves remaining time and pause state. Align is available in every view.
+It selects the first valid :00 or :30 boundary. If that endpoint is already selected
+and a second boundary is valid, it selects the second instead. Repeated use switches
+between the two; a single valid boundary stays selected. Timer and Countdown leave
+at least five minutes, stay within one hour, keep the pause state, and save the new
+repeat duration. Pomodoro changes only the current focus so active rest ends at the
+selected boundary. It keeps both rest durations and leaves at least five minutes of focus. In Pomodoro,
+the command is disabled during rest or when the boundary exceeds the focus allocation limit.
+A paused alignment uses the current wall time and stays paused; a later resume
+moves the endpoints by the pause duration. The schedule saves the prior focus
+allocation and restores it at the next stage. A manual focus edit replaces that
+saved allocation. Model change signals pass through the engine and controller to
+the view.
 
 The view update task samples time every 100 ms. Timer and Pomodoro updates use
 absolute dates. Scroll input uses uptime for gesture timing. Timer and Countdown

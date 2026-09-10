@@ -58,7 +58,7 @@ struct CountdownModeTests {
                 let session = Session()
                 defer { session.close() }
                 let controller = session.makeController(autoRepeat: autoRepeat, alarm: alarm)
-                controller.setTimerToNextHour()
+                controller.autoAlign()
                 controller.selectMode(outgoing)
                 session.now += controller.timer.remaining
                 controller.selectMode(incoming)
@@ -66,7 +66,7 @@ struct CountdownModeTests {
                 #expect(controller.timer.completionCount == (outgoing.usesTimer ? 1 : 0))
                 #expect(session.sounds == (outgoing.usesTimer && alarm ? 1 : 0))
                 let expected: TimeInterval = !outgoing.usesTimer || autoRepeat
-                    ? 3_600 : (incoming == .pomodoro ? 1_800 : 0)
+                    ? 1_800 : (incoming == .pomodoro ? 1_800 : 0)
                 #expect(controller.timer.remaining == expected)
                 #expect(!controller.engine.isPaused)
                 controller.update()
@@ -89,8 +89,8 @@ struct CountdownModeTests {
         controller.adjustTimerDuration(steps: 1)
         #expect(controller.timer.remaining == 600)
         #expect(controller.engine.isPaused)
-        controller.setTimerToNextHour()
-        #expect(controller.timer.remaining == 3_527)
+        controller.autoAlign()
+        #expect(controller.timer.remaining == 1_727)
         #expect(controller.timer.isPaused)
         controller.toggleTimerRunning()
         session.now += controller.timer.remaining

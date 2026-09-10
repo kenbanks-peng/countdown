@@ -16,7 +16,6 @@ struct PomodoroLifecycleTests {
         timer.update()
         #expect(timer.pomodoro.focusRemaining == 900)
         #expect(timer.pomodoro.restRemaining == 300)
-        timer.setTimerToNextHour()
         timer.adjustTimerDuration(by: 60)
         timer.toggleTimerRunning() // A command for a hidden UI mode is ignored.
         #expect(timer.timer.remaining == 1_200)

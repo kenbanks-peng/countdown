@@ -67,17 +67,20 @@ struct CountdownView: View {
             }
             .pickerStyle(.inline)
             Divider()
+            Button(countdown.controlLabel, action: countdown.toggleRunning)
+            Button("Align", action: countdown.autoAlign)
+                .disabled(!countdown.canAutoAlign)
+            if !countdown.mode.usesTimer {
+                Button("Reset", action: countdown.resetPomodoro)
+            }
+            Divider()
+            if countdown.mode.usesTimer {
+                TimerContextMenu(model: countdown.timer)
+            }
+            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
             Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
             if countdown.testEnabled {
                 Button("Test", action: countdown.testNotification)
-            }
-            Toggle("Auto Repeat", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
-            Button(countdown.controlLabel, action: countdown.toggleRunning)
-            Divider()
-            if countdown.mode.usesTimer {
-                TimerContextMenu(model: countdown.timer, setToNextHour: countdown.setTimerToNextHour)
-            } else {
-                Button("Reset", action: countdown.resetPomodoro)
             }
             Divider()
             Button("Quit Countdown") {
@@ -133,7 +136,7 @@ struct CountdownView: View {
     private func activate() {
         guard allowsClick() else { return }
         if countdown.mode.usesTimer, !isCompact, NSEvent.modifierFlags.contains(.option) {
-            countdown.setTimerToNextHour()
+            countdown.autoAlign()
         } else {
             changePresentation()
         }

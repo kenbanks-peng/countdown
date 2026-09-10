@@ -66,9 +66,9 @@ struct CountdownControllerTests {
         controller.selectMode(.timer)
         #expect(controller.timer.status == .active)
         controller.toggleRunning()
-        controller.setTimerToNextHour()
+        controller.autoAlign()
         #expect(controller.timer.isPaused)
-        #expect(controller.timer.remaining == 1_800)
+        #expect(controller.timer.remaining == 3_600) // The current endpoint was already the first alignment.
         #expect(controller.engine.isPaused)
     }
 

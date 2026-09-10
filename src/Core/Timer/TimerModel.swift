@@ -19,6 +19,8 @@ final class TimerModel: ObservableObject {
     private(set) var repeatDuration: TimeInterval = 0
     private(set) var endDate: Date?
     private(set) var pausedAt: Date?
+    // A paused Countdown has no absolute endpoint. Keep its last alignment while unchanged.
+    private var pausedAlignment: (end: Date, remaining: TimeInterval)?
     private(set) var isClockEnabled: Bool
     private let sessionStore: TimerSessionStore
     private let configuration: CountdownConfiguration
@@ -89,25 +91,24 @@ final class TimerModel: ObservableObject {
         save()
     }
 
-    func setDurationToNextHour() {
-        let currentTime = now()
-        let calendar = Calendar.current
-        guard let nextHour = calendar.nextDate(
-            after: currentTime,
-            matching: DateComponents(minute: 0, second: 0),
-            matchingPolicy: .nextTime
+    func autoAlign(at currentTime: Date) {
+        let frozenEnd = isPaused && pausedAlignment?.remaining == remaining ? pausedAlignment?.end : nil
+        let end = endDate ?? frozenEnd ?? currentTime + remaining
+        guard let boundary = ClockBoundary.alignment(
+            from: end, minimum: currentTime + 300, maximum: currentTime + Self.maximumDuration
         ) else { return }
 
-        duration = nextHour.timeIntervalSince(currentTime)
+        duration = boundary.timeIntervalSince(currentTime)
         remaining = duration
+        pausedAlignment = isEnginePaused ? (boundary, remaining) : nil
         captureRepeatDuration()
 
         if status == .prepared || isEnginePaused {
             pausedAt = isClockEnabled ? currentTime : nil
-            endDate = isClockEnabled ? nextHour : nil
+            endDate = isClockEnabled ? boundary : nil
             status = .prepared
         } else {
-            endDate = nextHour
+            endDate = boundary
             status = .active
         }
         save()

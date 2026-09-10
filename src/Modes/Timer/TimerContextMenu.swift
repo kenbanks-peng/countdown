@@ -2,12 +2,9 @@ import SwiftUI
 
 struct TimerContextMenu: View {
     @ObservedObject var model: TimerModel
-    let setToNextHour: () -> Void
 
     var body: some View {
-        Toggle("Timeout", isOn: enablementBinding(\.showsRemainingMinutes, model.setRemainingMinutesVisible))
-        Divider()
-        Button("Set Timeout to Next Hour", action: setToNextHour)
+        Toggle("Show value", isOn: enablementBinding(\.showsRemainingMinutes, model.setRemainingMinutesVisible))
     }
 
     private func enablementBinding(

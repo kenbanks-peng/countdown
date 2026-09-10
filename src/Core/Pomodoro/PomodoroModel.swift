@@ -131,6 +131,17 @@ struct PomodoroModel {
         syncClockProgress()
     }
 
+    func canAutoAlign(at now: Date) -> Bool {
+        clockSchedule?.autoAlignedFocusEnd(at: now, restPhase: restPhase) != nil
+    }
+
+    mutating func autoAlign(at now: Date) {
+        update(at: now)
+        let phase = restPhase
+        clockSchedule?.autoAlign(at: now, restPhase: phase)
+        syncClockProgress()
+    }
+
     mutating func adjustClockEndpoint(_ phase: Phase, steps: Int, at now: Date) {
         update(at: now)
         guard let target = prepareFocusEdit(phase, increasing: steps > 0, at: now) else { return }

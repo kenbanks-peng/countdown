@@ -155,14 +155,6 @@ final class CountdownController: ObservableObject {
         toggleRunning()
     }
 
-    func setTimerToNextHour() {
-        guard mode.usesTimer else { return }
-        update()
-        timer.setDurationToNextHour()
-        engine.timerDidChange()
-        saveSettings()
-    }
-
     func adjustPomodoroDuration(_ phase: PomodoroModel.Phase, by amount: TimeInterval) {
         guard mode == .pomodoro else { return }
         update()
@@ -181,6 +173,22 @@ final class CountdownController: ObservableObject {
     func togglePomodoroRunning() {
         guard mode == .pomodoro else { return }
         toggleRunning()
+    }
+
+    var canAutoAlign: Bool {
+        mode.usesTimer || pomodoro.canAutoAlign(at: currentTime)
+    }
+
+    func autoAlign() {
+        let date = currentTime
+        update(at: date)
+        if mode.usesTimer {
+            timer.autoAlign(at: date)
+            engine.timerDidChange(at: date)
+        } else {
+            engine.autoAlignPomodoro(at: date)
+        }
+        saveSettings()
     }
 
     func resetPomodoro() {
