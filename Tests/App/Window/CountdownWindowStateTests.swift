@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Testing
 @testable import Countdown
 
@@ -107,6 +108,108 @@ struct CountdownWindowStateTests {
             #expect(completions == 1)
             #expect(panel.frame == destination)
         }
+    }
+
+    @Test(arguments: [false, true])
+    func transitionScalesFrozenImagesInsteadOfLiveViews(expanding: Bool) throws {
+        let startSide: CGFloat = expanding ? 32 : 188
+        let endSide: CGFloat = expanding ? 188 : 32
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: startSide, height: startSide),
+                            styleMask: .borderless, backing: .buffered, defer: false)
+        panel.isReleasedWhenClosed = false
+        defer { panel.close() }
+        let outgoing = NSView(frame: panel.contentView!.bounds)
+        let incoming = NSView(frame: NSRect(x: 0, y: 0, width: endSide, height: endSide))
+        for view in [outgoing, incoming] {
+            view.wantsLayer = true
+            view.layer?.backgroundColor = NSColor.green.cgColor
+        }
+        panel.contentView = outgoing
+        let transition = CountdownPanelTransition()
+        _ = transition.crossFadeTo(incoming, in: panel)
+        let container = try #require(panel.contentView)
+        let images = container.subviews.compactMap { $0 as? NSImageView }
+        try #require(images.count == 2, "Only frozen images must be visible during the transition")
+        #expect(images[0].image?.size == NSSize(width: startSide, height: startSide))
+        #expect(images[1].image?.size == NSSize(width: endSide, height: endSide))
+        #expect(outgoing.isHidden)
+        #expect(incoming.superview == nil)
+        let pixels = images.map { $0.image?.tiffRepresentation }
+        outgoing.layer?.backgroundColor = NSColor.red.cgColor
+        incoming.layer?.backgroundColor = NSColor.blue.cgColor
+        for side: CGFloat in [64, 110, 156] {
+            panel.setFrame(NSRect(x: 0, y: 0, width: side, height: side), display: true)
+            container.layoutSubtreeIfNeeded()
+            #expect(outgoing.frame.size == NSSize(width: startSide, height: startSide))
+            #expect(incoming.frame.size == NSSize(width: endSide, height: endSide))
+            for (index, image) in images.enumerated() {
+                #expect(image.frame == container.bounds)
+                #expect(image.image?.tiffRepresentation == pixels[index])
+            }
+        }
+        panel.setFrame(NSRect(x: 0, y: 0, width: endSide, height: endSide), display: true)
+        transition.replaceContent(of: panel, with: incoming)
+        #expect(panel.contentView === incoming)
+        #expect(!incoming.isHidden)
+        #expect(incoming.frame.size == NSSize(width: endSide, height: endSide))
+    }
+
+    @Test(arguments: [false, true])
+    func timerUpdatesBehindFrozenSnapshotsWithValueVisible(expanding: Bool) async throws {
+        let session = ClockTestSession()
+        defer { session.close() }
+        let controller = session.controller
+        controller.adjustTimerDuration(by: 1_800)
+        controller.timer.setRemainingMinutesVisible(true)
+        let startSide = expanding ? 32.0 : 188.0
+        let endSide = expanding ? 188.0 : 32.0
+        let outgoing = NSHostingView(rootView: CountdownView(
+            countdown: controller, isCompact: expanding, changePresentation: {}
+        ))
+        let incoming = NSHostingView(rootView: CountdownView(
+            countdown: controller, isCompact: !expanding, changePresentation: {}
+        ))
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: startSide, height: startSide),
+                            styleMask: .borderless, backing: .buffered, defer: false)
+        panel.isReleasedWhenClosed = false
+        defer { panel.close() }
+        panel.contentView = outgoing
+        _ = try render(outgoing, side: startSide)
+        incoming.frame = NSRect(x: 0, y: 0, width: endSide, height: endSide)
+        let transition = CountdownPanelTransition()
+        _ = try #require(transition.crossFadeTo(incoming, in: panel))
+        let images = try #require(panel.contentView).subviews.compactMap { $0 as? NSImageView }
+        try #require(images.count == 2)
+        for image in images {
+            let bitmap = try #require(image.image?.representations.first as? NSBitmapImageRep)
+            #expect((bitmap.colorAt(x: bitmap.pixelsWide / 2, y: bitmap.pixelsHigh / 2)?.alphaComponent ?? 0) > 0.5)
+        }
+        let pixels = images.map { $0.image?.tiffRepresentation }
+        let remaining = controller.timer.remaining
+        session.now += 1
+        // Exercise the hidden view's update task, rather than updating the model here.
+        for _ in 0..<100 {
+            if controller.timer.remaining < remaining { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(controller.timer.remaining == remaining - 1)
+        panel.setFrame(NSRect(x: 0, y: 0, width: 110, height: 110), display: true)
+        #expect(images.map { $0.image?.tiffRepresentation } == pixels)
+        panel.setFrame(NSRect(x: 0, y: 0, width: endSide, height: endSide), display: true)
+        transition.replaceContent(of: panel, with: incoming)
+        #expect(panel.contentView === incoming)
+    }
+
+    @Test
+    func failedSnapshotLeavesTheLiveContentUntouched() {
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 32, height: 32),
+                            styleMask: .borderless, backing: .buffered, defer: false)
+        panel.isReleasedWhenClosed = false
+        defer { panel.close() }
+        let outgoing = panel.contentView
+        #expect(CountdownPanelTransition().crossFadeTo(NSView(frame: .zero), in: panel) == nil)
+        #expect(panel.contentView === outgoing)
+        #expect(outgoing?.isHidden == false)
     }
 
     @Test

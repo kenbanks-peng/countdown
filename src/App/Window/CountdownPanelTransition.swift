@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-/// Owns panel motion and content cross-fades, not window or countdown state.
+/// Owns panel motion and frozen-image cross-fades, not window or countdown state.
 @MainActor
 struct CountdownPanelTransition {
     let duration: TimeInterval = 0.36
@@ -30,33 +30,53 @@ struct CountdownPanelTransition {
         RunLoop.main.add(timer, forMode: .common)
     }
 
-    /// Stacks `incoming` over the panel's current content and fades between the
-    /// two over the same span as the window transition. The returned view is the
-    /// one to install as the panel's content once the transition finishes.
-    func crossFadeTo(_ incoming: NSView, in panel: NSPanel) -> NSView {
-        guard let outgoing = panel.contentView else {
-            panel.contentView = incoming
-            return incoming
-        }
+    /// Capture both views at their intended sizes, then scale and fade only images.
+    /// The caller installs the returned live view when motion finishes. If capture
+    /// fails, return nil so the caller can switch immediately without live resizing.
+    func crossFadeTo(_ incoming: NSView, in panel: NSPanel) -> NSView? {
+        guard let outgoing = panel.contentView,
+              let outgoingImage = snapshot(of: outgoing),
+              let incomingImage = snapshot(of: incoming) else { return nil }
 
         let container = NSView(frame: outgoing.frame)
-        outgoing.frame = container.bounds
-        outgoing.autoresizingMask = [.width, .height]
-        incoming.frame = container.bounds
-        incoming.autoresizingMask = [.width, .height]
-        incoming.alphaValue = 0
+        // Keep the existing update task alive, but never resize or show its view.
+        outgoing.autoresizingMask = []
+        outgoing.isHidden = true
         container.addSubview(outgoing)
-        container.addSubview(incoming)
+
+        func imageView(_ image: NSImage) -> NSImageView {
+            let view = NSImageView(frame: container.bounds)
+            view.image = image
+            view.imageScaling = .scaleAxesIndependently
+            view.autoresizingMask = [.width, .height]
+            container.addSubview(view)
+            return view
+        }
+        let outgoingSnapshot = imageView(outgoingImage)
+        let incomingSnapshot = imageView(incomingImage)
+        incomingSnapshot.alphaValue = 0
         panel.contentView = container
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            outgoing.animator().alphaValue = 0
-            incoming.animator().alphaValue = 1
+            outgoingSnapshot.animator().alphaValue = 0
+            incomingSnapshot.animator().alphaValue = 1
         }
 
         return incoming
+    }
+
+    private func snapshot(of view: NSView) -> NSImage? {
+        guard view.bounds.width > 0, view.bounds.height > 0 else { return nil }
+        view.layoutSubtreeIfNeeded()
+        guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return nil }
+        bitmap.bitmapData?.initialize(repeating: 0, count: bitmap.bytesPerRow * bitmap.pixelsHigh)
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        bitmap.size = view.bounds.size
+        let image = NSImage(size: view.bounds.size)
+        image.addRepresentation(bitmap)
+        return image
     }
 
     /// Removes the transition container and installs the faded-in view as the

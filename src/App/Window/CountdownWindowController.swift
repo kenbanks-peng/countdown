@@ -106,7 +106,7 @@ final class CountdownWindowController {
     }
 
     private func contentView(isCompact: Bool) -> NSView {
-        NSHostingView(rootView: CountdownView(
+        let view = NSHostingView(rootView: CountdownView(
             countdown: countdown, isCompact: isCompact,
             scale: isCompact ? configuration.compactSize : configuration.size,
             allowsClick: { [weak self] in self?.panel.allowsClick ?? true },
@@ -115,6 +115,8 @@ final class CountdownWindowController {
                 if isCompact { self?.showNormalWindow() } else { self?.showCompactWindow() }
             }
         ))
+        view.frame = NSRect(origin: .zero, size: isCompact ? compactSize : normalSize)
+        return view
     }
 
     private func restoreOrPosition(_ panel: NSPanel, for mode: Presentation, size: NSSize) {
@@ -157,10 +159,14 @@ final class CountdownWindowController {
             return
         }
 
-        // Cross-fade the content while the panel shrinks and travels, so the
-        // clock face and hands fade out with the circle instead of vanishing
-        // the moment the transition starts.
-        let incoming = transition.crossFadeTo(contentView(isCompact: true), in: panel)
+        let content = contentView(isCompact: true)
+        guard let incoming = transition.crossFadeTo(content, in: panel) else {
+            panel.setFrame(compactFrame, display: false)
+            panel.contentView = content
+            savePanelState(frame: compactFrame)
+            isTransitioning = false
+            return
+        }
 
         transition.animate(panel, to: compactFrame, anchor: scaleAnchor(for: compactFrame)) { [weak self] in
             guard let self else { return }
@@ -199,9 +205,13 @@ final class CountdownWindowController {
             return
         }
 
-        // Cross-fade while moving and growing around the compact position's
-        // canvas-edge anchor. The reverse transition uses the same anchor.
-        let incoming = transition.crossFadeTo(contentView(isCompact: false), in: panel)
+        let content = contentView(isCompact: false)
+        guard let incoming = transition.crossFadeTo(content, in: panel) else {
+            panel.setFrame(fullFrame, display: false)
+            panel.contentView = content
+            finishTransition()
+            return
+        }
 
         transition.animate(panel, to: fullFrame, anchor: scaleAnchor(for: panel.frame)) { [weak self] in
             guard let self else { return }
