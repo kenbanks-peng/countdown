@@ -7,7 +7,7 @@ import Vision
 @MainActor
 struct CountdownNotificationViewTests {
     @Test(arguments: [0.0, 1_500, 1_560, 1_800, 6_900, 7_200, 8_100])
-    func pomodoroNotificationShowsWorkOrRest(elapsed: TimeInterval) throws {
+    func pomodoroPreviewShowsRemainingFocusOrRest(elapsed: TimeInterval) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         // Start on a clock mark so both displays have the same phase times.
@@ -29,9 +29,9 @@ struct CountdownNotificationViewTests {
         let text = try recognizedText(bitmap).joined(separator: " ")
         let model = controller.pomodoro
         if model.focusRemaining > 0 {
-            #expect(text == "WORK")
+            #expect(text == CountdownNotificationOverlay.timeLabel(model.focusRemaining))
             try expectNotificationMinutes(bitmap, remaining: model.focusRemaining,
-                                          fontVariations: variations, isPomodoro: true)
+                                          fontVariations: variations)
         } else {
             #expect(text == "REST")
             try expectNotificationMinutes(bitmap, remaining: 0, fontVariations: variations, isRest: true)
@@ -44,6 +44,33 @@ struct CountdownNotificationViewTests {
         // No circle, sectors, clock marks, or hands surround the number.
         for angle in stride(from: 0.0, to: 360.0, by: 5) {
             #expect(try sample(bitmap, angle: angle, radius: 0.42).alphaComponent < 0.03)
+        }
+    }
+
+    @Test
+    func scheduledNotificationKeepsItsEventText() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var now = Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 12))!
+        let controller = CountdownController(
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            preferences: CountdownPreferences(notificationEnabled: true),
+            playSound: { _ in }, now: { now }, saveEnablement: { _, _ in }
+        )
+        controller.selectMode(.pomodoro)
+        for (seconds, expected) in [(1_200.0, "5"), (300.0, "REST"), (300.0, "WORK")] {
+            now += seconds
+            controller.update()
+            let event = try #require(controller.notifications.lastEvent)
+            let hosting = NSHostingView(rootView: CountdownView(
+                countdown: controller, isNotification: true, notificationEvent: event, changePresentation: {}
+            ))
+            #expect(try recognizedText(render(hosting, side: 512)) == [expected])
+            // A visible notification keeps its text if the countdown changes.
+            controller.selectMode(.timer)
+            #expect(try recognizedText(render(hosting, side: 512)) == [expected])
+            controller.selectMode(.pomodoro)
         }
     }
 
@@ -109,16 +136,16 @@ struct CountdownNotificationViewTests {
         ))
         let remaining = mode.usesTimer ? controller.timer.remaining : controller.pomodoro.focusRemaining
         try expectNotificationMinutes(render(hosting, side: 512), remaining: remaining,
-                                      fontName: fontName, fontVariations: variations, isPomodoro: mode == .pomodoro)
+                                      fontName: fontName, fontVariations: variations)
     }
 
     // Vision can omit isolated single digits. Compare the complete rendered image instead.
     private func expectNotificationMinutes(_ bitmap: NSBitmapImageRep, remaining: TimeInterval,
                                        fontSize: Double = 144, fontName: String = "",
                                        fontVariations: NotificationFontVariations = NotificationFontVariations(),
-                                       isRest: Bool = false, isPomodoro: Bool = false) throws {
+                                       isRest: Bool = false, isWork: Bool = false) throws {
         let expected = try render(NSHostingView(rootView: CountdownNotificationOverlay(
-            remaining: remaining, isRest: isRest, isPomodoro: isPomodoro, fontSizePt: fontSize,
+            remaining: remaining, isRest: isRest, isWork: isWork, fontSizePt: fontSize,
             fontName: fontName, fontVariations: fontVariations
         )), side: 512)
         for y in 0..<bitmap.pixelsHigh {
@@ -210,8 +237,8 @@ struct CountdownNotificationViewTests {
     @Test(arguments: [72.0, 144, 200])
     func phaseLabelsUseEightyPercentOfNumberFontSize(fontSize: Double) {
         let number = CountdownNotificationOverlay(remaining: 600, fontSizePt: fontSize)
-        let work = CountdownNotificationOverlay(remaining: 600, isPomodoro: true, fontSizePt: fontSize)
-        let rest = CountdownNotificationOverlay(remaining: 0, isRest: true, isPomodoro: true, fontSizePt: fontSize)
+        let work = CountdownNotificationOverlay(remaining: 600, isWork: true, fontSizePt: fontSize)
+        let rest = CountdownNotificationOverlay(remaining: 0, isRest: true, fontSizePt: fontSize)
         #expect(number.label == "10")
         #expect(work.label == "WORK")
         #expect(rest.label == "REST")

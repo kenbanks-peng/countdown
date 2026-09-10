@@ -80,16 +80,17 @@ final class CountdownWindowController {
 
     private func handleNotificationInterval() {
         guard presentation == .compact else { return }
-        showNotification(configuration: configuration)
+        showNotification(configuration: configuration, event: countdown.notifications.lastEvent)
     }
 
-    private func showNotification(configuration: CountdownConfiguration) {
+    private func showNotification(configuration: CountdownConfiguration, event: NotificationScheduler.Event? = nil) {
         guard let screen = panel.screen ?? NSScreen.main else { return }
         notification.show(
             content: NSHostingView(rootView: CountdownView(
                 countdown: countdown, isNotification: true, notificationFontSizePt: configuration.notificationFontSizePt,
                 notificationFont: configuration.notificationFont,
-                notificationFontVariations: configuration.notificationFontVariations, changePresentation: {}
+                notificationFontVariations: configuration.notificationFontVariations,
+                notificationEvent: event, changePresentation: {}
             )),
             screenFrame: screen.frame, size: screen.frame.size,
             duration: TimeInterval(configuration.notificationTimeSeconds),

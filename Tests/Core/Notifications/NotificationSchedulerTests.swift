@@ -135,6 +135,11 @@ struct NotificationSchedulerTests {
         controller.update()
         controller.notifications.setNotificationEnabled(true)
         var notificationMinutes: [Int] = []
+        var events: [NotificationScheduler.Event] = []
+        let subscription = controller.notifications.$notificationIntervalCount.dropFirst().sink { _ in
+            if let event = controller.notifications.lastEvent { events.append(event) }
+        }
+        defer { subscription.cancel() }
         for _ in 0..<(32 * 60) {
             now += 1
             let count = controller.notifications.notificationIntervalCount
@@ -144,6 +149,9 @@ struct NotificationSchedulerTests {
             }
         }
         #expect(notificationMinutes == (interval == 5 ? [35, 40, 45, 50, 5] : [40, 50, 5]))
+        #expect(events == (interval == 5
+            ? [.remaining(900), .remaining(600), .remaining(300), .rest, .work]
+            : [.remaining(600), .rest, .work]))
     }
 
     @Test(arguments: [false, true], [false, true])

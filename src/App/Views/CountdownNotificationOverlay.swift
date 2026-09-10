@@ -1,11 +1,11 @@
 import CoreText
 import SwiftUI
 
-/// Timer minutes or a Pomodoro phase, centered on a transparent surface.
+/// Remaining minutes or a phase-start label, centered on a transparent surface.
 struct CountdownNotificationOverlay: View {
     let remaining: TimeInterval
     var isRest = false
-    var isPomodoro = false
+    var isWork = false
     var fontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt
     var fontName = ""
     var fontVariations = NotificationFontVariations()
@@ -15,11 +15,11 @@ struct CountdownNotificationOverlay: View {
     }
 
     var label: String {
-        isRest ? "REST" : isPomodoro ? "WORK" : Self.timeLabel(remaining)
+        isRest ? "REST" : isWork ? "WORK" : Self.timeLabel(remaining)
     }
 
     var effectiveFontSizePt: CGFloat {
-        fontSizePt * (isRest || isPomodoro ? 0.8 : 1)
+        fontSizePt * (isRest || isWork ? 0.8 : 1)
     }
 
     var body: some View {
@@ -55,6 +55,6 @@ struct CountdownNotificationOverlay: View {
         }
         .shadow(color: .black.opacity(0.7), radius: 2)
         .allowsHitTesting(false)
-        .accessibilityLabel(isRest || isPomodoro ? label : "\(label) minutes remaining")
+        .accessibilityLabel(isRest || isWork ? label : "\(label) minutes remaining")
     }
 }

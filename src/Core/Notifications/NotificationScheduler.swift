@@ -4,6 +4,13 @@ import Foundation
 /// Interval notifications counted backwards from the active countdown endpoint.
 @MainActor
 final class NotificationScheduler: ObservableObject {
+    enum Event: Equatable {
+        case remaining(TimeInterval)
+        case work
+        case rest
+    }
+
+    private(set) var lastEvent: Event?
     @Published private(set) var isNotificationEnabled: Bool
     @Published private(set) var notificationIntervalCount = 0
 
@@ -37,17 +44,19 @@ final class NotificationScheduler: ObservableObject {
         guard configuration.notificationEnabled, previousRemaining.isFinite, remaining.isFinite,
               previousRemaining > remaining, previousRemaining > 0,
               ceil(previousRemaining / notificationInterval) > ceil(max(0, remaining) / notificationInterval) else { return }
-        notify(remaining: remaining)
+        notify(remaining: remaining, event: .remaining(remaining))
     }
 
     /// Phase boundaries notify even when they do not cross an interval mark.
     func reportPhaseChange(remaining: TimeInterval) {
         guard configuration.notificationEnabled, remaining.isFinite else { return }
-        notify(remaining: remaining)
+        notify(remaining: remaining, event: remaining > 0 ? .work : .rest)
     }
 
-    private func notify(remaining: TimeInterval) {
+    private func notify(remaining: TimeInterval, event: Event) {
         guard isNotificationEnabled else { return }
+        // Set the payload before the published count calls its subscribers.
+        lastEvent = event
         notificationIntervalCount += 1
         guard configuration.notificationAudioEnabled else { return }
         let sound: URL?

@@ -10,11 +10,12 @@ struct CountdownView: View {
     let notificationFontSizePt: CGFloat
     let notificationFont: String
     let notificationFontVariations: NotificationFontVariations
+    let notificationEvent: NotificationScheduler.Event?
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", notificationFontVariations: NotificationFontVariations = NotificationFontVariations(), allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", notificationFontVariations: NotificationFontVariations = NotificationFontVariations(), notificationEvent: NotificationScheduler.Event? = nil, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
         self.isNotification = isNotification
@@ -22,6 +23,7 @@ struct CountdownView: View {
         self.notificationFontSizePt = notificationFontSizePt
         self.notificationFont = notificationFont
         self.notificationFontVariations = notificationFontVariations
+        self.notificationEvent = notificationEvent
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
         self._currentTime = State(initialValue: countdown.currentTime)
@@ -102,17 +104,16 @@ struct CountdownView: View {
     }
 
     private var notificationOverlay: CountdownNotificationOverlay {
-        if countdown.mode.usesTimer {
-            return CountdownNotificationOverlay(
-                remaining: countdown.timer.remaining, fontSizePt: notificationFontSizePt,
-                fontName: notificationFont, fontVariations: notificationFontVariations
-            )
-        }
-        let model = countdown.pomodoro
+        let event = notificationEvent ?? (countdown.mode.usesTimer
+            ? .remaining(countdown.timer.remaining)
+            : countdown.pomodoro.focusRemaining > 0
+                ? .remaining(countdown.pomodoro.focusRemaining) : .rest)
+        let remaining: TimeInterval
+        if case .remaining(let time) = event { remaining = time } else { remaining = 0 }
         return CountdownNotificationOverlay(
-            remaining: model.focusRemaining,
-            isRest: model.focusRemaining == 0,
-            isPomodoro: true,
+            remaining: remaining,
+            isRest: event == .rest,
+            isWork: event == .work,
             fontSizePt: notificationFontSizePt, fontName: notificationFont, fontVariations: notificationFontVariations
         )
     }
