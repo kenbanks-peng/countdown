@@ -16,16 +16,19 @@ final class CountdownWindowController {
     private var testNotificationSubscription: AnyCancellable?
     private let notification: CountdownNotificationController
 
-    private let windowState = CountdownWindowStateStore()
+    private let windowState: CountdownWindowStateStore
     private let transition = CountdownPanelTransition()
     private let configuration: CountdownConfiguration
     private let normalSize: NSSize
     private let compactSize: NSSize
 
-    init(countdown: CountdownController, configuration: CountdownConfiguration = .default) {
+    init(countdown: CountdownController, configuration: CountdownConfiguration = .default,
+         windowState: CountdownWindowStateStore = CountdownWindowStateStore(),
+         notification: CountdownNotificationController? = nil) {
         self.countdown = countdown
         self.configuration = configuration
-        notification = CountdownNotificationController(fadeDuration: configuration.notificationFadeTimeSeconds)
+        self.windowState = windowState
+        self.notification = notification ?? CountdownNotificationController(fadeDuration: configuration.notificationFadeTimeSeconds)
         let normalSide = CountdownAppearance.normalSize * configuration.size
         let compactSide = CountdownAppearance.compactSize * configuration.compactSize
         normalSize = NSSize(width: normalSide, height: normalSide)
@@ -79,7 +82,8 @@ final class CountdownWindowController {
     }
 
     private func handleNotificationInterval() {
-        guard presentation == .compact else { return }
+        // Explicit cycle selections must show WORK in normal view, where the controls are.
+        guard presentation == .compact || countdown.notifications.lastEventWasUserInitiated else { return }
         showNotification(configuration: configuration, event: countdown.notifications.lastEvent)
     }
 

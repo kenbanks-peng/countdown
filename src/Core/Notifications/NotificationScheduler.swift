@@ -11,6 +11,7 @@ final class NotificationScheduler: ObservableObject {
     }
 
     private(set) var lastEvent: Event?
+    private(set) var lastEventWasUserInitiated = false
     @Published private(set) var isNotificationEnabled: Bool
     @Published private(set) var notificationIntervalCount = 0
 
@@ -48,15 +49,17 @@ final class NotificationScheduler: ObservableObject {
     }
 
     /// Phase boundaries notify even when they do not cross an interval mark.
-    func reportPhaseChange(remaining: TimeInterval) {
+    func reportPhaseChange(remaining: TimeInterval, isUserInitiated: Bool = false) {
         guard configuration.notificationEnabled, remaining.isFinite else { return }
-        notify(remaining: remaining, event: remaining > 0 ? .work : .rest)
+        notify(remaining: remaining, event: remaining > 0 ? .work : .rest,
+               isUserInitiated: isUserInitiated)
     }
 
-    private func notify(remaining: TimeInterval, event: Event) {
+    private func notify(remaining: TimeInterval, event: Event, isUserInitiated: Bool = false) {
         guard isNotificationEnabled else { return }
         // Set the payload before the published count calls its subscribers.
         lastEvent = event
+        lastEventWasUserInitiated = isUserInitiated
         notificationIntervalCount += 1
         guard configuration.notificationAudioEnabled else { return }
         let sound: URL?

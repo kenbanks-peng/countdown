@@ -174,7 +174,7 @@ final class CountdownController: ObservableObject {
         guard mode == .pomodoro, (1...pomodoro.focusPeriodsPerCycle).contains(stage) else { return }
         // Replace the outgoing phase without sending any overdue notifications.
         engine.restartPomodoroStage(stage, at: currentTime)
-        notifications.reportPhaseChange(remaining: pomodoro.focusRemaining)
+        notifications.reportPhaseChange(remaining: pomodoro.focusRemaining, isUserInitiated: true)
         saveSettings()
     }
 
