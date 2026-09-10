@@ -8,6 +8,11 @@ final class CountdownPanel: NSPanel {
     private let dragThreshold: CGFloat = 3
     private var didDrag = false
     private var isDispatchingPointerEvent = false
+    private var pointerModifierFlags: NSEvent.ModifierFlags = []
+
+    var clickModifierFlags: NSEvent.ModifierFlags {
+        isDispatchingPointerEvent ? pointerModifierFlags : NSEvent.modifierFlags
+    }
 
     var allowsClick: Bool {
         // Keyboard and accessibility activation must not depend on the last drag.
@@ -16,8 +21,13 @@ final class CountdownPanel: NSPanel {
 
     override func sendEvent(_ event: NSEvent) {
         let wasDispatchingPointerEvent = isDispatchingPointerEvent
+        let previousModifierFlags = pointerModifierFlags
         isDispatchingPointerEvent = [.leftMouseDown, .leftMouseDragged, .leftMouseUp].contains(event.type)
-        defer { isDispatchingPointerEvent = wasDispatchingPointerEvent }
+        pointerModifierFlags = event.modifierFlags
+        defer {
+            isDispatchingPointerEvent = wasDispatchingPointerEvent
+            pointerModifierFlags = previousModifierFlags
+        }
 
         switch event.type {
         case .leftMouseDown:

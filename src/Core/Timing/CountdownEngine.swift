@@ -122,9 +122,9 @@ final class CountdownEngine: ObservableObject {
         projectPomodoro(at: date)
     }
 
-    func restartPomodoroStage(_ stage: Int, at date: Date) {
+    func restartPomodoroStage(_ stage: Int, restoringDefaults: Bool = false, at date: Date) {
         guard mode == .pomodoro, (1...pomodoro.focusPeriodsPerCycle).contains(stage) else { return }
-        pomodoro.restartStage(stage, at: date)
+        pomodoro.restartStage(stage, restoringDefaults: restoringDefaults, at: date)
         isPaused = false
         timer.isEnginePaused = false
         projectPomodoro(at: date)

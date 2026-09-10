@@ -13,9 +13,10 @@ struct CountdownView: View {
     let notificationEvent: NotificationScheduler.Event?
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
+    private let clickModifierFlags: () -> NSEvent.ModifierFlags
     @State private var currentTime = Date.now
 
-    init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", notificationFontVariations: NotificationFontVariations = NotificationFontVariations(), notificationEvent: NotificationScheduler.Event? = nil, allowsClick: @escaping () -> Bool = { true }, changePresentation: @escaping () -> Void) {
+    init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", notificationFontVariations: NotificationFontVariations = NotificationFontVariations(), notificationEvent: NotificationScheduler.Event? = nil, allowsClick: @escaping () -> Bool = { true }, clickModifierFlags: @escaping () -> NSEvent.ModifierFlags = { NSEvent.modifierFlags }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
         self.isCompact = isCompact
         self.isNotification = isNotification
@@ -26,6 +27,7 @@ struct CountdownView: View {
         self.notificationEvent = notificationEvent
         self.changePresentation = changePresentation
         self.allowsClick = allowsClick
+        self.clickModifierFlags = clickModifierFlags
         self._currentTime = State(initialValue: countdown.currentTime)
     }
 
@@ -65,7 +67,9 @@ struct CountdownView: View {
             if countdown.mode == .pomodoro && !isCompact {
                 PomodoroCycleControls(model: countdown.pomodoro) { stage in
                     guard allowsClick() else { return }
-                    countdown.restartPomodoroStage(stage)
+                    countdown.restartPomodoroStage(
+                        stage, restoringDefaults: clickModifierFlags().contains(.option)
+                    )
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipShape(Circle().inset(by: CountdownAppearance.circleInset))

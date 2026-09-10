@@ -110,6 +110,7 @@ final class CountdownWindowController {
             countdown: countdown, isCompact: isCompact,
             scale: isCompact ? configuration.compactSize : configuration.size,
             allowsClick: { [weak self] in self?.panel.allowsClick ?? true },
+            clickModifierFlags: { [weak self] in self?.panel.clickModifierFlags ?? [] },
             changePresentation: { [weak self] in
                 if isCompact { self?.showNormalWindow() } else { self?.showCompactWindow() }
             }

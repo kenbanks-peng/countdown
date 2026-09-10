@@ -39,6 +39,44 @@ struct PomodoroCycleSelectionTests {
         #expect(controller.pomodoro.focusRemaining == focus)
     }
 
+    @Test(arguments: [false, true])
+    func defaultsAreRestoredOnlyWhenRequested(restoringDefaults: Bool) {
+        let session = ClockTestSession()
+        defer { session.close() }
+        let controller = session.controller
+        controller.selectMode(.pomodoro)
+        controller.adjustPomodoroDuration(.focus, by: -300)
+        controller.adjustPomodoroDuration(.rest, by: 300)
+        controller.adjustPomodoroDuration(.longRest, by: 300)
+        controller.notifications.setNotificationEnabled(true)
+        controller.restartPomodoroStage(4, restoringDefaults: restoringDefaults)
+        #expect(controller.pomodoro.focusRemaining == (restoringDefaults ? 1_500 : 1_200))
+        #expect(controller.pomodoro.restDuration == (restoringDefaults ? 300 : 600))
+        #expect(controller.pomodoro.restRemaining == (restoringDefaults ? 900 : 1_200))
+        #expect(controller.notifications.lastEvent == .work)
+        let restored = session.makeController()
+        #expect(restored.pomodoro.focusDuration == controller.pomodoro.focusDuration)
+        #expect(restored.pomodoro.restDuration == controller.pomodoro.restDuration)
+        #expect(restored.pomodoro.longRestDuration == controller.pomodoro.longRestDuration)
+    }
+
+    @Test
+    func normalRestartKeepsAlignedAndZeroFocusAllocations() {
+        let now = Date(timeIntervalSince1970: 1_699_999_800)
+        var model = PomodoroModel()
+        model.setClockEnabled(true, at: now)
+        model.autoAlign(at: now + 600)
+        let alignedFocus = model.focusDuration
+        model.restartStage(2, at: now + 600)
+        #expect(model.focusRemaining == alignedFocus)
+
+        var zeroFocus = PomodoroModel(focusDuration: 0, defaultDurations: (1_500, 300, 1_200))
+        zeroFocus.restartStage(2, at: now)
+        #expect(zeroFocus.focusDuration == 0)
+        zeroFocus.restartStage(3, restoringDefaults: true, at: now)
+        #expect(zeroFocus.focusRemaining == 1_500)
+    }
+
     @Test
     func invalidSelectionAndOtherModesDoNothing() {
         let session = ClockTestSession()
@@ -53,31 +91,36 @@ struct PomodoroCycleSelectionTests {
         #expect(controller.pomodoro.clockSchedule?.focusEnd == schedule?.focusEnd)
     }
 
-    @Test(arguments: [false, true])
-    func pointerSelectsCycleWithoutChangingPresentation(allowsClick: Bool) throws {
+    @Test(arguments: [false, true], [false, true])
+    func pointerSelectsCycleWithoutChangingPresentation(allowsClick: Bool, option: Bool) throws {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = makeUIController(session)
         controller.selectMode(.pomodoro)
+        let defaultFocus = controller.pomodoro.focusDuration
+        controller.adjustPomodoroDuration(.focus, by: -300)
         var changes = 0
         let panel = CountdownPanel(contentRect: NSRect(x: 100, y: 120, width: 188, height: 188),
                                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.contentView = NSHostingView(rootView: CountdownView(
-            countdown: controller, allowsClick: { allowsClick }, changePresentation: { changes += 1 }
+            countdown: controller, allowsClick: { allowsClick },
+            clickModifierFlags: { [weak panel] in panel?.clickModifierFlags ?? [] },
+            changePresentation: { changes += 1 }
         ))
         panel.orderFront(nil)
         defer { panel.close() }
         panel.contentView?.layoutSubtreeIfNeeded()
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             let event = try #require(NSEvent.mouseEvent(
-                with: type, location: NSPoint(x: 101, y: 62), modifierFlags: [],
+                with: type, location: NSPoint(x: 101, y: 62), modifierFlags: option ? [.option] : [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
                 context: nil, eventNumber: 0, clickCount: 1, pressure: 1
             ))
             NSApplication.shared.sendEvent(event)
         }
         #expect(controller.pomodoro.stage == (allowsClick ? 3 : 1))
+        #expect(controller.pomodoro.focusDuration == (allowsClick && option ? defaultFocus : defaultFocus - 300))
         #expect(changes == 0)
     }
 

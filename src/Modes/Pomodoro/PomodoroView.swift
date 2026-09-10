@@ -79,7 +79,8 @@ struct PomodoroCycleControls: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Start Pomodoro cycle \(index + 1)")
-                .help("Start work at cycle \(index + 1).")
+                .accessibilityHint("Hold Option while clicking to restore default durations.")
+                .help("Start work at cycle \(index + 1). Hold Option to restore default durations.")
             }
         }
         .fixedSize()
