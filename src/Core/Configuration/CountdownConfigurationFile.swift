@@ -22,8 +22,30 @@ struct CountdownConfigurationFile {
 
         var sectionValues: [String: [String: String]] = [:]
         var section = ""
+        var arrayLine: String?
         for line in contents.split(whereSeparator: \.isNewline) {
-            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            var trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            let uncommented = trimmedLine.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+                .first?.trimmingCharacters(in: .whitespaces) ?? ""
+            if let pending = arrayLine {
+                // An assignment or section header ends an unterminated array.
+                if !uncommented.contains("="), !uncommented.hasPrefix("[") {
+                    trimmedLine = pending + " " + uncommented
+                    if !uncommented.contains("]") {
+                        arrayLine = trimmedLine
+                        continue
+                    }
+                } else if let equals = pending.firstIndex(of: "=") {
+                    let key = pending[..<equals].trimmingCharacters(in: .whitespaces)
+                    if sectionValues[section]?[key] == nil { sectionValues[section, default: [:]][key] = "invalid" }
+                }
+                arrayLine = nil
+            } else if let equals = uncommented.firstIndex(of: "="),
+                      uncommented[uncommented.index(after: equals)...].trimmingCharacters(in: .whitespaces).hasPrefix("["),
+                      !uncommented.contains("]") {
+                arrayLine = uncommented
+                continue
+            }
             let header = trimmedLine.split(separator: "#", maxSplits: 1).first?
                 .trimmingCharacters(in: .whitespaces) ?? ""
             if header.hasPrefix("["), header.hasSuffix("]") {
@@ -72,6 +94,20 @@ struct CountdownConfigurationFile {
     func doubleValue(for key: String, section: String = "") -> Double? {
         guard let value = sectionValues[section]?[key] else { return nil }
         return Double(value.split(separator: "#", maxSplits: 1).first?.trimmingCharacters(in: .whitespaces) ?? "")
+    }
+
+    func intArrayValue(for key: String, section: String) -> [Int]? {
+        guard let raw = sectionValues[section]?[key] else { return nil }
+        let value = raw.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+            .first?.trimmingCharacters(in: .whitespaces) ?? ""
+        guard value.hasPrefix("["), value.hasSuffix("]") else { return nil }
+        let body = value.dropFirst().dropLast().trimmingCharacters(in: .whitespaces)
+        if body.isEmpty { return [] }
+        var elements = body.split(separator: ",", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        if elements.last == "" { elements.removeLast() } // TOML permits a trailing comma.
+        let integers = elements.compactMap(Int.init)
+        return integers.count == elements.count ? integers : nil
     }
 
     func intValue(for key: String, section: String) -> Int? {

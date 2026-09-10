@@ -27,11 +27,13 @@ Restart Countdown after configuration changes. Saved Pomodoro duration edits
 take priority over configuration defaults; Option-click a Pomodoro dot to restore
 the configured durations.
 
-`notification_enabled` permits interval and Pomodoro phase-change notifications,
+`notification_enabled` permits scheduled and Pomodoro phase-change notifications,
 including text and sound. It must be `true` for the **Notifications** menu option
 to work. `notification_audio_enabled` controls notification sound only.
 `alarm_enabled` controls the Timer and Countdown timeout alarm independently;
-it does not add an alarm to Pomodoro.
+it does not add an alarm to Pomodoro. `alarm_message` replaces the timeout
+notification's `0` when the alarm is enabled. An empty or absent message keeps `0`.
+The message uses the existing notification display controls.
 
 `notification_time_seconds` sets how long the centered notification stays visible
 between fades. `notification_font_size_pt` sets its font size in points.
@@ -41,10 +43,13 @@ If these keys are absent, the built-in defaults are 5 seconds, 144 points, and 1
 The supplied file disables notification audio and the timeout alarm; both are enabled
 by default if their keys are absent.
 
-`notification_interval_minutes` defaults to 15 and rounds to the nearest
-multiple of 5, with a minimum of 5 minutes. Timer and Countdown notifications
-count backwards from the end time, including zero. Pomodoro interval notifications
-count backwards from the focus end; phase changes show work or rest notifications.
+`notification_marks_minutes` accepts a repeating interval (default: `15`) or exact
+remaining-minute marks such as `[1, 5, 15, 30, 45]`. A single number rounds to the
+nearest multiple of 5, with a minimum of 5 minutes. Array entries must be nonnegative
+integers and are not rounded; duplicates have no effect. An empty array leaves only
+end and phase-change notifications. Invalid values use the default interval.
+Timer and Countdown always notify at zero. Pomodoro marks count backwards from the
+focus end; phase changes show work or rest notifications.
 Relative sound paths are resolved from the directory that contains `config.toml`;
 absolute paths are also accepted.
 

@@ -119,13 +119,18 @@ struct CountdownView: View {
 
     private var notificationOverlay: CountdownNotificationOverlay {
         let event = notificationEvent ?? (countdown.mode.usesTimer
-            ? .remaining(countdown.timer.remaining)
+            ? (countdown.timer.remaining <= 0
+                ? countdown.notifications.alarmMessage.map(NotificationScheduler.Event.alarm) ?? .remaining(0)
+                : .remaining(countdown.timer.remaining))
             : countdown.pomodoro.focusRemaining > 0
                 ? .remaining(countdown.pomodoro.focusRemaining) : .rest)
         let remaining: TimeInterval
         if case .remaining(let time) = event { remaining = time } else { remaining = 0 }
+        let alarmMessage: String?
+        if case .alarm(let message) = event { alarmMessage = message } else { alarmMessage = nil }
         return CountdownNotificationOverlay(
             remaining: remaining,
+            alarmMessage: alarmMessage,
             isRest: event == .rest,
             isWork: event == .work,
             fontSizePt: notificationFontSizePt, fontName: notificationFont, fontVariations: notificationFontVariations

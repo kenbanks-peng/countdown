@@ -220,6 +220,91 @@ struct NotificationSchedulerTests {
         #expect(controller.notifications.notificationIntervalCount == 1)
     }
 
+    @Test(arguments: [false, true], [false, true])
+    func alarmMessageRequiresBothAlarmControls(configEnabled: Bool, savedEnabled: Bool) {
+        let notifications = NotificationScheduler(
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationMarksMinutes: [1],
+                                                 alarmEnabled: configEnabled, alarmMessage: "DONE"),
+            state: CountdownPreferences(alarmEnabled: savedEnabled),
+            playSound: { _ in }, saveEnablement: { _, _ in }
+        )
+        notifications.reportElapsed(previousRemaining: 61, remaining: 60)
+        #expect(notifications.lastEvent == .remaining(60))
+        notifications.reportElapsed(previousRemaining: 1, remaining: 0)
+        #expect(notifications.lastEvent == (configEnabled && savedEnabled ? .alarm("DONE") : .remaining(0)))
+        notifications.reportPhaseChange(remaining: 0)
+        #expect(notifications.lastEvent == .rest)
+        notifications.reportPhaseChange(remaining: 1_500)
+        #expect(notifications.lastEvent == .work)
+    }
+
+    @Test(arguments: ["", "   ", "\n"])
+    func emptyAlarmMessageKeepsZero(message: String) {
+        let notifications = NotificationScheduler(
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, alarmMessage: message),
+            playSound: { _ in }, saveEnablement: { _, _ in }
+        )
+        notifications.reportElapsed(previousRemaining: 1, remaining: 0)
+        #expect(notifications.lastEvent == .remaining(0))
+    }
+
+    @Test
+    func exactMarksNotifyOnceAtEachMarkAndAtZero() {
+        let notifications = NotificationScheduler(
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationMarksMinutes: [1, 5, 15, 30, 45, 5]),
+            playSound: { _ in }, saveEnablement: { _, _ in }
+        )
+        var marks: [Int] = []
+        for remaining in stride(from: 3_600, through: 0, by: -1) {
+            let count = notifications.notificationIntervalCount
+            notifications.reportElapsed(previousRemaining: Double(remaining + 1), remaining: Double(remaining))
+            if notifications.notificationIntervalCount > count { marks.append(remaining) }
+        }
+        #expect(marks == [2_700, 1_800, 900, 300, 60, 0])
+    }
+
+    @Test(arguments: [[Int](), [0], [1, 5, 15, 30, 45]])
+    func exactMarksKeepEndAndPhaseNotifications(marks: [Int]) {
+        let notifications = NotificationScheduler(
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationMarksMinutes: marks),
+            playSound: { _ in }, saveEnablement: { _, _ in }
+        )
+        notifications.reportElapsed(previousRemaining: 1, remaining: -1)
+        #expect(notifications.notificationIntervalCount == 1)
+        notifications.reportElapsed(previousRemaining: -1, remaining: -2)
+        #expect(notifications.notificationIntervalCount == 1)
+        notifications.reportPhaseChange(remaining: 0)
+        #expect(notifications.lastEvent == .rest)
+        notifications.reportPhaseChange(remaining: 1_500)
+        #expect(notifications.lastEvent == .work)
+        #expect(notifications.notificationIntervalCount == 3)
+    }
+
+    @Test
+    func exactMarksHandleLatePausedDisabledAndInvalidUpdates() {
+        let notifications = NotificationScheduler(
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationMarksMinutes: [1, 5, 15, 30, 45]),
+            playSound: { _ in }, saveEnablement: { _, _ in }
+        )
+        notifications.reportElapsed(previousRemaining: 3_000, remaining: 299)
+        #expect(notifications.notificationIntervalCount == 1)
+        #expect(notifications.lastEvent == .remaining(299))
+        notifications.reportElapsed(previousRemaining: 299, remaining: 299)
+        notifications.reportElapsed(previousRemaining: 299, remaining: 600)
+        notifications.reportElapsed(previousRemaining: .infinity, remaining: 0)
+        notifications.reportElapsed(previousRemaining: 299, remaining: .nan)
+        // An endpoint edit is not elapsed time. Starting at a mark must not replay it.
+        notifications.reportElapsed(previousRemaining: 300, remaining: 61)
+        #expect(notifications.notificationIntervalCount == 1)
+        notifications.setNotificationEnabled(false)
+        notifications.reportElapsed(previousRemaining: 61, remaining: 60)
+        notifications.setNotificationEnabled(true)
+        notifications.reportElapsed(previousRemaining: 60, remaining: 1)
+        #expect(notifications.notificationIntervalCount == 1)
+        notifications.reportElapsed(previousRemaining: 1, remaining: 0)
+        #expect(notifications.notificationIntervalCount == 2)
+    }
+
     @Test
     func endpointEditsDoNotLeaveAStaleSchedule() {
         let notifications = NotificationScheduler(configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationIntervalMinutes: 10), playSound: { _ in }, saveEnablement: { _, _ in })

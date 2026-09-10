@@ -5,6 +5,7 @@ struct CountdownConfiguration {
     let notificationEnabled: Bool
     let notificationAudioEnabled: Bool
     let alarmEnabled: Bool
+    let alarmMessage: String
     let size: Double
     let compactSize: Double
     let greenNotificationURL: URL?
@@ -22,6 +23,8 @@ struct CountdownConfiguration {
     let notificationFadeOut: NotificationFadeCurve
     let notificationTimeSeconds: Double
     let notificationIntervalMinutes: Int
+    /// Exact remaining-minute marks, or nil to use the repeating interval.
+    let notificationMarksMinutes: [Int]?
     let pomodoroFocusPeriodsPerCycle: Int
     let pomodoroFocusMinutes: Int
     let pomodoroRestMinutes: Int
@@ -41,6 +44,7 @@ struct CountdownConfiguration {
         notificationFont: String = "",
         notificationFontVariations: NotificationFontVariations = NotificationFontVariations(),
         notificationIntervalMinutes: Int = 15,
+        notificationMarksMinutes: [Int]? = nil,
         pomodoroFocusMinutes: Int = 25,
         pomodoroRestMinutes: Int = 5,
         pomodoroLongRestMinutes: Int = 20,
@@ -50,12 +54,14 @@ struct CountdownConfiguration {
         notificationEnabled: Bool = true,
         notificationAudioEnabled: Bool = true,
         alarmEnabled: Bool = true,
+        alarmMessage: String = "",
         testEnabled: Bool = false
     ) {
         self.testEnabled = testEnabled
         self.notificationEnabled = notificationEnabled
         self.notificationAudioEnabled = notificationAudioEnabled
         self.alarmEnabled = alarmEnabled
+        self.alarmMessage = alarmMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         self.size = size.isFinite && size > 0 ? size : 1
         self.compactSize = compactSize.isFinite && compactSize > 0 ? compactSize : 1
         self.pomodoroFocusPeriodsPerCycle = PomodoroModel.normalizedFocusPeriodCount(pomodoroFocusPeriodsPerCycle)
@@ -75,6 +81,9 @@ struct CountdownConfiguration {
         self.notificationFadeOut = notificationFadeOut
         self.notificationTimeSeconds = notificationTimeSeconds.isFinite && notificationTimeSeconds >= 0
             ? notificationTimeSeconds : 5
+        self.notificationMarksMinutes = notificationMarksMinutes.flatMap { marks in
+            marks.allSatisfy { $0 >= 0 } ? Array(Set(marks)).sorted() : nil
+        }
         let interval = max(5, notificationIntervalMinutes)
         let roundedDown = interval - interval % 5
         self.notificationIntervalMinutes = interval % 5 >= 3 && roundedDown <= Int.max - 5 ? roundedDown + 5 : roundedDown
@@ -115,7 +124,8 @@ struct CountdownConfiguration {
                 opticalSize: configurationFile.doubleValue(for: "notification_font_optical_size_pt", section: "notifications"),
                 slant: configurationFile.doubleValue(for: "notification_font_slant_degrees", section: "notifications")
             ),
-            notificationIntervalMinutes: configurationFile.intValue(for: "notification_interval_minutes", section: "notifications") ?? 15,
+            notificationIntervalMinutes: configurationFile.intValue(for: "notification_marks_minutes", section: "notifications") ?? 15,
+            notificationMarksMinutes: configurationFile.intArrayValue(for: "notification_marks_minutes", section: "notifications"),
             pomodoroFocusMinutes: configurationFile.intValue(for: "focus", section: "pomodoro") ?? 25,
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,
             pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", section: "pomodoro") ?? 20,
@@ -125,6 +135,7 @@ struct CountdownConfiguration {
             notificationEnabled: configurationFile.boolValue(for: "notification_enabled") ?? true,
             notificationAudioEnabled: configurationFile.boolValue(for: "notification_audio_enabled") ?? true,
             alarmEnabled: configurationFile.boolValue(for: "alarm_enabled") ?? true,
+            alarmMessage: configurationFile.stringValue(for: "alarm_message", section: "notifications") ?? "",
             testEnabled: configurationFile.boolValue(for: "test", section: "") ?? false
         )
     }

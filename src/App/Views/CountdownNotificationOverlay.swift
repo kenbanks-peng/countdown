@@ -1,9 +1,10 @@
 import CoreText
 import SwiftUI
 
-/// Remaining minutes or a phase-start label, centered on a transparent surface.
+/// Remaining minutes, an alarm message, or a phase label on a transparent surface.
 struct CountdownNotificationOverlay: View {
     let remaining: TimeInterval
+    var alarmMessage: String? = nil
     var isRest = false
     var isWork = false
     var fontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt
@@ -15,7 +16,7 @@ struct CountdownNotificationOverlay: View {
     }
 
     var label: String {
-        isRest ? "REST" : isWork ? "WORK" : Self.timeLabel(remaining)
+        isRest ? "REST" : isWork ? "WORK" : alarmMessage ?? Self.timeLabel(remaining)
     }
 
     var effectiveFontSizePt: CGFloat {
@@ -24,9 +25,33 @@ struct CountdownNotificationOverlay: View {
 
     var body: some View {
         Canvas { context, size in
-            // The label contains only ASCII digits or phase text. Draw its glyphs directly:
-            // attributed text can reuse a named font's previously cached weight.
+            // Construct the font with the configured variable-font axes.
             let font = NotificationFont.make(name: fontName, size: effectiveFontSizePt, variations: fontVariations)
+            if alarmMessage != nil && !isRest && !isWork {
+                // Shape user text with font fallback for non-ASCII characters.
+                let line = CTLineCreateWithAttributedString(NSAttributedString(string: label, attributes: [
+                    NSAttributedString.Key(kCTFontAttributeName as String): font,
+                    NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
+                ]))
+                let width = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+                context.withCGContext { graphics in
+                    graphics.translateBy(x: (size.width - width) / 2,
+                                         y: (size.height + CTFontGetAscent(font) - CTFontGetDescent(font)) / 2)
+                    graphics.scaleBy(x: 1, y: -1)
+                    graphics.setStrokeColor(CGColor(gray: 0, alpha: 0.85))
+                    graphics.setLineWidth(2)
+                    graphics.setLineJoin(.round)
+                    graphics.setTextDrawingMode(.stroke)
+                    graphics.textPosition = .zero
+                    CTLineDraw(line, graphics)
+                    graphics.setTextDrawingMode(.fill)
+                    graphics.setFillColor(CGColor.white)
+                    graphics.textPosition = .zero
+                    CTLineDraw(line, graphics)
+                }
+                return
+            }
+            // Draw ASCII digits and phase text directly to avoid cached font weights.
             let characters = Array(label.utf16)
             var glyphs = [CGGlyph](repeating: 0, count: characters.count)
             CTFontGetGlyphsForCharacters(font, characters, &glyphs, characters.count)
@@ -55,6 +80,6 @@ struct CountdownNotificationOverlay: View {
         }
         .shadow(color: .black.opacity(0.7), radius: 2)
         .allowsHitTesting(false)
-        .accessibilityLabel(isRest || isWork ? label : "\(label) minutes remaining")
+        .accessibilityLabel(isRest || isWork || alarmMessage != nil ? label : "\(label) minutes remaining")
     }
 }

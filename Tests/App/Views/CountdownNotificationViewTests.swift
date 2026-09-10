@@ -47,6 +47,42 @@ struct CountdownNotificationViewTests {
         }
     }
 
+    @Test(arguments: [CountdownMode.timer, .countdown], [false, true])
+    func timeoutShowsAlarmMessageOrZero(mode: CountdownMode, alarmEnabled: Bool) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var now = Date(timeIntervalSince1970: 1_699_999_800)
+        var sounds: [URL?] = []
+        let alarmURL = URL(fileURLWithPath: "/tmp/alarm.mp3")
+        let controller = CountdownController(
+            sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: alarmURL, notificationMarksMinutes: [],
+                                                 notificationAudioEnabled: false, alarmEnabled: alarmEnabled,
+                                                 alarmMessage: "DONE"),
+            preferences: CountdownPreferences(),
+            playSound: { sounds.append($0) }, now: { now }, saveEnablement: { _, _ in }
+        )
+        controller.selectMode(mode)
+        controller.adjustTimerDuration(by: 300)
+        controller.setAutoRepeatEnabled(true)
+        now += controller.timer.remaining
+        controller.update()
+        let event = try #require(controller.notifications.lastEvent)
+        #expect(event == (alarmEnabled ? .alarm("DONE") : .remaining(0)))
+        #expect(sounds == (alarmEnabled ? [alarmURL] : []))
+        #expect(controller.timer.remaining > 0)
+        let hosting = NSHostingView(rootView: CountdownView(
+            countdown: controller, isNotification: true, notificationEvent: event, changePresentation: {}
+        ))
+        if alarmEnabled {
+            #expect(try recognizedText(render(hosting, side: 512)) == ["DONE"])
+            controller.selectMode(.pomodoro)
+            #expect(try recognizedText(render(hosting, side: 512)) == ["DONE"])
+        } else {
+            try expectNotificationMinutes(render(hosting, side: 512), remaining: 0)
+        }
+    }
+
     @Test
     func scheduledNotificationKeepsItsEventText() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

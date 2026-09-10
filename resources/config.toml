@@ -5,9 +5,11 @@ compact_size = 1
 [notifications]
 notification_enabled = true
 
-# Rounded to the nearest multiple of 5 minutes, with a minimum of 5.
+# A number repeats at that interval, rounded to the nearest 5 (minimum 5).
+# An array sets exact remaining-minute marks: [1, 5, 15, 30, 45].
+# Array entries must be nonnegative integers; [] leaves only end/phase notifications.
 # Notifications count backwards from the active end time, including zero.
-notification_interval_minutes = 15
+notification_marks_minutes = 15
 
 # Seconds the centered minutes stay visible between fades.
 notification_time_seconds = 5
@@ -40,6 +42,8 @@ red_audio = "red.mp3"
 
 alarm_enabled = false
 alarm_audio = "alarm.mp3"
+# Replaces 0 at timeout when the alarm is enabled. Empty or absent means 0.
+alarm_message = "DONE"
 
 [pomodoro]
 focus = 25          # minutes

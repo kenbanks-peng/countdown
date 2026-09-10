@@ -14,7 +14,7 @@ struct CountdownConfigurationFileTests {
         return CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
     }
 
-    @Test(arguments: [nil, "", "[notifications]\nnotification_enabled = invalid\nnotification_audio_enabled = \"false\"\nalarm_enabled = FALSE\nnotification_time_seconds = invalid\nnotification_interval_minutes = invalid"] as [String?])
+    @Test(arguments: [nil, "", "[notifications]\nnotification_enabled = invalid\nnotification_audio_enabled = \"false\"\nalarm_enabled = FALSE\nnotification_time_seconds = invalid\nnotification_marks_minutes = invalid"] as [String?])
     func missingAndInvalidValuesUseDefaults(contents: String?) throws {
         let config = try load(contents)
         #expect(config.size == 1)
@@ -32,6 +32,23 @@ struct CountdownConfigurationFileTests {
         #expect(config.yellowNotificationURL?.lastPathComponent == "yellow.mp3")
         #expect(config.redNotificationURL?.lastPathComponent == "red.mp3")
         #expect(config.alarmNotificationURL?.lastPathComponent == "alarm.mp3")
+    }
+
+    @Test(arguments: ["", "[notifications]\nalarm_message = invalid", "[notifications]\nalarm_message = \"   \""])
+    func missingOrInvalidAlarmMessageIsEmpty(contents: String) throws {
+        #expect(try load(contents).alarmMessage == "")
+    }
+
+    @Test
+    func alarmMessageUsesNotificationSectionAndFirstValue() throws {
+        let config = try load("""
+        alarm_message = "WRONG"
+        [notifications]
+        alarm_message = " DONE " # Timeout label
+        alarm_message = "SECOND"
+        """)
+        #expect(config.alarmMessage == "DONE")
+        #expect(CountdownConfiguration(alarmNotificationURL: nil).alarmMessage == "")
     }
 
     @Test(arguments: ["0", "0.0", "0.1", "0.5", "1", "1.0", "5"])
@@ -74,7 +91,7 @@ struct CountdownConfigurationFileTests {
         notification_audio_enabled = false
         alarm_enabled = false
         notification_time_seconds = 7
-        notification_interval_minutes = 8
+        notification_marks_minutes = 8
         alarm_audio = "/tmp/alarm.mp3"
         green_audio = "sounds/green.mp3" # Relative path
         red_audio = invalid
@@ -99,6 +116,29 @@ struct CountdownConfigurationFileTests {
         #expect(config.redNotificationURL?.lastPathComponent == "red.mp3")
     }
 
+    @Test(arguments: ["[1, 5, 15, 30, 45]", "[45, 5, 1, 30, 15, 5,] # Marks", "[\n1, # One minute\n5, 15,\n30, 45,\n]"])
+    func arraysPreserveExactMarks(value: String) throws {
+        let config = try load("[notifications]\nnotification_marks_minutes = \(value)")
+        #expect(config.notificationMarksMinutes == [1, 5, 15, 30, 45])
+    }
+
+    @Test(arguments: ["[1, invalid]", "[1, 2.5]", "[1, -5]", "[1,,5]", "[,]", "[\"1\"]", "[1, 5", "[1] trailing", "[999999999999999999999999]"])
+    func invalidArraysUseDefaultInterval(value: String) throws {
+        let config = try load("[notifications]\nnotification_marks_minutes = \(value)\nnotification_marks_minutes = [30]\nnotification_audio_enabled = false")
+        #expect(config.notificationMarksMinutes == nil)
+        #expect(config.notificationIntervalMinutes == 15)
+        #expect(!config.notificationAudioEnabled)
+    }
+
+    @Test
+    func arraysUseTheirOwnSectionAndFirstValue() throws {
+        let config = try load("[unrelated]\nnotification_marks_minutes = [45]\n[notifications]\nnotification_marks_minutes = [0, 1, 1]\nnotification_marks_minutes = [30]")
+        #expect(config.notificationMarksMinutes == [0, 1])
+        #expect(try load("[notifications]\nnotification_marks_minutes = []").notificationMarksMinutes == [])
+        #expect(try load("[notifications]\nnotification_marks_minutes = 15").notificationMarksMinutes == nil)
+        #expect(try load("[notifications]\nnotification_interval_minutes = 30").notificationIntervalMinutes == 15)
+    }
+
     @Test
     func invalidFirstValuesDoNotFallThrough() throws {
         let config = try load("""
@@ -107,8 +147,8 @@ struct CountdownConfigurationFileTests {
         notification_enabled = false
         notification_time_seconds = invalid
         notification_time_seconds = 9
-        notification_interval_minutes = invalid
-        notification_interval_minutes = 30
+        notification_marks_minutes = invalid
+        notification_marks_minutes = 30
         alarm_audio = "first.mp3"
         alarm_audio = "second.mp3"
         """)
