@@ -57,9 +57,8 @@ struct CountdownNotificationViewTests {
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: CountdownConfiguration(alarmNotificationURL: alarmURL, notificationMarksMinutes: [],
-                                                 notificationAudioEnabled: false, alarmEnabled: alarmEnabled,
                                                  alarmMessage: "DONE"),
-            preferences: CountdownPreferences(),
+            preferences: CountdownPreferences(alarmEnabled: alarmEnabled),
             playSound: { sounds.append($0) }, now: { now }, saveEnablement: { _, _ in }
         )
         controller.selectMode(mode)

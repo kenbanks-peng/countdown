@@ -13,7 +13,7 @@ struct CountdownTestNotificationTests {
         var sounds = 0
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil, notificationEnabled: false, testEnabled: true),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, testEnabled: true),
             preferences: CountdownPreferences(notificationEnabled: false),
             playSound: { _ in sounds += 1 }, now: { now },
             reloadConfiguration: { CountdownConfiguration(alarmNotificationURL: nil) }
@@ -71,7 +71,7 @@ struct CountdownTestNotificationTests {
             notification_font_weight = 800
             notification_font_width = 75
             notification_font_optical_size_pt = 48
-            notification_time_seconds = 2
+            notification_hold_time_seconds = 2
             notification_fade_time_seconds = 0
             notification_fade_in = "\(size == 180 ? "linear" : "ease-out")"
             notification_fade_out = "\(size == 180 ? "ease-in-out" : "ease-in")"
@@ -86,7 +86,7 @@ struct CountdownTestNotificationTests {
             #expect(config.notificationFontSizePt == Double(size))
             #expect(config.notificationFontAlpha == Double(size) / 300)
             #expect(config.notificationFontVariations == NotificationFontVariations(weight: 800, width: 75, opticalSize: 48))
-            #expect(config.notificationTimeSeconds == 2)
+            #expect(config.notificationHoldTimeSeconds == 2)
             #expect(config.notificationFadeTimeSeconds == 0)
             #expect(config.notificationFadeIn == (size == 180 ? .linear : .easeOut))
             #expect(config.notificationFadeOut == (size == 180 ? .easeInOut : .easeIn))

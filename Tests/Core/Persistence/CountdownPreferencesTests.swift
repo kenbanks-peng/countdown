@@ -22,14 +22,10 @@ struct CountdownPreferencesTests {
         try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
         let configURL = configDirectory.appendingPathComponent("config.toml")
         let contents = """
-        [display]
-        current_timeout_enabled = true
         [notifications]
-        notification_enabled = true
-        notification_audio_enabled = false
-        alarm_enabled = true
-        notification_time_seconds = 5
+        notification_hold_time_seconds = 5
         notification_marks_minutes = 15
+        [alarm]
         alarm_audio = "alarm.mp3"
         """
         try contents.write(to: configURL, atomically: true, encoding: .utf8)
@@ -41,7 +37,6 @@ struct CountdownPreferencesTests {
             == configDirectory.appendingPathComponent("alarm.mp3"))
         let timerStore = TimerSessionStore(environment: ["XDG_STATE_HOME": directory.appendingPathComponent("state").path])
         let stateStore = CountdownPreferencesStore(stateDirectory: timerStore.stateDirectory)
-        stateStore.saveEnablement("alarm_enabled", enabled: alarmEnabled)
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         var sounds = 0
         func controller() -> CountdownController {
@@ -53,6 +48,7 @@ struct CountdownPreferencesTests {
         let original = controller()
         original.selectMode(.countdown)
         original.notifications.setNotificationEnabled(false)
+        original.notifications.setAlarmEnabled(alarmEnabled)
         original.timer.setRemainingMinutesVisible(false)
         original.timer.setAutoRepeatEnabled(true)
         original.setAutoAlignEnabled(true)
@@ -62,9 +58,11 @@ struct CountdownPreferencesTests {
             from: Data(contentsOf: timerStore.stateDirectory.appendingPathComponent("features.json"))
         )
         #expect(savedFeatures["notification_enabled"] == false)
+        #expect(savedFeatures["alarm_enabled"] == alarmEnabled)
         let restored = controller()
         #expect(!restored.mode.isClockEnabled)
         #expect(!restored.notifications.isNotificationEnabled)
+        #expect(restored.notifications.isAlarmEnabled == alarmEnabled)
         #expect(!restored.timer.showsRemainingMinutes)
         #expect(restored.timer.isAutoRepeatEnabled)
         #expect(restored.timer.isAutoAlignEnabled)
@@ -109,10 +107,12 @@ struct CountdownPreferencesTests {
         )
         controller.selectMode(.countdown)
         controller.notifications.setNotificationEnabled(false)
+        controller.notifications.setAlarmEnabled(false)
         controller.timer.setRemainingMinutesVisible(false)
         controller.timer.setAutoRepeatEnabled(true)
         #expect(!controller.mode.isClockEnabled)
         #expect(!controller.notifications.isNotificationEnabled)
+        #expect(!controller.notifications.isAlarmEnabled)
         #expect(!controller.timer.showsRemainingMinutes)
         #expect(controller.timer.isAutoRepeatEnabled)
         #expect(try String(contentsOf: directory, encoding: .utf8) == "blocked")

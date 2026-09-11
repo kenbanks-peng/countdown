@@ -1,9 +1,8 @@
-# Positive scale factors. Restart Countdown after configuration changes.
-size = 1
-compact_size = 1
+# Window side lengths in pixels. Restart Countdown after configuration changes.
+size_px = 220
+compact_size_px = 32
 
 [notifications]
-notification_enabled = true
 
 # A number repeats at that interval, rounded to the nearest 5 (minimum 5).
 # An array sets exact remaining-minute marks: [1, 5, 15, 30, 45].
@@ -12,7 +11,7 @@ notification_enabled = true
 notification_marks_minutes = 15
 
 # Seconds the centered minutes stay visible between fades.
-notification_time_seconds = 5
+notification_hold_time_seconds = 5
 
 # Duration of each fade, in seconds. Zero disables fades.
 notification_fade_time_seconds = 0.8 
@@ -35,12 +34,7 @@ notification_font_width = 1000
 # notification_font_optical_size_pt = 28    # SF Pro: 17 to 28, normal = 28
 # notification_font_slant_degrees = -10     # Monaspace: 0 = upright; negative values lean right
 
-notification_audio_enabled = false
-green_audio = "green.mp3"
-yellow_audio = "yellow.mp3"
-red_audio = "red.mp3"
-
-alarm_enabled = false
+[alarm]
 alarm_audio = "alarm.mp3"
 # Replaces 0 at timeout when the alarm is enabled. Empty or absent means 0.
 alarm_message = "DONE"

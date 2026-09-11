@@ -21,6 +21,8 @@ final class CountdownWindowController {
     private let configuration: CountdownConfiguration
     private let normalSize: NSSize
     private let compactSize: NSSize
+    private var normalScale: CGFloat { configuration.sizePx / CountdownAppearance.normalSize }
+    private var compactScale: CGFloat { configuration.compactSizePx / CountdownAppearance.compactSize }
 
     init(countdown: CountdownController, configuration: CountdownConfiguration = .default,
          windowState: CountdownWindowStateStore = CountdownWindowStateStore(),
@@ -29,8 +31,8 @@ final class CountdownWindowController {
         self.configuration = configuration
         self.windowState = windowState
         self.notification = notification ?? CountdownNotificationController(fadeDuration: configuration.notificationFadeTimeSeconds)
-        let normalSide = CountdownAppearance.normalSize * configuration.size
-        let compactSide = CountdownAppearance.compactSize * configuration.compactSize
+        let normalSide = configuration.sizePx
+        let compactSide = configuration.compactSizePx
         normalSize = NSSize(width: normalSide, height: normalSide)
         compactSize = NSSize(width: compactSide, height: compactSide)
         presentation = windowState.presentation
@@ -45,7 +47,7 @@ final class CountdownWindowController {
         testNotificationSubscription = countdown.testNotificationRequested.sink { [weak self] configuration in
             self?.showNotification(configuration: configuration)
         }
-        scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, normalScale: configuration.size, isCompact: { [weak self] in
+        scrollTimeAdjuster = ScrollTimeAdjuster(countdown: countdown, window: panel, normalScale: normalScale, isCompact: { [weak self] in
             self?.presentation == .compact
         })
     }
@@ -97,7 +99,7 @@ final class CountdownWindowController {
                 notificationEvent: event, changePresentation: {}
             )),
             screenFrame: screen.frame, size: screen.frame.size,
-            duration: TimeInterval(configuration.notificationTimeSeconds),
+            duration: TimeInterval(configuration.notificationHoldTimeSeconds),
             fadeDuration: configuration.notificationFadeTimeSeconds,
             peakAlpha: configuration.notificationFontAlpha,
             fadeIn: configuration.notificationFadeIn,
@@ -108,7 +110,7 @@ final class CountdownWindowController {
     private func contentView(isCompact: Bool) -> NSView {
         let view = NSHostingView(rootView: CountdownView(
             countdown: countdown, isCompact: isCompact,
-            scale: isCompact ? configuration.compactSize : configuration.size,
+            scale: isCompact ? compactScale : normalScale,
             allowsClick: { [weak self] in self?.panel.allowsClick ?? true },
             clickModifierFlags: { [weak self] in self?.panel.clickModifierFlags ?? [] },
             changePresentation: { [weak self] in

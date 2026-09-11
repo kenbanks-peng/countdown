@@ -49,12 +49,10 @@ if [ ! -f "$config_dir/config.toml" ]; then
   install -m 644 "resources/config.toml" "$config_dir/config.toml"
   resources_installed=true
 fi
-for file in green.mp3 yellow.mp3 red.mp3 alarm.mp3; do
-  if [ ! -f "$config_dir/$file" ] || ! cmp -s "resources/$file" "$config_dir/$file"; then
-    install -m 644 "resources/$file" "$config_dir/$file"
-    resources_installed=true
-  fi
-done
+if [ ! -f "$config_dir/alarm.mp3" ] || ! cmp -s "resources/alarm.mp3" "$config_dir/alarm.mp3"; then
+  install -m 644 "resources/alarm.mp3" "$config_dir/alarm.mp3"
+  resources_installed=true
+fi
 if [ "$resources_installed" = true ]; then
   echo "Installed countdown resources"
 fi

@@ -22,27 +22,24 @@ Native macOS app with three modes: Pomodoro, Timer, and Countdown. Requires macO
 Countdown reads `${XDG_CONFIG_HOME:-$HOME/.config}/countdown/config.toml`.
 
 See [the supplied configuration](resources/config.toml) for the main settings.
-Put `size` and `compact_size` at the top level, notification and alarm settings
-under `[notifications]`, and focus, rest, long-rest, and cycle settings under `[pomodoro]`.
+Put `size_px` and `compact_size_px` at the top level (defaults: 220 and 32).
+These set the window side lengths. Put notification settings under `[notifications]`,
+alarm settings under `[alarm]`, and focus, rest, long-rest, and cycle settings under `[pomodoro]`.
 Restart Countdown after configuration changes. Saved Pomodoro duration edits
 take priority over configuration defaults; Option-click a Pomodoro dot to restore
 the configured durations.
 
-`notification_enabled` permits scheduled and Pomodoro phase-change notifications,
-including text and sound. It must be `true` for the **Notifications** menu option
-to work. `notification_audio_enabled` controls notification sound only.
-`alarm_enabled` controls the Timer and Countdown timeout alarm independently;
+**Notifications** controls silent scheduled and Pomodoro phase-change notifications.
+**Alarm** controls the Timer and Countdown timeout alarm independently;
 it does not add an alarm to Pomodoro. `alarm_message` replaces the timeout
 notification's `0` when the alarm is enabled. An empty or absent message keeps `0`.
 The message uses the existing notification display controls.
 
-`notification_time_seconds` sets how long the centered notification stays visible
+`notification_hold_time_seconds` sets how long the centered notification stays visible
 between fades. `notification_font_size_pt` sets its font size in points.
 `notification_fade_time_seconds` sets the duration of each fade; zero disables fades.
 The supplied file uses 5 seconds, 600 points, and 0.8 seconds respectively.
 If these keys are absent, the built-in defaults are 5 seconds, 144 points, and 1.5 seconds.
-The supplied file disables notification audio and the timeout alarm; both are enabled
-by default if their keys are absent.
 
 `notification_marks_minutes` accepts a repeating interval (default: `15`) or exact
 remaining-minute marks such as `[1, 5, 15, 30, 45]`. A single number rounds to the
@@ -56,9 +53,8 @@ absolute paths are also accepted.
 
 Saved state is stored under `${XDG_STATE_HOME:-$HOME/.local/state}/countdown/`.
 `settings.json` stores the mode, pause state, and Pomodoro settings and schedule.
-`features.json` stores menu choices such as Notifications, Loop, and Show value.
-`session.json` stores timer progress. A saved disabled alarm setting in `features.json`
-also suppresses the alarm. Menu changes do not modify `config.toml`.
+`features.json` stores menu choices such as Notifications, Alarm, Loop, and Show value.
+`session.json` stores timer progress. Menu changes do not modify `config.toml`.
 
 ## Development and installation
 

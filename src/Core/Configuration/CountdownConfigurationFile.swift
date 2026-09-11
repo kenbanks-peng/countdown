@@ -61,9 +61,9 @@ struct CountdownConfigurationFile {
         self.sectionValues = sectionValues
     }
 
-    func soundURL(for key: String, defaultName: String) -> URL {
+    func soundURL(for key: String, defaultName: String, section: String) -> URL {
         var path = defaultName
-        if let value = sectionValues["notifications"]?[key], value.first == "\"",
+        if let value = sectionValues[section]?[key], value.first == "\"",
            let end = value.dropFirst().firstIndex(of: "\"") {
             let suffix = value[value.index(after: end)...].trimmingCharacters(in: .whitespaces)
             let candidate = String(value[value.index(after: value.startIndex)..<end])

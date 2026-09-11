@@ -2,15 +2,11 @@ import Foundation
 
 struct CountdownConfiguration {
     let testEnabled: Bool
-    let notificationEnabled: Bool
-    let notificationAudioEnabled: Bool
-    let alarmEnabled: Bool
     let alarmMessage: String
-    let size: Double
-    let compactSize: Double
-    let greenNotificationURL: URL?
-    let yellowNotificationURL: URL?
-    let redNotificationURL: URL?
+    static let defaultSizePx: Double = 220
+    static let defaultCompactSizePx: Double = 32
+    let sizePx: Double
+    let compactSizePx: Double
     let alarmNotificationURL: URL?
     static let defaultNotificationFontSizePt: Double = 144
     let notificationFontSizePt: Double
@@ -21,7 +17,7 @@ struct CountdownConfiguration {
     let notificationFadeTimeSeconds: Double
     let notificationFadeIn: NotificationFadeCurve
     let notificationFadeOut: NotificationFadeCurve
-    let notificationTimeSeconds: Double
+    let notificationHoldTimeSeconds: Double
     let notificationIntervalMinutes: Int
     /// Exact remaining-minute marks, or nil to use the repeating interval.
     let notificationMarksMinutes: [Int]?
@@ -32,10 +28,7 @@ struct CountdownConfiguration {
 
     init(
         alarmNotificationURL: URL?,
-        greenNotificationURL: URL? = nil,
-        yellowNotificationURL: URL? = nil,
-        redNotificationURL: URL? = nil,
-        notificationTimeSeconds: Double = 5,
+        notificationHoldTimeSeconds: Double = 5,
         notificationFadeTimeSeconds: Double = CountdownConfiguration.defaultNotificationFadeTimeSeconds,
         notificationFadeIn: NotificationFadeCurve = .easeIn,
         notificationFadeOut: NotificationFadeCurve = .easeOut,
@@ -49,25 +42,16 @@ struct CountdownConfiguration {
         pomodoroRestMinutes: Int = 5,
         pomodoroLongRestMinutes: Int = 20,
         pomodoroFocusPeriodsPerCycle: Int = 4,
-        size: Double = 1,
-        compactSize: Double = 1,
-        notificationEnabled: Bool = true,
-        notificationAudioEnabled: Bool = true,
-        alarmEnabled: Bool = true,
+        sizePx: Double = CountdownConfiguration.defaultSizePx,
+        compactSizePx: Double = CountdownConfiguration.defaultCompactSizePx,
         alarmMessage: String = "",
         testEnabled: Bool = false
     ) {
         self.testEnabled = testEnabled
-        self.notificationEnabled = notificationEnabled
-        self.notificationAudioEnabled = notificationAudioEnabled
-        self.alarmEnabled = alarmEnabled
         self.alarmMessage = alarmMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.size = size.isFinite && size > 0 ? size : 1
-        self.compactSize = compactSize.isFinite && compactSize > 0 ? compactSize : 1
+        self.sizePx = sizePx.isFinite && sizePx > 0 ? sizePx : Self.defaultSizePx
+        self.compactSizePx = compactSizePx.isFinite && compactSizePx > 0 ? compactSizePx : Self.defaultCompactSizePx
         self.pomodoroFocusPeriodsPerCycle = PomodoroModel.normalizedFocusPeriodCount(pomodoroFocusPeriodsPerCycle)
-        self.greenNotificationURL = greenNotificationURL
-        self.yellowNotificationURL = yellowNotificationURL
-        self.redNotificationURL = redNotificationURL
         self.alarmNotificationURL = alarmNotificationURL
         self.notificationFontAlpha = notificationFontAlpha.isFinite && (0...1).contains(notificationFontAlpha)
             ? notificationFontAlpha : 1
@@ -79,8 +63,8 @@ struct CountdownConfiguration {
             ? notificationFadeTimeSeconds : Self.defaultNotificationFadeTimeSeconds
         self.notificationFadeIn = notificationFadeIn
         self.notificationFadeOut = notificationFadeOut
-        self.notificationTimeSeconds = notificationTimeSeconds.isFinite && notificationTimeSeconds >= 0
-            ? notificationTimeSeconds : 5
+        self.notificationHoldTimeSeconds = notificationHoldTimeSeconds.isFinite && notificationHoldTimeSeconds >= 0
+            ? notificationHoldTimeSeconds : 5
         self.notificationMarksMinutes = notificationMarksMinutes.flatMap { marks in
             marks.allSatisfy { $0 >= 0 } ? Array(Set(marks)).sorted() : nil
         }
@@ -103,13 +87,10 @@ struct CountdownConfiguration {
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> CountdownConfiguration {
         let configurationFile = CountdownConfigurationFile(fileManager: fileManager, environment: environment)
-        let alarmNotificationURL = configurationFile.soundURL(for: "alarm_audio", defaultName: "alarm.mp3")
+        let alarmNotificationURL = configurationFile.soundURL(for: "alarm_audio", defaultName: "alarm.mp3", section: "alarm")
         return CountdownConfiguration(
             alarmNotificationURL: alarmNotificationURL,
-            greenNotificationURL: configurationFile.soundURL(for: "green_audio", defaultName: "green.mp3"),
-            yellowNotificationURL: configurationFile.soundURL(for: "yellow_audio", defaultName: "yellow.mp3"),
-            redNotificationURL: configurationFile.soundURL(for: "red_audio", defaultName: "red.mp3"),
-            notificationTimeSeconds: configurationFile.doubleValue(for: "notification_time_seconds", section: "notifications") ?? 5,
+            notificationHoldTimeSeconds: configurationFile.doubleValue(for: "notification_hold_time_seconds", section: "notifications") ?? 5,
             notificationFadeTimeSeconds: configurationFile.doubleValue(for: "notification_fade_time_seconds", section: "notifications") ?? Self.defaultNotificationFadeTimeSeconds,
             notificationFadeIn: configurationFile.stringValue(for: "notification_fade_in", section: "notifications")
                 .flatMap(NotificationFadeCurve.init(rawValue:)) ?? .easeIn,
@@ -130,12 +111,9 @@ struct CountdownConfiguration {
             pomodoroRestMinutes: configurationFile.intValue(for: "rest", section: "pomodoro") ?? 5,
             pomodoroLongRestMinutes: configurationFile.intValue(for: "long-rest", section: "pomodoro") ?? 20,
             pomodoroFocusPeriodsPerCycle: configurationFile.intValue(for: "cycles", section: "pomodoro") ?? 4,
-            size: configurationFile.doubleValue(for: "size") ?? 1,
-            compactSize: configurationFile.doubleValue(for: "compact_size") ?? 1,
-            notificationEnabled: configurationFile.boolValue(for: "notification_enabled") ?? true,
-            notificationAudioEnabled: configurationFile.boolValue(for: "notification_audio_enabled") ?? true,
-            alarmEnabled: configurationFile.boolValue(for: "alarm_enabled") ?? true,
-            alarmMessage: configurationFile.stringValue(for: "alarm_message", section: "notifications") ?? "",
+            sizePx: configurationFile.doubleValue(for: "size_px") ?? Self.defaultSizePx,
+            compactSizePx: configurationFile.doubleValue(for: "compact_size_px") ?? Self.defaultCompactSizePx,
+            alarmMessage: configurationFile.stringValue(for: "alarm_message", section: "alarm") ?? "",
             testEnabled: configurationFile.boolValue(for: "test", section: "") ?? false
         )
     }

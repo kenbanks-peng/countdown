@@ -51,7 +51,7 @@ final class CountdownController: ObservableObject {
         )
         let state = preferences ?? preferencesStore.load()
         let notifications = NotificationScheduler(
-            configuration: configuration, state: state, playSound: playSound,
+            configuration: configuration, state: state,
             saveEnablement: saveEnablement ?? { preferencesStore.saveEnablement($0, enabled: $1) }
         )
         self.notifications = notifications
@@ -63,7 +63,8 @@ final class CountdownController: ObservableObject {
                     notifications.reportElapsed(previousRemaining: previous, remaining: remaining)
                 }
             },
-            timeoutActionsEnabled: { policy.mode.usesTimer }
+            timeoutActionsEnabled: { policy.mode.usesTimer },
+            alarmEnabled: { notifications.isAlarmEnabled }
         )
         var pomodoro = PomodoroModel(
             focusDuration: settings.focusDuration, restDuration: settings.restDuration,

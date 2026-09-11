@@ -15,7 +15,7 @@ struct PomodoroCycleNotificationTests {
         let windowState = CountdownWindowStateStore(defaults: defaults)
         windowState.save(frame: NSRect(x: 100, y: 120, width: 188, height: 188),
                          presentation: isCompact ? .compact : .normal)
-        let config = CountdownConfiguration(alarmNotificationURL: nil, notificationAudioEnabled: false)
+        let config = CountdownConfiguration(alarmNotificationURL: nil)
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
             configuration: config, preferences: CountdownPreferences(notificationEnabled: enabled),

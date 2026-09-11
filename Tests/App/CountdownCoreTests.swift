@@ -23,7 +23,7 @@ struct CountdownCoreTests {
         now += 300
         timer.update()
         #expect(timer.notifications.notificationIntervalCount == 1)
-        #expect(sounds == 1)
+        #expect(sounds == 0)
         timer.update()
         #expect(timer.notifications.notificationIntervalCount == 1)
 
@@ -49,7 +49,7 @@ struct CountdownCoreTests {
         now += 600
         timer.update()
         #expect(timer.notifications.notificationIntervalCount == 2)
-        #expect(sounds == 2) // Disabling notifications also disables notification audio.
+        #expect(sounds == 0)
         #expect(settings == ["notification_enabled": false])
     }
 
@@ -75,7 +75,8 @@ struct CountdownCoreTests {
         #expect(sounds == 0)
         now += 1
         controller.update()
-        #expect(sounds == 1)
+        #expect(controller.notifications.notificationIntervalCount == 1)
+        #expect(sounds == 0)
     }
 
     @Test(arguments: CountdownMode.allCases)
@@ -93,15 +94,16 @@ struct CountdownCoreTests {
         if mode.usesTimer { controller.adjustTimerDuration(by: 1_800) }
         now += 300
         controller.update()
-        #expect(sounds == 1)
+        #expect(controller.notifications.notificationIntervalCount == 1)
         if mode.usesTimer { controller.adjustTimerDuration(by: 300) }
         else { controller.adjustPomodoroDuration(.focus, by: 300) }
         now += 60
         controller.update()
-        #expect(sounds == 1)
+        #expect(controller.notifications.notificationIntervalCount == 1)
         now += 240
         controller.update()
-        #expect(sounds == 2)
+        #expect(controller.notifications.notificationIntervalCount == 2)
+        #expect(sounds == 0)
     }
 
     @Test
@@ -121,16 +123,17 @@ struct CountdownCoreTests {
         #expect(sounds == 0)
         now += 10 // Visible focus crosses 300 seconds; hidden Timer must not also notify.
         controller.update()
-        #expect(sounds == 1)
+        #expect(controller.notifications.notificationIntervalCount == 1)
         now += 290 // Focus has ten seconds left; no new boundary was crossed.
         controller.update()
         controller.update() // A second view can also request an update.
-        #expect(sounds == 1)
+        #expect(controller.notifications.notificationIntervalCount == 1)
         controller.selectMode(.timer)
-        #expect(sounds == 1) // Switching views must not notify.
-        now += 10 // Timer crosses 300 seconds, five minutes after the last sound.
+        #expect(controller.notifications.notificationIntervalCount == 1) // Switching views must not notify.
+        now += 10 // Timer crosses 300 seconds, five minutes after the last notification.
         controller.update()
-        #expect(sounds == 2)
+        #expect(controller.notifications.notificationIntervalCount == 2)
+        #expect(sounds == 0)
     }
 
     @Test(arguments: CountdownMode.allCases)

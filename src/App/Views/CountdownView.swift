@@ -92,6 +92,7 @@ struct CountdownView: View {
                         }
                     }
                 ))
+                Toggle("Alarm", isOn: Binding(get: { countdown.notifications.isAlarmEnabled }, set: countdown.notifications.setAlarmEnabled))
                 Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
             }
             Divider()

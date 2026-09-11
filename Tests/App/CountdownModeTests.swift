@@ -128,7 +128,7 @@ struct CountdownModeTests {
 
         func makeController(autoRepeat: Bool = false, alarm: Bool = true) -> CountdownController {
             CountdownController(
-                sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15, notificationAudioEnabled: false),
+                sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroLongRestMinutes: 15),
                 preferences: CountdownPreferences(autoRepeatEnabled: autoRepeat, notificationEnabled: false, alarmEnabled: alarm),
                 playSound: { [unowned self] _ in sounds += 1 }, now: { [unowned self] in now }
             )

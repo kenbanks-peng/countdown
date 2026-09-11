@@ -127,7 +127,7 @@ struct PomodoroPersistenceTests {
         restored.update()
         #expect(restored.timer.completionCount == 1)
         #expect(restored.notifications.notificationIntervalCount == 1)
-        #expect(session.sounds == 2) // Endpoint notification and completion alarm.
+        #expect(session.sounds == 1) // Completion alarm only.
     }
 
     @Test(arguments: [true, false])

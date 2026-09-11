@@ -26,7 +26,7 @@ final class TimerModel: ObservableObject {
     private let sessionStore: TimerSessionStore
     private let configuration: CountdownConfiguration
     private let preferencesStore: CountdownPreferencesStore
-    private let isAlarmEnabled: Bool
+    private let isAlarmEnabled: () -> Bool
     private let playSound: @MainActor (URL?) -> Void
     private let now: () -> Date
     private let reportElapsed: (TimeInterval, TimeInterval) -> Void
@@ -40,7 +40,8 @@ final class TimerModel: ObservableObject {
         playSound: @escaping @MainActor (URL?) -> Void = CountdownSound.play,
         now: @escaping () -> Date = Date.init,
         reportElapsed: @escaping (TimeInterval, TimeInterval) -> Void = { _, _ in },
-        timeoutActionsEnabled: @escaping () -> Bool = { true }
+        timeoutActionsEnabled: @escaping () -> Bool = { true },
+        alarmEnabled: (() -> Bool)? = nil
     ) {
         self.sessionStore = sessionStore
         self.configuration = configuration
@@ -55,7 +56,7 @@ final class TimerModel: ObservableObject {
         showsRemainingMinutes = state.showsRemainingMinutes
         isAutoRepeatEnabled = state.autoRepeatEnabled
         isAutoAlignEnabled = state.autoAlignEnabled
-        isAlarmEnabled = configuration.alarmEnabled && state.alarmEnabled
+        isAlarmEnabled = alarmEnabled ?? { state.alarmEnabled }
         self.isClockEnabled = isClockEnabled
         restore()
     }
@@ -277,7 +278,7 @@ final class TimerModel: ObservableObject {
             // The empty status prevents later updates from reporting this completion again.
             if reportEvents && timeoutActionsEnabled() {
                 completionCount += 1
-                if isAlarmEnabled {
+                if isAlarmEnabled() {
                     playSound(configuration.alarmNotificationURL)
                 }
             }

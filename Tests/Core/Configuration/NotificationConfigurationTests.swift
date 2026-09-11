@@ -45,21 +45,19 @@ struct NotificationConfigurationTests {
     }
 
     @Test
-    func fontSizeUsesNotificationSectionAndIsIndependentOfWindowScales() throws {
+    func fontSizeUsesNotificationSectionAndIsIndependentOfWindowSizes() throws {
         let config = try load("""
-        size = 2
-        compact_size = 0.5
+        size_px = 376
+        compact_size_px = 16
         notification_font_size_pt = 90
         [notifications]
-        notification_enabled = false
         notification_font_size_pt = 180.5 # Points
         [pomodoro]
         notification_font_size_pt = 12
         """)
         #expect(config.notificationFontSizePt == 180.5)
-        #expect(!config.notificationEnabled)
-        #expect(config.size == 2)
-        #expect(config.compactSize == 0.5)
+        #expect(config.sizePx == 376)
+        #expect(config.compactSizePx == 16)
         #expect(try load("[pomodoro]\nnotification_font_size_pt = 12").notificationFontSizePt == 144)
     }
 
