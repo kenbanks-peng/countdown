@@ -10,7 +10,7 @@ struct PomodoroModel {
     let focusPeriodsPerCycle: Int
     private let defaultDurations: (focus: TimeInterval, rest: TimeInterval, longRest: TimeInterval)
 
-    static let defaultFocusPeriodsPerCycle = 8
+    static let defaultFocusPeriodsPerCycle = 7
 
     static func normalizedFocusPeriodCount(_ value: Int) -> Int {
         (1...15).contains(value) ? value : defaultFocusPeriodsPerCycle

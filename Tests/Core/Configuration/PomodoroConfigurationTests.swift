@@ -46,7 +46,7 @@ struct PomodoroConfigurationTests {
         #expect(restored.pomodoro.restDuration == 600)
         #expect(restored.pomodoro.longRestDuration == 1_500)
         #expect(restored.pomodoro.stage == 1)
-        #expect(restored.pomodoro.focusPeriodsPerCycle == 8)
+        #expect(restored.pomodoro.focusPeriodsPerCycle == 7)
         #expect(controller(configuration).pomodoro.focusPeriodsPerCycle == 3)
     }
 
@@ -66,7 +66,7 @@ struct PomodoroConfigurationTests {
 
     @Test(arguments: ["", "cycles = 0", "cycles = -1", "cycles = 16", "cycles = 1.5",
                       "cycles = \"4\"", "cycles = 99999999999999999999999999"])
-    func missingOrInvalidCyclesUseEight(line: String) throws {
+    func missingOrInvalidCyclesUseSeven(line: String) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let configDirectory = directory.appendingPathComponent("countdown")
@@ -74,7 +74,7 @@ struct PomodoroConfigurationTests {
         try "[pomodoro]\n\(line)\n"
             .write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
         let configuration = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
-        #expect(configuration.pomodoroFocusPeriodsPerCycle == 8)
+        #expect(configuration.pomodoroFocusPeriodsPerCycle == 7)
     }
 
     @Test(arguments: Array(1...15))

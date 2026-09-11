@@ -16,10 +16,10 @@ struct PomodoroCycleLayoutTests {
     }
 
     @Test
-    func defaultUsesEightCyclesInTwoRows() {
+    func defaultUsesSevenCyclesInTwoRows() {
         let model = PomodoroModel()
-        #expect(model.focusPeriodsPerCycle == 8)
-        #expect(CountdownConfiguration(alarmNotificationURL: nil).pomodoroFocusPeriodsPerCycle == 8)
-        #expect(PomodoroCycleLayout(count: model.focusPeriodsPerCycle).rows.map(\.count) == [4, 4])
+        #expect(model.focusPeriodsPerCycle == 7)
+        #expect(CountdownConfiguration(alarmNotificationURL: nil).pomodoroFocusPeriodsPerCycle == 7)
+        #expect(PomodoroCycleLayout(count: model.focusPeriodsPerCycle).rows.map(\.count) == [4, 3])
     }
 }

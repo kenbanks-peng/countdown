@@ -62,9 +62,9 @@ struct PomodoroCycleTests {
     }
 
     @Test(arguments: [0, -1, 16, Int.max])
-    func invalidCyclesUseEight(focusPeriodsPerCycle: Int) {
-        #expect(PomodoroModel(focusPeriodsPerCycle: focusPeriodsPerCycle).focusPeriodsPerCycle == 8)
-        #expect(CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: focusPeriodsPerCycle).pomodoroFocusPeriodsPerCycle == 8)
+    func invalidCyclesUseSeven(focusPeriodsPerCycle: Int) {
+        #expect(PomodoroModel(focusPeriodsPerCycle: focusPeriodsPerCycle).focusPeriodsPerCycle == 7)
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: focusPeriodsPerCycle).pomodoroFocusPeriodsPerCycle == 7)
     }
 
     @Test(arguments: Array(1...15))
