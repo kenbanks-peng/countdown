@@ -76,31 +76,34 @@ struct CountdownView: View {
             }
         }
         .contextMenu {
-            Picker("View", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
+            Picker("Mode", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
                 ForEach(CountdownMode.allCases, id: \.self) { mode in
                     Text(mode.label).tag(mode)
                 }
             }
             .pickerStyle(.inline)
             Divider()
-            Toggle("Pause", isOn: Binding(
-                get: { countdown.engine.isPaused },
-                set: { paused in
-                    if paused != countdown.engine.isPaused {
-                        countdown.toggleRunning()
+            Section("Control") {
+                Toggle("Pause", isOn: Binding(
+                    get: { countdown.engine.isPaused },
+                    set: { paused in
+                        if paused != countdown.engine.isPaused {
+                            countdown.toggleRunning()
+                        }
                     }
-                }
-            ))
-            Divider()
-            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
-            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
-            Toggle("Auto-align", isOn: Binding(get: { countdown.timer.isAutoAlignEnabled }, set: countdown.setAutoAlignEnabled))
-            if countdown.mode.usesTimer {
-                TimerContextMenu(model: countdown.timer)
+                ))
+                Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
             }
             Divider()
-            Button("Align Now", action: countdown.autoAlign)
-                .disabled(!countdown.canAutoAlign)
+            Section("Settings") {
+                if countdown.mode.usesTimer {
+                    TimerContextMenu(model: countdown.timer)
+                }
+                Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
+                Toggle("Auto-align", isOn: Binding(get: { countdown.timer.isAutoAlignEnabled }, set: countdown.setAutoAlignEnabled))
+                Button("Align Now", action: countdown.autoAlign)
+                    .disabled(!countdown.canAutoAlign)
+            }
             if countdown.testEnabled {
                 Divider()
                 Button("Test", action: countdown.testNotification)
