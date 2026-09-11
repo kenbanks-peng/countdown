@@ -76,14 +76,14 @@ struct CountdownView: View {
             }
         }
         .contextMenu {
-            Picker("Mode", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
+            Picker("Timer Mode", selection: Binding(get: { countdown.mode }, set: countdown.selectMode)) {
                 ForEach(CountdownMode.allCases, id: \.self) { mode in
                     Text(mode.label).tag(mode)
                 }
             }
             .pickerStyle(.inline)
             Divider()
-            Section("Control") {
+            Section("Timer Controls") {
                 Toggle("Pause", isOn: Binding(
                     get: { countdown.engine.isPaused },
                     set: { paused in
