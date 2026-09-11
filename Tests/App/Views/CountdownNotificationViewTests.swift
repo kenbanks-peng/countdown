@@ -14,7 +14,7 @@ struct CountdownNotificationViewTests {
         var now = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: 4),
             preferences: CountdownPreferences(notificationEnabled: false),
             playSound: { _ in }, now: { now }
         )

@@ -46,7 +46,7 @@ struct PomodoroConfigurationTests {
         #expect(restored.pomodoro.restDuration == 600)
         #expect(restored.pomodoro.longRestDuration == 1_500)
         #expect(restored.pomodoro.stage == 1)
-        #expect(restored.pomodoro.focusPeriodsPerCycle == 4)
+        #expect(restored.pomodoro.focusPeriodsPerCycle == 8)
         #expect(controller(configuration).pomodoro.focusPeriodsPerCycle == 3)
     }
 
@@ -64,9 +64,9 @@ struct PomodoroConfigurationTests {
         #expect(configuration.pomodoroLongRestMinutes == 20)
     }
 
-    @Test(arguments: ["", "cycles = 0", "cycles = -1", "cycles = 13", "cycles = 1.5",
+    @Test(arguments: ["", "cycles = 0", "cycles = -1", "cycles = 16", "cycles = 1.5",
                       "cycles = \"4\"", "cycles = 99999999999999999999999999"])
-    func missingOrInvalidCyclesUseFour(line: String) throws {
+    func missingOrInvalidCyclesUseEight(line: String) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let configDirectory = directory.appendingPathComponent("countdown")
@@ -74,7 +74,19 @@ struct PomodoroConfigurationTests {
         try "[pomodoro]\n\(line)\n"
             .write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
         let configuration = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
-        #expect(configuration.pomodoroFocusPeriodsPerCycle == 4)
+        #expect(configuration.pomodoroFocusPeriodsPerCycle == 8)
+    }
+
+    @Test(arguments: Array(1...15))
+    func validCycleCountsLoad(count: Int) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let configDirectory = directory.appendingPathComponent("countdown")
+        try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
+        try "[pomodoro]\ncycles = \(count)\n"
+            .write(to: configDirectory.appendingPathComponent("config.toml"), atomically: true, encoding: .utf8)
+        let configuration = CountdownConfiguration.load(environment: ["XDG_CONFIG_HOME": directory.path])
+        #expect(configuration.pomodoroFocusPeriodsPerCycle == count)
     }
 
     @Test

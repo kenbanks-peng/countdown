@@ -80,7 +80,7 @@ struct AutoAlignRepeatTests {
         #expect(controller.pomodoro.restRemaining == 2_100)
         controller.save()
         let store = TimerSessionStore(environment: ["XDG_STATE_HOME": session.directory.path])
-        let restored = CountdownController(sessionStore: store, playSound: { _ in }, now: { session.now })
+        let restored = CountdownController(sessionStore: store, configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: 4), playSound: { _ in }, now: { session.now })
         #expect(restored.timer.isAutoAlignEnabled)
         #expect(restored.pomodoro.isAutoAlignEnabled)
         #expect(restored.pomodoro.restRemaining == 2_100)

@@ -43,4 +43,4 @@ alarm_message = "DONE"
 focus = 25          # minutes
 rest = 5            # minutes
 long-rest = 20      # minutes
-cycles = 4          # 1 to 6
+cycles = 8          # 1 to 15

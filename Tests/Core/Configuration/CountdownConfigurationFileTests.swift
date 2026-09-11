@@ -24,7 +24,7 @@ struct CountdownConfigurationFileTests {
         #expect(config.pomodoroFocusMinutes == 25)
         #expect(config.pomodoroRestMinutes == 5)
         #expect(config.pomodoroLongRestMinutes == 20)
-        #expect(config.pomodoroFocusPeriodsPerCycle == 4)
+        #expect(config.pomodoroFocusPeriodsPerCycle == 8)
         #expect(config.alarmNotificationURL?.lastPathComponent == "alarm.mp3")
     }
 

@@ -150,7 +150,7 @@ struct NotificationSchedulerTests {
         var sounds = 0
         let controller = CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": directory.path]),
-            configuration: CountdownConfiguration(alarmNotificationURL: nil),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: 4),
             preferences: CountdownPreferences(notificationEnabled: notification),
             playSound: { _ in sounds += 1 }, now: { now }, saveEnablement: { _, _ in }
         )

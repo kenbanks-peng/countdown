@@ -88,20 +88,26 @@ struct PomodoroRenderingTests {
         #expect(outsideAlpha < 0.05)
     }
 
-    @Test(arguments: [0.0, 1_500, 1_800, 3_600, 5_400, 6_900, 7_800])
-    func fourDotsRenderCompletedCurrentAndPendingFocus(elapsed: TimeInterval) throws {
+    @Test(arguments: [0.0, 1_500, 1_800, 3_600, 5_400, 6_900, 7_800], Array(1...15))
+    func dotsRenderCompletedCurrentAndPendingFocus(elapsed: TimeInterval, count: Int) throws {
         let start = Calendar.current.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 12))!
-        var model = PomodoroModel()
+        var model = PomodoroModel(focusPeriodsPerCycle: count)
         model.toggleRunning(at: start)
         model.update(at: start + elapsed)
         let bitmap = try render(NSHostingView(rootView: PomodoroView(model: model)))
         let scale = Double(bitmap.pixelsWide) / 188
         var areas: [PomodoroModel.DotState: [Int]] = [:]
-        for index in 0..<4 {
-            let centerX = 73.0 + Double(index) * 14
+        let layout = PomodoroCycleLayout(count: count)
+        let pitch = Double(layout.diameter + 2 + layout.spacing)
+        for index in 0..<count {
+            let row = try #require(layout.rows.firstIndex { $0.contains(index) })
+            let range = layout.rows[row]
+            let centerX = 94 + (Double(index - range.lowerBound) - Double(range.count - 1) / 2) * pitch
+            let centerY = 126 + (Double(row) - Double(layout.rows.count - 1) / 2) * pitch
+            let radius = Double(layout.diameter) / 2
             var whitePixels = 0
-            for y in Int(122 * scale)..<Int(130 * scale) {
-                for x in Int((centerX - 4) * scale)..<Int((centerX + 4) * scale) {
+            for y in Int((centerY - radius) * scale)..<Int((centerY + radius) * scale) {
+                for x in Int((centerX - radius) * scale)..<Int((centerX + radius) * scale) {
                     let color = try #require(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))
                     if min(color.redComponent, color.greenComponent, color.blueComponent) > 0.8 {
                         whitePixels += 1

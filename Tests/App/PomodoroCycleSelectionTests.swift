@@ -91,11 +91,12 @@ struct PomodoroCycleSelectionTests {
         #expect(controller.pomodoro.clockSchedule?.focusEnd == schedule?.focusEnd)
     }
 
-    @Test(arguments: [false, true], [false, true])
-    func pointerSelectsCycleWithoutChangingPresentation(allowsClick: Bool, option: Bool) throws {
+    @Test(arguments: (1...15).flatMap { count in [true, false].map { (count, $0) } }, [false, true])
+    func pointerSelectsCycleWithoutChangingPresentation(selection: (Int, Bool), option: Bool) throws {
+        let (count, allowsClick) = selection
         let session = ClockTestSession()
         defer { session.close() }
-        let controller = makeUIController(session)
+        let controller = makeUIController(session, count: count)
         controller.selectMode(.pomodoro)
         let defaultFocus = controller.pomodoro.focusDuration
         controller.adjustPomodoroDuration(.focus, by: -300)
@@ -111,22 +112,28 @@ struct PomodoroCycleSelectionTests {
         panel.orderFront(nil)
         defer { panel.close() }
         panel.contentView?.layoutSubtreeIfNeeded()
+        let layout = PomodoroCycleLayout(count: count)
+        let pitch = layout.diameter + 2 + layout.spacing
+        let lastRow = try #require(layout.rows.last)
+        let x = 94 + CGFloat(lastRow.count - 1) / 2 * pitch
+        let y = 62 - CGFloat(layout.rows.count - 1) / 2 * pitch
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             let event = try #require(NSEvent.mouseEvent(
-                with: type, location: NSPoint(x: 101, y: 62), modifierFlags: option ? [.option] : [],
+                with: type, location: NSPoint(x: x, y: y), modifierFlags: option ? [.option] : [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
                 context: nil, eventNumber: 0, clickCount: 1, pressure: 1
             ))
             NSApplication.shared.sendEvent(event)
         }
-        #expect(controller.pomodoro.stage == (allowsClick ? 3 : 1))
+        #expect(controller.pomodoro.stage == (allowsClick ? count : 1))
         #expect(controller.pomodoro.focusDuration == (allowsClick && option ? defaultFocus : defaultFocus - 300))
         #expect(changes == 0)
     }
 
-    private func makeUIController(_ session: ClockTestSession) -> CountdownController {
+    private func makeUIController(_ session: ClockTestSession, count: Int = 8) -> CountdownController {
         CountdownController(
             sessionStore: TimerSessionStore(environment: ["XDG_STATE_HOME": session.directory.path]),
+            configuration: CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: count),
             preferences: CountdownPreferences(notificationEnabled: false),
             playSound: { _ in }, now: { session.now }
         )

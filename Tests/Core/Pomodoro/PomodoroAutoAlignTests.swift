@@ -12,7 +12,7 @@ struct PomodoroAutoAlignTests {
     private func model(at now: Date, focus: TimeInterval = 1_500,
                        rest: TimeInterval = 300, longRest: TimeInterval = 1_200,
                        stage: Int = 1, paused: Bool = false) -> PomodoroModel {
-        var model = PomodoroModel(focusDuration: focus, restDuration: rest, longRestDuration: longRest)
+        var model = PomodoroModel(focusDuration: focus, restDuration: rest, longRestDuration: longRest, focusPeriodsPerCycle: 4)
         model.restoreClockSchedule(PomodoroClockSchedule(
             stageStart: now, focusEnd: now + focus, restEnd: now + focus + rest,
             longRestEnd: now + focus + longRest, sampledAt: now,

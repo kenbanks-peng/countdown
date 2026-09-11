@@ -7,7 +7,7 @@ struct PomodoroCycleTests {
 
     @Test
     func fourFocusPeriodsUseThreeRestsAndOneLongRestThenRepeat() {
-        var model = PomodoroModel(longRestDuration: 900)
+        var model = PomodoroModel(longRestDuration: 900, focusPeriodsPerCycle: 4)
         #expect(model.cycleDuration == 130 * 60)
         model.toggleRunning(at: start)
         for stage in 1...4 {
@@ -36,7 +36,7 @@ struct PomodoroCycleTests {
         #expect(model.restRemaining == 300)
     }
 
-    @Test(arguments: [1, 3, 4, 12])
+    @Test(arguments: Array(1...15))
     func configuredCyclesRepeatAfterLongRest(focusPeriodsPerCycle: Int) {
         var model = PomodoroModel(longRestDuration: 900, focusPeriodsPerCycle: focusPeriodsPerCycle)
         #expect(model.cycleDuration == Double(focusPeriodsPerCycle) * 1_500 + Double(focusPeriodsPerCycle - 1) * 300 + 900)
@@ -61,13 +61,13 @@ struct PomodoroCycleTests {
         #expect(model.focusPeriodsPerCycle == focusPeriodsPerCycle)
     }
 
-    @Test(arguments: [0, -1, 13, Int.max])
-    func invalidCyclesUseFour(focusPeriodsPerCycle: Int) {
-        #expect(PomodoroModel(focusPeriodsPerCycle: focusPeriodsPerCycle).focusPeriodsPerCycle == 4)
-        #expect(CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: focusPeriodsPerCycle).pomodoroFocusPeriodsPerCycle == 4)
+    @Test(arguments: [0, -1, 16, Int.max])
+    func invalidCyclesUseEight(focusPeriodsPerCycle: Int) {
+        #expect(PomodoroModel(focusPeriodsPerCycle: focusPeriodsPerCycle).focusPeriodsPerCycle == 8)
+        #expect(CountdownConfiguration(alarmNotificationURL: nil, pomodoroFocusPeriodsPerCycle: focusPeriodsPerCycle).pomodoroFocusPeriodsPerCycle == 8)
     }
 
-    @Test(arguments: [1, 3, 4, 12])
+    @Test(arguments: Array(1...15))
     func lateUpdatesMatchSmallUpdatesAndIgnoreDuplicateOrBackwardTime(focusPeriodsPerCycle: Int) {
         var late = PomodoroModel(focusPeriodsPerCycle: focusPeriodsPerCycle)
         var stepped = PomodoroModel(focusPeriodsPerCycle: focusPeriodsPerCycle)
@@ -93,7 +93,7 @@ struct PomodoroCycleTests {
 
     @Test
     func editedDurationsCarryIntoFollowingStagesAndCycles() {
-        var model = PomodoroModel(longRestDuration: 900)
+        var model = PomodoroModel(longRestDuration: 900, focusPeriodsPerCycle: 4)
         model.toggleRunning(at: start)
         model.adjustDuration(.focus, by: -300, at: start + 600)
         model.adjustDuration(.rest, by: 120, at: start + 600)
@@ -115,7 +115,7 @@ struct PomodoroCycleTests {
 
     @Test(arguments: [false, true])
     func longRestEditsKeepElapsedTimeAndDoNotChangeShortRests(paused: Bool) {
-        var model = PomodoroModel(longRestDuration: 900)
+        var model = PomodoroModel(longRestDuration: 900, focusPeriodsPerCycle: 4)
         model.toggleRunning(at: start)
         let now = start + 7_200 // Five minutes into the long rest.
         model.update(at: now)
@@ -141,7 +141,7 @@ struct PomodoroCycleTests {
 
     @Test
     func longRestPauseResumeAndResetKeepStageAndAllocations() {
-        var model = PomodoroModel(longRestDuration: 900)
+        var model = PomodoroModel(longRestDuration: 900, focusPeriodsPerCycle: 4)
         model.toggleRunning(at: start)
         model.pause(at: start + 7_000)
         #expect(model.stage == 4)
