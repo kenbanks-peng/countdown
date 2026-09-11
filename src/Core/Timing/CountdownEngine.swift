@@ -19,6 +19,7 @@ final class CountdownEngine: ObservableObject {
         self.mode = mode
         self.now = now
         self.pomodoro.isAutoRepeatEnabled = timer.isAutoRepeatEnabled
+        self.pomodoro.isAutoAlignEnabled = timer.isAutoAlignEnabled
         let date = now()
         timer.isEnginePaused = isPaused
         if self.pomodoro.clockSchedule == nil { self.pomodoro.setClockEnabled(true, at: date) }
@@ -61,6 +62,7 @@ final class CountdownEngine: ObservableObject {
     /// The controller settles the outgoing view before changing its timeout policy.
     func selectMode(_ mode: CountdownMode) {
         let date = now()
+        let inheritsPomodoro = !self.mode.usesTimer && mode.usesTimer
         self.mode = mode
         timer.setClockEnabled(mode.isClockEnabled, settle: false)
         if mode.usesTimer {
@@ -75,13 +77,18 @@ final class CountdownEngine: ObservableObject {
             pomodoro.reserveMinimumRest(at: date)
             projectPomodoro(at: date)
         }
-        if mode.usesTimer { timer.captureRepeatDuration() }
+        if inheritsPomodoro { timer.captureRepeatDuration() }
         timer.save()
     }
 
     func setAutoRepeatEnabled(_ enabled: Bool) {
         timer.setAutoRepeatEnabled(enabled)
         pomodoro.isAutoRepeatEnabled = enabled
+    }
+
+    func setAutoAlignEnabled(_ enabled: Bool) {
+        timer.setAutoAlignEnabled(enabled)
+        pomodoro.isAutoAlignEnabled = enabled
     }
 
     func timerDidChange(at date: Date? = nil) {

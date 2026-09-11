@@ -55,6 +55,7 @@ struct CountdownPreferencesTests {
         original.notifications.setNotificationEnabled(false)
         original.timer.setRemainingMinutesVisible(false)
         original.timer.setAutoRepeatEnabled(true)
+        original.setAutoAlignEnabled(true)
         original.save()
         let savedFeatures = try JSONDecoder().decode(
             [String: Bool].self,
@@ -66,6 +67,10 @@ struct CountdownPreferencesTests {
         #expect(!restored.notifications.isNotificationEnabled)
         #expect(!restored.timer.showsRemainingMinutes)
         #expect(restored.timer.isAutoRepeatEnabled)
+        #expect(restored.timer.isAutoAlignEnabled)
+        #expect(restored.pomodoro.isAutoAlignEnabled)
+        restored.setAutoAlignEnabled(false)
+        #expect(!controller().timer.isAutoAlignEnabled)
         #expect(stateStore.load().alarmEnabled == alarmEnabled)
         restored.timer.setAutoRepeatEnabled(false)
         restored.adjustTimerDuration(by: -3_600)
@@ -90,6 +95,7 @@ struct CountdownPreferencesTests {
         #expect(state.notificationEnabled)
         #expect(state.alarmEnabled == (contents != "{\"alarm_enabled\":false}"))
         #expect(!state.autoRepeatEnabled)
+        #expect(!state.autoAlignEnabled)
     }
 
     @Test

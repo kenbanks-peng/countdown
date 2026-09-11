@@ -18,6 +18,11 @@ struct PomodoroModel {
     private(set) var restDuration: TimeInterval
     private(set) var longRestDuration: TimeInterval
     var isAutoRepeatEnabled = true
+    var isAutoAlignEnabled = false
+
+    var savedFocusDuration: TimeInterval { clockSchedule?.savedFocusDuration ?? focusDuration }
+    var savedRestDuration: TimeInterval { clockSchedule?.savedRestDuration ?? restDuration }
+    var savedLongRestDuration: TimeInterval { clockSchedule?.savedLongRestDuration ?? longRestDuration }
     private(set) var stage = 1
     private(set) var status: Status = .ready
     private(set) var elapsedTime: TimeInterval = 0
@@ -152,7 +157,8 @@ struct PomodoroModel {
 
     private mutating func advanceClock(at now: Date) {
         let count = focusPeriodsPerCycle
-        clockSchedule?.advance(at: now, focusPeriodsPerCycle: count, autoRepeat: isAutoRepeatEnabled)
+        clockSchedule?.advance(at: now, focusPeriodsPerCycle: count,
+                               autoRepeat: isAutoRepeatEnabled, autoAlign: isAutoAlignEnabled)
     }
 
     private mutating func syncClockProgress() {
@@ -286,6 +292,12 @@ struct PomodoroModel {
     mutating func restartStage(_ stage: Int, restoringDefaults: Bool = false, at now: Date) {
         guard (1...focusPeriodsPerCycle).contains(stage) else { return }
         if restoringDefaults { reset(at: now) }
+        let focus = savedFocusDuration
+        let rest = savedRestDuration
+        let longRest = savedLongRestDuration
+        focusDuration = focus
+        restDuration = rest
+        longRestDuration = longRest
         self.stage = stage
         resetStage()
         clockSchedule = PomodoroClockSchedule(
@@ -294,8 +306,16 @@ struct PomodoroModel {
             longRestEnd: now + focusDuration + longRestDuration,
             sampledAt: now, pausedAt: nil, stage: stage, focusCompleted: false
         )
+        alignNewStage(at: now)
         status = .running
         lastUpdate = now
+    }
+
+    private mutating func alignNewStage(at now: Date) {
+        guard isAutoAlignEnabled else { return }
+        let isFinalStage = stage == focusPeriodsPerCycle
+        clockSchedule?.alignForRepeat(at: now, isFinalStage: isFinalStage)
+        syncClockProgress()
     }
 
     mutating func reset() {
@@ -322,6 +342,7 @@ struct PomodoroModel {
         adjustDuration(.focus, by: defaultDurations.focus - 300, at: now)
         adjustDuration(.rest, by: defaultDurations.rest - 300, at: now)
         adjustDuration(.longRest, by: defaultDurations.longRest - 300, at: now)
+        alignNewStage(at: now)
     }
 
     mutating func pause(at now: Date) {

@@ -15,7 +15,7 @@ struct AutoAlignTests {
         session.now += 60
         controller.autoAlign()
         #expect(controller.timer.remaining == 1_606.75)
-        #expect(controller.timer.repeatDuration == 1_606.75)
+        #expect(controller.timer.repeatDuration == 3_000)
         #expect(controller.engine.isPaused == paused)
         #expect(controller.timer.isPaused == paused)
         #expect(controller.timer.remaining == controller.pomodoro.focusRemaining + controller.pomodoro.restRemaining)
@@ -60,6 +60,7 @@ struct AutoAlignTests {
         if paused { controller.toggleRunning() }
         controller.autoAlign()
         let first = session.now + controller.timer.remaining
+        let repeatDuration = controller.timer.repeatDuration
         for offset in [1_800.0, 0, 1_800, 0] {
             session.now += 1.25
             controller.autoAlign()
@@ -72,7 +73,7 @@ struct AutoAlignTests {
                 let schedule = try #require(controller.pomodoro.clockSchedule)
                 #expect(schedule.isValid(focusPeriodsPerCycle: controller.pomodoro.focusPeriodsPerCycle))
             } else {
-                #expect(controller.timer.repeatDuration == controller.timer.remaining)
+                #expect(controller.timer.repeatDuration == repeatDuration)
             }
         }
     }

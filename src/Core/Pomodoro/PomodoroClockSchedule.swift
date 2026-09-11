@@ -17,6 +17,12 @@ struct PomodoroClockSchedule: Codable {
     var longRestCarry: TimeInterval?
     // Align changes this stage only. Restore this allocation at the next stage.
     var nextStageFocusDuration: TimeInterval?
+    var nextStageRestDuration: TimeInterval?
+    var nextStageLongRestDuration: TimeInterval?
+
+    var savedFocusDuration: TimeInterval { nextStageFocusDuration ?? focusDuration }
+    var savedRestDuration: TimeInterval { nextStageRestDuration ?? restDuration }
+    var savedLongRestDuration: TimeInterval { nextStageLongRestDuration ?? longRestDuration }
 
     var focusDuration: TimeInterval { focusEnd.timeIntervalSince(stageStart) }
     var restDuration: TimeInterval { restEnd.timeIntervalSince(focusEnd) + (restCarry ?? 0) }
@@ -28,9 +34,13 @@ struct PomodoroClockSchedule: Codable {
             && (1...focusPeriodsPerCycle).contains(stage)
             && focusDuration >= 0 && focusDuration <= 3_600
             && restDuration >= 60 && restDuration <= 3_600
-            && longRestDuration >= 60 && longRestDuration <= 3_600
+            && longRestDuration >= 60
+            && (longRestDuration <= 3_600 || (nextStageLongRestDuration != nil
+                && longRestDuration < savedLongRestDuration + 1_800))
             && [restCarry ?? 0, longRestCarry ?? 0].allSatisfy { $0.isFinite && $0 >= 0 }
             && (nextStageFocusDuration.map { $0.isFinite && $0 >= 0 && $0 <= 3_600 } ?? true)
+            && [nextStageRestDuration, nextStageLongRestDuration].compactMap { $0 }
+                .allSatisfy { $0.isFinite && $0 >= 60 && $0 <= 3_600 }
             && restEnd >= focusEnd && longRestEnd >= focusEnd
     }
 
@@ -53,7 +63,7 @@ struct PomodoroClockSchedule: Codable {
 
     mutating func autoAlign(at now: Date, restPhase: PomodoroModel.Phase) {
         guard let target = autoAlignedRestEnd(at: now, restPhase: restPhase) else { return }
-        nextStageFocusDuration = nextStageFocusDuration ?? focusDuration
+        captureSavedDurations()
         let shortRest = restDuration
         let longRest = longRestDuration
         let reference = pausedAt ?? now
@@ -71,9 +81,36 @@ struct PomodoroClockSchedule: Codable {
         if pausedAt != nil { pausedAt = now }
     }
 
+    private mutating func captureSavedDurations() {
+        nextStageFocusDuration = savedFocusDuration
+        nextStageRestDuration = savedRestDuration
+        nextStageLongRestDuration = savedLongRestDuration
+    }
+
+    /// Unlike Align, automatic alignment always chooses the first boundary.
+    /// The final rest can span more boundaries but cannot be shorter than its saved minimum.
+    mutating func alignForRepeat(at start: Date, isFinalStage: Bool) {
+        captureSavedDurations()
+        let rest = max(300, savedRestDuration)
+        guard let end = ClockBoundary.halfHour(atOrAfter: start + rest) else { return }
+        stageStart = start
+        focusEnd = end - rest
+        restEnd = end
+        longRestEnd = isFinalStage
+            ? ClockBoundary.halfHour(atOrAfter: focusEnd + savedLongRestDuration) ?? focusEnd + savedLongRestDuration
+            : focusEnd + savedLongRestDuration
+        restCarry = nil
+        longRestCarry = nil
+        focusCompleted = focusEnd <= start
+    }
+
     mutating func edit(_ phase: PomodoroModel.Phase, steps: Int? = nil, amount: TimeInterval = 0) {
-        // A manual focus edit becomes the allocation for following stages.
-        if phase == .focus { nextStageFocusDuration = nil }
+        // A manual edit becomes the allocation for following stages.
+        switch phase {
+        case .focus: nextStageFocusDuration = nil
+        case .rest: nextStageRestDuration = nil
+        case .longRest: nextStageLongRestDuration = nil
+        }
         let minimum: Date
         let maximum: Date
         switch phase {
@@ -151,7 +188,8 @@ struct PomodoroClockSchedule: Codable {
         sampledAt = now
     }
 
-    mutating func advance(at now: Date, focusPeriodsPerCycle: Int, autoRepeat: Bool = true) {
+    mutating func advance(at now: Date, focusPeriodsPerCycle: Int, autoRepeat: Bool = true,
+                          autoAlign: Bool = false) {
         guard pausedAt == nil else { return }
         sampledAt = max(sampledAt, now)
         while sampledAt >= (stage == focusPeriodsPerCycle ? longRestEnd : restEnd) {
@@ -162,12 +200,23 @@ struct PomodoroClockSchedule: Codable {
             let start = stage == focusPeriodsPerCycle ? longRestEnd : restEnd
             stage = stage == focusPeriodsPerCycle ? 1 : stage + 1
             moveStage(to: start)
-            // Whole cycles preserve the selected durations, including off-mark values.
-            let cycle = Double(focusPeriodsPerCycle) * focusDuration
-                + Double(focusPeriodsPerCycle - 1) * restDuration + longRestDuration
+            if autoAlign { alignForRepeat(at: start, isFinalStage: stage == focusPeriodsPerCycle) }
+            // Once aligned, each complete cycle starts on the same clock boundary.
+            let cycle: TimeInterval
+            if autoAlign {
+                let normal = ceil(max(300, savedRestDuration) / 1_800) * 1_800
+                let focus = normal - max(300, savedRestDuration)
+                let final = ceil((focus + savedLongRestDuration) / 1_800) * 1_800
+                cycle = Double(focusPeriodsPerCycle - 1) * normal + final
+            } else {
+                cycle = Double(focusPeriodsPerCycle) * focusDuration
+                    + Double(focusPeriodsPerCycle - 1) * restDuration + longRestDuration
+            }
             let completeCycles = max(0, floor(sampledAt.timeIntervalSince(stageStart) / cycle))
-            if autoRepeat && completeCycles > 0 {
+            let isBoundary = ClockBoundary.halfHour(atOrAfter: stageStart) == stageStart
+            if autoRepeat && completeCycles > 0 && (!autoAlign || isBoundary) {
                 moveStage(to: stageStart + completeCycles * cycle)
+                if autoAlign { alignForRepeat(at: stageStart, isFinalStage: stage == focusPeriodsPerCycle) }
             }
         }
         if sampledAt >= focusEnd { focusCompleted = true }
@@ -178,14 +227,16 @@ struct PomodoroClockSchedule: Codable {
         longRestEnd += longRestCarry ?? 0
         restCarry = nil
         longRestCarry = nil
-        let focus = nextStageFocusDuration ?? focusDuration
-        let rest = restDuration
-        let longRest = longRestDuration
+        let focus = savedFocusDuration
+        let rest = savedRestDuration
+        let longRest = savedLongRestDuration
         stageStart = start
         focusEnd = start + focus
         restEnd = focusEnd + rest
         longRestEnd = focusEnd + longRest
         nextStageFocusDuration = nil
+        nextStageRestDuration = nil
+        nextStageLongRestDuration = nil
         focusCompleted = false
     }
 }

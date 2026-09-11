@@ -13,6 +13,7 @@ final class TimerModel: ObservableObject {
     @Published private(set) var completionCount = 0
     @Published private(set) var showsRemainingMinutes = true
     @Published private(set) var isAutoRepeatEnabled = false
+    @Published private(set) var isAutoAlignEnabled = false
 
     // The engine can be paused even when this record is empty.
     var isEnginePaused = false
@@ -53,6 +54,7 @@ final class TimerModel: ObservableObject {
         let state = preferences ?? preferencesStore.load()
         showsRemainingMinutes = state.showsRemainingMinutes
         isAutoRepeatEnabled = state.autoRepeatEnabled
+        isAutoAlignEnabled = state.autoAlignEnabled
         isAlarmEnabled = configuration.alarmEnabled && state.alarmEnabled
         self.isClockEnabled = isClockEnabled
         restore()
@@ -80,6 +82,11 @@ final class TimerModel: ObservableObject {
         preferencesStore.saveEnablement("auto_repeat_enabled", enabled: enabled)
     }
 
+    func setAutoAlignEnabled(_ enabled: Bool) {
+        isAutoAlignEnabled = enabled
+        preferencesStore.saveEnablement("auto_align_enabled", enabled: enabled)
+    }
+
     /// Capture only explicit edits and values inherited on mode entry.
     func captureRepeatDuration() {
         repeatDuration = remaining
@@ -87,7 +94,10 @@ final class TimerModel: ObservableObject {
 
     private func repeatTimer(at date: Date) {
         guard isAutoRepeatEnabled, repeatDuration > 0 else { return }
-        setSharedRemaining(repeatDuration, at: date)
+        let duration = isAutoAlignEnabled
+            ? ClockBoundary.halfHour(atOrAfter: date + 300)?.timeIntervalSince(date) ?? repeatDuration
+            : repeatDuration
+        setSharedRemaining(duration, at: date)
         save()
     }
 
@@ -101,7 +111,8 @@ final class TimerModel: ObservableObject {
         duration = boundary.timeIntervalSince(currentTime)
         remaining = duration
         pausedAlignment = isEnginePaused ? (boundary, remaining) : nil
-        captureRepeatDuration()
+        // Align can create the first run, but must not replace an existing repeat setting.
+        if repeatDuration == 0 { captureRepeatDuration() }
 
         if status == .prepared || isEnginePaused {
             pausedAt = isClockEnabled ? currentTime : nil

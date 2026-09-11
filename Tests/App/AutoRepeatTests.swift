@@ -36,7 +36,7 @@ struct AutoRepeatTests {
     }
 
     @Test(arguments: CountdownMode.allCases, [CountdownMode.timer, .countdown])
-    func repeatsValuesInheritedOnEntry(outgoing: CountdownMode, incoming: CountdownMode) throws {
+    func repeatsSavedTimerOrInheritedPomodoroValues(outgoing: CountdownMode, incoming: CountdownMode) throws {
         let session = ClockTestSession()
         defer { session.close() }
         let controller = session.controller
@@ -49,7 +49,7 @@ struct AutoRepeatTests {
         controller.setAutoRepeatEnabled(true)
         session.now = try #require(controller.timer.endDate)
         controller.update()
-        #expect(controller.timer.remaining == (outgoing == incoming ? 1_200 : inherited))
+        #expect(controller.timer.remaining == (outgoing.usesTimer ? 1_200 : inherited))
     }
 
     @Test(arguments: 0..<4, [1, 4, 12])

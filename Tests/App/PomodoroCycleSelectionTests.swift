@@ -61,14 +61,14 @@ struct PomodoroCycleSelectionTests {
     }
 
     @Test
-    func normalRestartKeepsAlignedAndZeroFocusAllocations() {
+    func normalRestartRestoresSavedFocusAndKeepsExplicitZeroFocus() {
         let now = Date(timeIntervalSince1970: 1_699_999_800)
         var model = PomodoroModel()
         model.setClockEnabled(true, at: now)
         model.autoAlign(at: now + 600)
-        let alignedFocus = model.focusDuration
+        #expect(model.focusDuration != 1_500)
         model.restartStage(2, at: now + 600)
-        #expect(model.focusRemaining == alignedFocus)
+        #expect(model.focusRemaining == 1_500)
 
         var zeroFocus = PomodoroModel(focusDuration: 0, defaultDurations: (1_500, 300, 1_200))
         zeroFocus.restartStage(2, at: now)

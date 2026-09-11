@@ -75,6 +75,7 @@ final class CountdownController: ObservableObject {
             )
         )
         pomodoro.isAutoRepeatEnabled = state.autoRepeatEnabled
+        pomodoro.isAutoAlignEnabled = state.autoAlignEnabled
         if let schedule = settings.pomodoroClockSchedule {
             pomodoro.restoreClockSchedule(schedule, at: now(), advance: settings.mode == .pomodoro)
         }
@@ -100,6 +101,12 @@ final class CountdownController: ObservableObject {
     func setAutoRepeatEnabled(_ enabled: Bool) {
         update()
         engine.setAutoRepeatEnabled(enabled)
+        saveSettings()
+    }
+
+    func setAutoAlignEnabled(_ enabled: Bool) {
+        update()
+        engine.setAutoAlignEnabled(enabled)
         saveSettings()
     }
 
@@ -226,8 +233,8 @@ final class CountdownController: ObservableObject {
 
     private func saveSettings() {
         settingsStore.save(CountdownSettings(
-            mode: mode, focusDuration: pomodoro.focusDuration, restDuration: pomodoro.restDuration,
-            isPaused: engine.isPaused, longRestDuration: pomodoro.longRestDuration,
+            mode: mode, focusDuration: pomodoro.savedFocusDuration, restDuration: pomodoro.savedRestDuration,
+            isPaused: engine.isPaused, longRestDuration: pomodoro.savedLongRestDuration,
             pomodoroClockSchedule: pomodoro.clockSchedule
         ))
     }

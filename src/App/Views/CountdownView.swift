@@ -85,6 +85,7 @@ struct CountdownView: View {
             Divider()
             Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
             Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
+            Toggle("Auto-align", isOn: Binding(get: { countdown.timer.isAutoAlignEnabled }, set: countdown.setAutoAlignEnabled))
             Button("Align", action: countdown.autoAlign)
                 .disabled(!countdown.canAutoAlign)
             if countdown.mode.usesTimer {

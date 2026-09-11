@@ -12,7 +12,8 @@ Native macOS app with three modes: Pomodoro, Timer, and Countdown. Requires macO
 - In Pomodoro, mouse scroll while over the blue sector to alter the rest duration. Likewise, mouse scroll while over the focus sector or background to alter the focus duration.
 - Pomodoro runs focus periods with short rests, then a long rest after the final focus period. Click a dot to restart focus at that position. Option-click a dot to also restore default durations.
 - **Loop** controls repetition in the selected mode.
-- Select **Align** to end the timeron the hour or half hour.
+- Select **Align** to adjust the current run to the hour or half hour without replacing saved durations.
+- **Auto-align** applies to new Pomodoro cycles and to loops in all views. It extends the final Pomodoro rest to an aligned endpoint, with the saved long rest as the minimum.
 - **Notifications** controls notifications in all modes.
 - **Show value** controls the remaining-minute label in Timer and Countdown.
 
