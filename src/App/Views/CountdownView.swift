@@ -83,13 +83,6 @@ struct CountdownView: View {
             }
             .pickerStyle(.inline)
             Divider()
-            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
-            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
-            Toggle("Auto-align", isOn: Binding(get: { countdown.timer.isAutoAlignEnabled }, set: countdown.setAutoAlignEnabled))
-            if countdown.mode.usesTimer {
-                TimerContextMenu(model: countdown.timer)
-            }
-            Divider()
             Toggle("Pause", isOn: Binding(
                 get: { countdown.engine.isPaused },
                 set: { paused in
@@ -98,6 +91,13 @@ struct CountdownView: View {
                     }
                 }
             ))
+            Divider()
+            Toggle("Notifications", isOn: Binding(get: { countdown.notifications.isNotificationEnabled }, set: countdown.notifications.setNotificationEnabled))
+            Toggle("Loop", isOn: Binding(get: { countdown.timer.isAutoRepeatEnabled }, set: countdown.setAutoRepeatEnabled))
+            Toggle("Auto-align", isOn: Binding(get: { countdown.timer.isAutoAlignEnabled }, set: countdown.setAutoAlignEnabled))
+            if countdown.mode.usesTimer {
+                TimerContextMenu(model: countdown.timer)
+            }
             Divider()
             Button("Align Now", action: countdown.autoAlign)
                 .disabled(!countdown.canAutoAlign)
