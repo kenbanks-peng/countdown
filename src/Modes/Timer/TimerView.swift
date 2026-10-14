@@ -8,7 +8,9 @@ struct TimerView: View {
     var showsLabels = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isHovering = false
+    // Name the property wrapper explicitly to avoid the SDK's State macro.
+    private typealias HoverState = SwiftUI.State<Bool>
+    @HoverState private var isHovering = false
 
     var body: some View {
         ZStack {

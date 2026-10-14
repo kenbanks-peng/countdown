@@ -14,7 +14,9 @@ struct CountdownView: View {
     let changePresentation: () -> Void
     private let allowsClick: () -> Bool
     private let clickModifierFlags: () -> NSEvent.ModifierFlags
-    @State private var currentTime = Date.now
+    // Name the property wrapper explicitly to avoid the SDK's State macro.
+    private typealias ClockState = SwiftUI.State<Date>
+    @ClockState private var currentTime = Date.now
 
     init(countdown: CountdownController, isCompact: Bool = false, isNotification: Bool = false, scale: CGFloat = 1, notificationFontSizePt: CGFloat = CountdownConfiguration.defaultNotificationFontSizePt, notificationFont: String = "", notificationFontVariations: NotificationFontVariations = NotificationFontVariations(), notificationEvent: NotificationScheduler.Event? = nil, allowsClick: @escaping () -> Bool = { true }, clickModifierFlags: @escaping () -> NSEvent.ModifierFlags = { NSEvent.modifierFlags }, changePresentation: @escaping () -> Void) {
         self.countdown = countdown
